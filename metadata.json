@@ -1,0 +1,8 @@
+{
+  "name": "KidRide",
+  "description": "A safety-first ride, carpool, and supervision app for parents. Coordinate safe rides for children to games and events.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
