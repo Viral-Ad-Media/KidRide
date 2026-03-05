@@ -15,7 +15,7 @@ export const AddChild = () => {
     photo: null as File | null
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newChild: Child = {
         id: `c-${Date.now()}`,
         name: formData.name,
@@ -28,8 +28,12 @@ export const AddChild = () => {
             : `https://ui-avatars.com/api/?name=${formData.name}&background=random`
     };
 
-    addChild(newChild);
-    navigate('/dashboard');
+    try {
+      await addChild(newChild);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Unable to add child profile:', error);
+    }
   };
 
   return (

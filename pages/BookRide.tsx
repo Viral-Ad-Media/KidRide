@@ -5,21 +5,30 @@ import { Button, Input, Card, Select } from '../components/UIComponents';
 import { MOCK_CHILDREN } from '../constants';
 import { ArrowLeft, MapPin, Search, ShieldCheck, Map } from 'lucide-react';
 import { useRide } from '../contexts/RideContext';
+import { useAuth } from '../contexts/AuthContext';
 import { RideStatus, ServiceType, Ride } from '../types';
 
 export const BookRide = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { requestRide, activeRide } = useRide();
   const [step, setStep] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
+  const availableChildren = user?.children && user.children.length > 0 ? user.children : MOCK_CHILDREN;
   
   const [formData, setFormData] = useState({
-    childId: MOCK_CHILDREN[0].id,
+    childId: '',
     pickup: '',
     dropoff: '',
     serviceType: 'pickup_only',
   });
+
+  useEffect(() => {
+    if (!formData.childId && availableChildren.length > 0) {
+      setFormData((prev) => ({ ...prev, childId: availableChildren[0].id }));
+    }
+  }, [availableChildren, formData.childId]);
 
   // Watch for driver acceptance
   useEffect(() => {
@@ -30,10 +39,10 @@ export const BookRide = () => {
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
-    else startDriverSearch();
+    else void startDriverSearch();
   };
 
-  const startDriverSearch = () => {
+  const startDriverSearch = async () => {
     setIsSearching(true);
     setSearchStatus('Broadcasting to verified drivers...');
 
@@ -52,8 +61,15 @@ export const BookRide = () => {
           driverId: undefined // No driver yet
     };
     
-    // Post to context
-    requestRide(newRide);
+    try {
+      // Post to backend through context
+      await requestRide(newRide);
+    } catch (error) {
+      console.error('Ride request failed:', error);
+      setSearchStatus('Unable to reach ride service. Please try again.');
+      setTimeout(() => setIsSearching(false), 1500);
+      return;
+    }
     
     // Aesthetic simulation messages only (logic is handled by context/driver)
     const searchSequence = [
@@ -123,7 +139,7 @@ export const BookRide = () => {
             <div className="space-y-6 fade-in">
                 <h3 className="text-lg font-semibold">Who is this ride for?</h3>
                 <div className="grid grid-cols-2 gap-4">
-                    {MOCK_CHILDREN.map(child => (
+                    {availableChildren.map(child => (
                         <div 
                             key={child.id}
                             onClick={() => setFormData({...formData, childId: child.id})}

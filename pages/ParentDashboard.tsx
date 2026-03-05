@@ -22,6 +22,7 @@ export const ParentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeRide } = useRide();
+  const availableChildren = user?.children && user.children.length > 0 ? user.children : MOCK_CHILDREN;
 
   return (
     <div className="space-y-8">
@@ -81,7 +82,7 @@ export const ParentDashboard = () => {
           <span className="text-xs font-medium text-[#3A77FF]">Book Ride</span>
         </div>
 
-        {MOCK_CHILDREN.map(child => (
+        {availableChildren.map(child => (
           <div key={child.id} className="flex-shrink-0 flex flex-col items-center gap-2">
             <img src={child.photoUrl} alt={child.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm" />
             <span className="text-xs font-medium text-gray-600">{child.name}</span>

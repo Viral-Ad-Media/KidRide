@@ -9,14 +9,22 @@ export const Welcome = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleParentLogin = () => {
-    login(UserRole.PARENT);
-    navigate('/dashboard');
+  const handleParentLogin = async () => {
+    try {
+      await login(UserRole.PARENT);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Parent login failed:', error);
+    }
   };
 
-  const handleDriverLogin = () => {
-    login(UserRole.DRIVER);
-    navigate('/driver-dashboard');
+  const handleDriverLogin = async () => {
+    try {
+      await login(UserRole.DRIVER);
+      navigate('/driver-dashboard');
+    } catch (error) {
+      console.error('Driver login failed:', error);
+    }
   };
 
   return (

@@ -72,15 +72,26 @@ export const DriverSignup = () => {
 
   const handleBack = () => setStep(step - 1);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isStep3Valid) return;
     setLoading(true);
-    // Simulate API submission
-    setTimeout(() => {
-      submitDriverApplication(); // Update global user state
+    try {
+      await submitDriverApplication({
+        phone: formData.phone,
+        vehicle: {
+          make: formData.make,
+          model: formData.model,
+          year: formData.year,
+          color: formData.color,
+          plate: formData.plate
+        }
+      });
       setLoading(false);
       setSubmitted(true);
-    }, 2000);
+    } catch (error) {
+      console.error('Driver application submission failed:', error);
+      setLoading(false);
+    }
   };
 
   if (submitted) {

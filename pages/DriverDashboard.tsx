@@ -10,8 +10,12 @@ export const DriverDashboard = () => {
   const [isOnline, setIsOnline] = useState(true);
 
   // Status Handler
-  const handleStatusUpdate = (nextStatus: RideStatus) => {
-    updateRideStatus(nextStatus);
+  const handleStatusUpdate = async (nextStatus: RideStatus) => {
+    try {
+      await updateRideStatus(nextStatus);
+    } catch (error) {
+      console.error('Unable to update ride status:', error);
+    }
   };
 
   return (
