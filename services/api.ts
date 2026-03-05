@@ -1,6 +1,7 @@
 import { Child, Ride, RideStatus, ServiceType, User, UserRole } from '../types';
 
-const DEFAULT_API_BASE_URL = 'http://localhost:5000/api';
+const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
+const DEPLOYED_API_BASE_URL = 'https://kidride-backend.vercel.app/api';
 const TOKEN_STORAGE_KEY = 'kidride_token';
 
 const validRideStatuses = new Set<string>(Object.values(RideStatus));
@@ -19,17 +20,51 @@ export class ApiError extends Error {
   }
 }
 
+const normalizeApiBaseUrl = (baseUrl: string): string => {
+  const trimmed = baseUrl.trim().replace(/\/+$/, '');
+  if (!trimmed) {
+    return DEPLOYED_API_BASE_URL;
+  }
+
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
+const getEnvApiBaseUrl = (): string | null => {
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  const candidate = viteEnv?.VITE_API_BASE_URL;
+  if (!candidate || !candidate.trim()) {
+    return null;
+  }
+
+  return normalizeApiBaseUrl(candidate);
+};
+
+const getDefaultApiBaseUrl = (): string => {
+  const envBaseUrl = getEnvApiBaseUrl();
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return LOCAL_API_BASE_URL;
+    }
+  }
+
+  return DEPLOYED_API_BASE_URL;
+};
+
 export const getApiBaseUrl = (): string => {
-  if (typeof window === 'undefined') {
-    return DEFAULT_API_BASE_URL;
+  const configured = typeof window === 'undefined'
+    ? null
+    : window.localStorage.getItem('kidride_api_base_url');
+
+  if (configured && configured.trim()) {
+    return normalizeApiBaseUrl(configured);
   }
 
-  const configured = window.localStorage.getItem('kidride_api_base_url');
-  if (!configured || !configured.trim()) {
-    return DEFAULT_API_BASE_URL;
-  }
-
-  return configured.trim().replace(/\/+$/, '');
+  return getDefaultApiBaseUrl();
 };
 
 export const getStoredToken = (): string | null => {
