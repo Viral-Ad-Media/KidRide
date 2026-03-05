@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '../types';
+import { User, UserRole, Child } from '../types';
+import { MOCK_CHILDREN } from '../constants';
 
 interface AuthContextType {
   user: User | null;
   login: (role: UserRole) => void;
   logout: () => void;
   submitDriverApplication: () => void;
+  addChild: (child: Child) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +28,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: UserRole.PARENT,
             email: 'alex.johnson@example.com',
             photoUrl: 'https://ui-avatars.com/api/?name=Alex+Johnson&background=0D8ABC&color=fff',
-            driverApplicationStatus: 'none'
+            driverApplicationStatus: 'none',
+            children: MOCK_CHILDREN // Initialize with mock children
         };
         setUser(defaultUser);
     }
@@ -40,7 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: role,
         email: 'test@example.com',
         driverApplicationStatus: 'none',
-        photoUrl: `https://ui-avatars.com/api/?name=${role === UserRole.DRIVER ? 'Sarah+Jenkins' : 'Alex+Johnson'}&background=random&color=fff`
+        photoUrl: `https://ui-avatars.com/api/?name=${role === UserRole.DRIVER ? 'Sarah+Jenkins' : 'Alex+Johnson'}&background=random&color=fff`,
+        children: role === UserRole.PARENT ? MOCK_CHILDREN : []
      };
      setUser(newUser);
      localStorage.setItem('kidride_user', JSON.stringify(newUser));
@@ -59,8 +63,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const addChild = (child: Child) => {
+    if (user) {
+        const updatedChildren = user.children ? [...user.children, child] : [child];
+        const updatedUser = { ...user, children: updatedChildren };
+        setUser(updatedUser);
+        localStorage.setItem('kidride_user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, submitDriverApplication }}>
+    <AuthContext.Provider value={{ user, login, logout, submitDriverApplication, addChild }}>
       {children}
     </AuthContext.Provider>
   );

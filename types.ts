@@ -21,6 +21,14 @@ export enum ServiceType {
   STAY = 'stay_with_child_and_dropoff'
 }
 
+export interface Child {
+  id: string;
+  name: string;
+  age: number;
+  photoUrl?: string;
+  notes?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -30,14 +38,7 @@ export interface User {
   isParentDriver?: boolean; // Can offer carpools
   photoUrl?: string;
   driverApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
-}
-
-export interface Child {
-  id: string;
-  name: string;
-  age: number;
-  photoUrl?: string;
-  notes?: string;
+  children?: Child[];
 }
 
 export interface Driver {

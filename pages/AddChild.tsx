@@ -1,11 +1,13 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input, FileUpload } from '../components/UIComponents';
 import { ArrowLeft, UserPlus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Child } from '../types';
 
 export const AddChild = () => {
   const navigate = useNavigate();
+  const { addChild } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -14,8 +16,19 @@ export const AddChild = () => {
   });
 
   const handleSubmit = () => {
-    // In a real app, this would push to the API
-    alert("Child profile created! (Simulation)");
+    const newChild: Child = {
+        id: `c-${Date.now()}`,
+        name: formData.name,
+        age: parseInt(formData.age),
+        notes: formData.notes,
+        // In a real app we'd upload the file and get a URL.
+        // For demo, we use a placeholder if no photo or create a fake URL object
+        photoUrl: formData.photo 
+            ? URL.createObjectURL(formData.photo) 
+            : `https://ui-avatars.com/api/?name=${formData.name}&background=random`
+    };
+
+    addChild(newChild);
     navigate('/dashboard');
   };
 
