@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole, Child } from '../types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Child, User, UserRole } from '../types';
 import {
-  ApiError,
   apiRequest,
   clearStoredToken,
   getStoredToken,
@@ -12,26 +11,15 @@ import {
 
 const USER_STORAGE_KEY = 'kidride_user';
 
-const DEMO_ACCOUNTS: Record<UserRole, { name: string; email: string; password: string; role: UserRole }> = {
-  [UserRole.PARENT]: {
-    name: 'Alex Johnson',
-    email: 'demo.parent@kidride.app',
-    password: 'KidRide123!',
-    role: UserRole.PARENT
-  },
-  [UserRole.DRIVER]: {
-    name: 'Sarah Jenkins',
-    email: 'demo.driver@kidride.app',
-    password: 'KidRide123!',
-    role: UserRole.DRIVER
-  },
-  [UserRole.ADMIN]: {
-    name: 'Admin User',
-    email: 'demo.admin@kidride.app',
-    password: 'KidRide123!',
-    role: UserRole.ADMIN
-  }
-};
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload extends LoginPayload {
+  name: string;
+  role?: UserRole;
+}
 
 interface DriverApplicationPayload {
   phone?: string;
@@ -51,20 +39,60 @@ interface DriverApplicationPayload {
 
 interface AuthContextType {
   user: User | null;
-  login: (role: UserRole) => Promise<void>;
+  isHydrating: boolean;
+  login: (payload: LoginPayload) => Promise<User>;
+  register: (payload: RegisterPayload) => Promise<User>;
   logout: () => void;
   submitDriverApplication: (payload?: DriverApplicationPayload) => Promise<void>;
   addChild: (child: Child) => Promise<void>;
 }
 
+type AuthResponse = Record<string, unknown> & { token?: string };
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+
+const readStoredUser = (): User | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const rawUser = window.localStorage.getItem(USER_STORAGE_KEY);
+  if (!rawUser) {
+    return null;
+  }
+
+  try {
+    return mapUser(JSON.parse(rawUser));
+  } catch {
+    window.localStorage.removeItem(USER_STORAGE_KEY);
+    return null;
+  }
+};
+
+export const getDefaultRouteForUser = (user: User): string => {
+  if (user.role === UserRole.DRIVER) {
+    if (user.driverApplicationStatus === 'none' || user.driverApplicationStatus === 'rejected') {
+      return '/driver-signup';
+    }
+
+    return '/driver-dashboard';
+  }
+
+  return '/dashboard';
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
 
   const persistUser = (nextUser: User, token?: string | null) => {
     setUser(nextUser);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+    }
 
     if (token === null) {
       clearStoredToken();
@@ -78,72 +106,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearSession = () => {
     setUser(null);
-    localStorage.removeItem(USER_STORAGE_KEY);
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(USER_STORAGE_KEY);
+    }
+
     clearStoredToken();
   };
 
-  type AuthResponse = Record<string, unknown> & { token?: string };
-
-  const authenticateWithDemoAccount = async (
-    account: { name: string; email: string; password: string; role: UserRole }
-  ): Promise<AuthResponse> => {
-    try {
-      return await apiRequest<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: {
-          email: account.email,
-          password: account.password
-        }
-      });
-    } catch (error) {
-      const canRegisterFallback = error instanceof ApiError && [400, 401, 404].includes(error.status);
-      if (!canRegisterFallback) {
-        throw error;
-      }
-
-      try {
-        await apiRequest<AuthResponse>('/auth/register', {
-          method: 'POST',
-          body: {
-            name: account.name,
-            email: account.email,
-            password: account.password,
-            role: account.role
-          }
-        });
-      } catch (registerError) {
-        if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-          throw registerError;
-        }
-      }
-
-      return apiRequest<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: {
-          email: account.email,
-          password: account.password
-        }
-      });
+  const finalizeAuthentication = (response: AuthResponse): User => {
+    const token = typeof response.token === 'string' ? response.token : null;
+    if (!token) {
+      throw new Error('Authentication response did not include a token.');
     }
+
+    const mappedUser = mapUser(response);
+    persistUser(mappedUser, token);
+    return mappedUser;
   };
 
-  // Initialize session from local storage and backend profile
   useEffect(() => {
-    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem(USER_STORAGE_KEY);
-      }
-    }
-
     const token = getStoredToken();
     if (!token) {
+      clearSession();
+      setIsHydrating(false);
       return;
     }
 
+    const storedUser = readStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
+    }
+
     let isMounted = true;
+
     const hydrateUser = async () => {
       try {
         const me = await apiRequest<Record<string, unknown>>('/auth/me', { token });
@@ -151,13 +147,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const mappedUser = mapUser(me);
-        persistUser(mappedUser, token);
+        persistUser(mapUser(me), token);
       } catch {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          clearSession();
         }
-        clearSession();
+      } finally {
+        if (isMounted) {
+          setIsHydrating(false);
+        }
       }
     };
 
@@ -168,17 +166,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (role: UserRole) => {
-    const account = DEMO_ACCOUNTS[role];
-    if (!account) {
-      throw new Error(`Unsupported login role: ${role}`);
-    }
+  const login = async ({ email, password }: LoginPayload) => {
+    const authResult = await apiRequest<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: {
+        email: normalizeEmail(email),
+        password
+      }
+    });
 
-    const authResult = await authenticateWithDemoAccount(account);
-    const mappedUser = mapUser(authResult);
-    const token = typeof authResult.token === 'string' ? authResult.token : null;
+    return finalizeAuthentication(authResult);
+  };
 
-    persistUser(mappedUser, token);
+  const register = async ({ name, email, password, role = UserRole.PARENT }: RegisterPayload) => {
+    const authResult = await apiRequest<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: {
+        name: name.trim(),
+        email: normalizeEmail(email),
+        password,
+        role
+      }
+    });
+
+    return finalizeAuthentication(authResult);
   };
 
   const logout = () => {
@@ -186,15 +197,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const submitDriverApplication = async (payload?: DriverApplicationPayload) => {
-    if (!user) {
-      return;
-    }
-
     const token = getStoredToken();
     if (!token) {
       throw new Error('You must be logged in to submit a driver application.');
     }
 
+    const currentUser = user ?? readStoredUser();
     const incomingVehicle = payload?.vehicle ?? {
       make: payload?.make,
       model: payload?.model,
@@ -212,18 +220,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    const updatedUser = mapUser(response.user || user);
+    const updatedUser = mapUser(response.user || currentUser || {});
     persistUser(updatedUser, token);
   };
 
   const addChild = async (child: Child) => {
-    if (!user) {
-      return;
-    }
-
     const token = getStoredToken();
     if (!token) {
       throw new Error('You must be logged in to add a child.');
+    }
+
+    const currentUser = user ?? readStoredUser();
+    if (!currentUser) {
+      throw new Error('Unable to resolve the current user. Please log in again.');
     }
 
     const response = await apiRequest<{ child?: unknown; children?: unknown[] }>('/users/children', {
@@ -239,10 +248,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const nextChildren = Array.isArray(response.children)
       ? response.children.map(mapChild)
-      : [...(user.children || []), mapChild(response.child || child)];
+      : [...(currentUser.children || []), mapChild(response.child || child)];
 
     const updatedUser: User = {
-      ...user,
+      ...currentUser,
       children: nextChildren
     };
 
@@ -250,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, submitDriverApplication, addChild }}>
+    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild }}>
       {children}
     </AuthContext.Provider>
   );

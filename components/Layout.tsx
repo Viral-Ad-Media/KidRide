@@ -14,7 +14,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const isAuthPage = location.pathname === '/' || location.pathname === '/drive' || location.pathname === '/driver-signup';
+  const publicPagePaths = new Set([
+    '/',
+    '/about',
+    '/help',
+    '/contact',
+    '/privacy',
+    '/terms',
+    '/drive',
+    '/driver-signup'
+  ]);
+  const isAuthPage = publicPagePaths.has(location.pathname);
   
   if (isAuthPage) {
     return <div className="min-h-screen bg-white">{children}</div>;
@@ -138,7 +148,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                  )}
 
                  <div className="my-2 border-t border-gray-100"></div>
-                 <button onClick={() => handleNavigation('/safety')} className="flex items-center gap-4 w-full p-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+                 <button onClick={() => handleNavigation('/help')} className="flex items-center gap-4 w-full p-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                     <HelpCircle size={20} className="text-gray-400" /> Help & Support
                  </button>
               </div>

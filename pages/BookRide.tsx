@@ -112,8 +112,8 @@ export const BookRide = () => {
              </div>
         </div>
         
-        <div className="mt-8 text-xs text-gray-400 max-w-[200px]">
-            Demo Tip: Open a new tab, login as a Driver, and accept this request!
+        <div className="mt-8 text-xs text-gray-400 max-w-[220px]">
+            Tip: Open a second tab, sign in with a driver account, and accept this request.
         </div>
       </div>
     );

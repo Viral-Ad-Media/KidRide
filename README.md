@@ -74,10 +74,12 @@ kidride/
 If `VITE_API_BASE_URL` does not end with `/api`, the app appends it automatically.
 
 ## Auth and Session Behavior
-- Demo login buttons in `Welcome` authenticate against backend demo credentials.
+- `Welcome` supports real signup and login for parent and driver accounts through `/api/auth/register` and `/api/auth/login`.
+- New driver signups are routed into `/driver-signup` to finish verification details and submit a driver application.
 - Token is stored in `localStorage` as `kidride_token`.
 - User profile cache is stored as `kidride_user`.
 - On app load, `AuthContext` calls `GET /api/auth/me` to refresh session state.
+- Protected routes redirect unauthenticated visitors back to `/`.
 
 ## Ride Behavior
 - `RideContext` polls active ride state from backend.
@@ -89,6 +91,11 @@ If `VITE_API_BASE_URL` does not end with `/api`, the app appends it automaticall
 
 ## Frontend Routes
 - `/` Welcome
+- `/about` About page
+- `/help` Help center
+- `/contact` Contact page
+- `/privacy` Privacy policy
+- `/terms` Terms of service
 - `/dashboard` Parent dashboard
 - `/add-child` Add child profile
 - `/book` Book ride

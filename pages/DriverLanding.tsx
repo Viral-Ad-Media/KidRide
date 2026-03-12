@@ -1,11 +1,18 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, Card } from '../components/UIComponents';
 import { CheckCircle, DollarSign, Clock, Shield, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export const DriverLanding = () => {
   const navigate = useNavigate();
+  const publicLinks = [
+    { path: '/about', label: 'About' },
+    { path: '/help', label: 'Help' },
+    { path: '/contact', label: 'Contact' },
+    { path: '/privacy', label: 'Privacy' },
+    { path: '/terms', label: 'Terms' }
+  ];
 
   return (
     <div className="bg-white min-h-screen pb-24">
@@ -83,13 +90,27 @@ export const DriverLanding = () => {
             </div>
         </div>
 
+        <div className="rounded-2xl border border-gray-100 bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-gray-900">Before you apply</p>
+            <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+                {publicLinks.map((link) => (
+                    <Link key={link.path} to={link.path} className="transition hover:text-gray-900">
+                        {link.label}
+                    </Link>
+                ))}
+            </div>
+        </div>
+
       </div>
 
       {/* Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 md:relative md:border-none md:p-0">
-         <div className="max-w-md mx-auto">
+         <div className="max-w-md mx-auto space-y-3">
             <Button fullWidth onClick={() => navigate('/driver-signup')} className="flex items-center justify-center gap-2">
                 Start Application <ArrowRight size={20} />
+            </Button>
+            <Button fullWidth variant="secondary" onClick={() => navigate('/')}>
+                Already have an account? Log In
             </Button>
          </div>
       </div>
