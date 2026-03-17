@@ -12,7 +12,6 @@ import {
   MessageCircle,
   Plus,
   Shield,
-  Sparkles,
   User,
   X
 } from 'lucide-react';
@@ -236,19 +235,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <button
               type="button"
               onClick={() => navigate(user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}
-              className="rounded-[28px] bg-[linear-gradient(135deg,#0f3ea8_0%,#1d6fff_58%,#7cc7ff_100%)] p-6 text-left text-white shadow-[0_24px_60px_rgba(29,111,255,0.28)]"
+              className="flex items-center gap-4 rounded-[24px] border border-white/60 bg-white/70 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-white/85"
             >
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-white/16 text-white">
-                <Sparkles size={22} />
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#0f3ea8_0%,#1d6fff_58%,#7cc7ff_100%)] text-white shadow-[0_14px_28px_rgba(29,111,255,0.22)]">
+                <Car size={22} />
               </div>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100">KidRide</p>
-              <h1 className="mt-3 text-3xl font-bold text-white">Move from mobile mockup to real workspace.</h1>
-              <p className="mt-3 text-sm leading-7 text-white/78">
-                Wider layouts, calmer surfaces, and faster access to the tasks that matter on desktop.
-              </p>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700/80">KidRide</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">Workspace</p>
+              </div>
             </button>
 
-            <div className="mt-6 flex items-center gap-4 rounded-[28px] border border-white/60 bg-white/72 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+            <div className="mt-5 flex items-center gap-4 rounded-[28px] border border-white/60 bg-white/72 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
               {renderAvatar()}
               <div className="min-w-0">
                 <p className="truncate text-base font-semibold text-slate-950">{user?.name || 'KidRide User'}</p>
@@ -257,7 +255,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             </div>
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-5 space-y-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
 
