@@ -37,7 +37,7 @@ export const AddChild = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
         <div className="flex items-center gap-4">
             <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
                 <ArrowLeft size={24} />
@@ -45,7 +45,7 @@ export const AddChild = () => {
             <h2 className="text-xl font-bold text-gray-900">Add Child Profile</h2>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
+        <div className="surface-card space-y-6 rounded-[30px] p-6 sm:p-8">
             <div className="flex justify-center mb-6">
                 <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center border-2 border-dashed border-blue-200">
                     <UserPlus size={32} className="text-[#3A77FF]" />

@@ -15,12 +15,12 @@ export const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const baseStyle = "h-[52px] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center px-6";
+  const baseStyle = "min-h-[52px] rounded-[18px] px-6 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(29,111,255,0.35)] disabled:cursor-not-allowed disabled:opacity-55";
   const variants = {
-    primary: "bg-[#3A77FF] text-white hover:bg-blue-600 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed",
-    secondary: "bg-white border-2 border-[#3A77FF] text-[#3A77FF] hover:bg-blue-50 disabled:opacity-50",
-    destructive: "bg-[#FF4F4F] text-white hover:bg-red-600 disabled:opacity-50",
-    ghost: "bg-transparent text-[#6A7485] hover:text-[#1A1D26] disabled:opacity-50"
+    primary: "border border-transparent bg-[linear-gradient(135deg,#1257db_0%,#1d6fff_58%,#66b8ff_100%)] text-white shadow-[0_18px_36px_rgba(29,111,255,0.24)] hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(29,111,255,0.3)]",
+    secondary: "border border-slate-200 bg-white/82 text-slate-800 shadow-[0_14px_28px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50",
+    destructive: "border border-transparent bg-[linear-gradient(135deg,#ef4444_0%,#f97316_100%)] text-white shadow-[0_18px_36px_rgba(239,68,68,0.18)] hover:-translate-y-0.5",
+    ghost: "border border-transparent bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-900"
   };
 
   return (
@@ -41,9 +41,9 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input: React.FC<InputProps> = ({ label, className = '', ...props }) => {
   return (
     <div className="w-full mb-4">
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      {label && <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>}
       <input 
-        className={`h-[50px] w-full rounded-xl border border-gray-200 px-4 focus:outline-none focus:border-[#3A77FF] focus:ring-1 focus:ring-[#3A77FF] transition-all bg-white ${className}`}
+        className={`h-[54px] w-full rounded-[18px] border border-slate-200 bg-white/88 px-4 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all placeholder:text-slate-400 focus:border-[#1d6fff] focus:outline-none focus:ring-4 focus:ring-[rgba(29,111,255,0.12)] ${className}`}
         {...props}
       />
     </div>
@@ -296,15 +296,15 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 export const Select: React.FC<SelectProps> = ({ label, children, className = '', ...props }) => {
     return (
       <div className="w-full mb-4">
-        {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>}
         <div className="relative">
             <select 
-            className={`h-[50px] w-full rounded-xl border border-gray-200 px-4 focus:outline-none focus:border-[#3A77FF] focus:ring-1 focus:ring-[#3A77FF] transition-all bg-white appearance-none ${className}`}
+            className={`h-[54px] w-full appearance-none rounded-[18px] border border-slate-200 bg-white/88 px-4 text-slate-900 transition-all focus:border-[#1d6fff] focus:outline-none focus:ring-4 focus:ring-[rgba(29,111,255,0.12)] ${className}`}
             {...props}
             >
             {children}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
             </div>
         </div>
@@ -323,7 +323,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onClick })
   return (
     <div 
       onClick={onClick}
-      className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${className}`}
+      className={`surface-card rounded-[28px] p-5 sm:p-6 ${onClick ? 'cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-[0_24px_50px_rgba(15,23,42,0.1)]' : ''} ${className}`}
     >
       {children}
     </div>

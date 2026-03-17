@@ -143,7 +143,7 @@ export const BookRide = () => {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl">
         <div className="flex items-center gap-4 mb-6">
             <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
                 <ArrowLeft size={24} />
@@ -162,7 +162,7 @@ export const BookRide = () => {
             <div className="space-y-6 fade-in">
                 <h3 className="text-lg font-semibold">Who is this ride for?</h3>
                 {hasChildren ? (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
                         {availableChildren.map(child => (
                             <div 
                                 key={child.id}
@@ -255,10 +255,12 @@ export const BookRide = () => {
             </div>
         )}
 
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 md:relative md:border-none md:p-0 md:mt-8">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white p-6 md:relative md:mt-8 md:border-none md:bg-transparent md:p-0">
+            <div className="mx-auto w-full max-w-4xl">
             <Button onClick={handleNext} fullWidth disabled={isSearching}>
                 {!hasChildren ? 'Add a Child First' : step === 3 ? 'Confirm & Book' : 'Next'}
             </Button>
+            </div>
         </div>
     </div>
   );

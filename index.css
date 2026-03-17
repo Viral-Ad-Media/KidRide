@@ -1,0 +1,134 @@
+:root {
+  --kidride-bg: #f4f7fb;
+  --kidride-ink: #0f172a;
+  --kidride-muted: #64748b;
+  --kidride-brand: #1d6fff;
+  --kidride-brand-deep: #123d9b;
+  --kidride-brand-soft: #dbeafe;
+  --kidride-warm: #ffb65c;
+  --kidride-success: #18b37e;
+  --kidride-border: rgba(148, 163, 184, 0.18);
+  --kidride-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  scroll-behavior: smooth;
+  background: var(--kidride-bg);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--kidride-ink);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(91, 163, 255, 0.2), transparent 24rem),
+    radial-gradient(circle at 85% 10%, rgba(255, 182, 92, 0.18), transparent 18rem),
+    linear-gradient(180deg, #eef5ff 0%, #f8fbff 36%, #f4f7fb 100%);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(29, 111, 255, 0.18);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(22px);
+  box-shadow: var(--kidride-shadow);
+}
+
+.surface-card {
+  border: 1px solid var(--kidride-border);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in,
+.fade-in {
+  animation: fadeIn 0.45s ease-out both;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.45s cubic-bezier(0.21, 1, 0.32, 1) both;
+}
+
+.animation-delay-500 {
+  animation-delay: 0.5s;
+}
