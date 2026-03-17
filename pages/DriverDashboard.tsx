@@ -6,15 +6,32 @@ import { Card, Button, StatusChip } from '../components/UIComponents';
 import { MapPin, Navigation, Phone, MessageSquare, CheckCircle, ShieldCheck, DollarSign } from 'lucide-react';
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus } = useRide();
+  const { activeRide, updateRideStatus, declineRideRequest } = useRide();
   const [isOnline, setIsOnline] = useState(true);
+  const [isDeclining, setIsDeclining] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Status Handler
   const handleStatusUpdate = async (nextStatus: RideStatus) => {
     try {
+      setError(null);
       await updateRideStatus(nextStatus);
     } catch (error) {
       console.error('Unable to update ride status:', error);
+      setError('Unable to update ride status right now.');
+    }
+  };
+
+  const handleDecline = async () => {
+    try {
+      setError(null);
+      setIsDeclining(true);
+      await declineRideRequest();
+    } catch (error) {
+      console.error('Unable to decline ride request:', error);
+      setError('Unable to decline this request right now.');
+    } finally {
+      setIsDeclining(false);
     }
   };
 
@@ -54,6 +71,12 @@ export const DriverDashboard = () => {
       {/* Job Feed / Active Trip */}
       <div>
         <h3 className="text-lg font-bold text-gray-900 mb-4">Current Status</h3>
+
+        {error && (
+          <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
         {!isOnline ? (
              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
@@ -108,8 +131,10 @@ export const DriverDashboard = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Button variant="secondary" onClick={() => {/* Reject logic */}}>Decline</Button>
-                        <Button onClick={() => handleStatusUpdate(RideStatus.DRIVER_ASSIGNED)}>Accept Ride</Button>
+                        <Button variant="secondary" onClick={() => void handleDecline()} disabled={isDeclining}>
+                            {isDeclining ? 'Declining...' : 'Decline'}
+                        </Button>
+                        <Button onClick={() => handleStatusUpdate(RideStatus.DRIVER_ASSIGNED)} disabled={isDeclining}>Accept Ride</Button>
                     </div>
                 </div>
             </div>

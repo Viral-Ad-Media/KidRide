@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input, Card, Select } from '../components/UIComponents';
-import { MOCK_CHILDREN } from '../constants';
 import { ArrowLeft, MapPin, Search, ShieldCheck, Map } from 'lucide-react';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,7 +14,8 @@ export const BookRide = () => {
   const [step, setStep] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
-  const availableChildren = user?.children && user.children.length > 0 ? user.children : MOCK_CHILDREN;
+  const availableChildren = user?.children || [];
+  const hasChildren = availableChildren.length > 0;
   
   const [formData, setFormData] = useState({
     childId: '',
@@ -25,7 +25,16 @@ export const BookRide = () => {
   });
 
   useEffect(() => {
-    if (!formData.childId && availableChildren.length > 0) {
+    const hasSelectedChild = availableChildren.some((child) => child.id === formData.childId);
+
+    if (availableChildren.length === 0) {
+      if (formData.childId) {
+        setFormData((prev) => ({ ...prev, childId: '' }));
+      }
+      return;
+    }
+
+    if (!hasSelectedChild) {
       setFormData((prev) => ({ ...prev, childId: availableChildren[0].id }));
     }
   }, [availableChildren, formData.childId]);
@@ -38,11 +47,25 @@ export const BookRide = () => {
   }, [activeRide, navigate]);
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-    else void startDriverSearch();
+    if (!hasChildren) {
+      navigate('/add-child');
+      return;
+    }
+
+    if (step < 3) {
+      setStep(step + 1);
+      return;
+    }
+
+    void startDriverSearch();
   };
 
   const startDriverSearch = async () => {
+    if (!formData.childId) {
+      navigate('/add-child');
+      return;
+    }
+
     setIsSearching(true);
     setSearchStatus('Broadcasting to verified drivers...');
 
@@ -138,18 +161,32 @@ export const BookRide = () => {
         {step === 1 && (
             <div className="space-y-6 fade-in">
                 <h3 className="text-lg font-semibold">Who is this ride for?</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {availableChildren.map(child => (
-                        <div 
-                            key={child.id}
-                            onClick={() => setFormData({...formData, childId: child.id})}
-                            className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center gap-3 ${formData.childId === child.id ? 'border-[#3A77FF] bg-blue-50' : 'border-gray-100 bg-white'}`}
-                        >
-                            <img src={child.photoUrl} className="w-16 h-16 rounded-full" />
-                            <span className="font-medium text-sm">{child.name}</span>
+                {hasChildren ? (
+                    <div className="grid grid-cols-2 gap-4">
+                        {availableChildren.map(child => (
+                            <div 
+                                key={child.id}
+                                onClick={() => setFormData({...formData, childId: child.id})}
+                                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center gap-3 ${formData.childId === child.id ? 'border-[#3A77FF] bg-blue-50' : 'border-gray-100 bg-white'}`}
+                            >
+                                <img src={child.photoUrl} className="w-16 h-16 rounded-full" />
+                                <span className="font-medium text-sm">{child.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <Card className="bg-blue-50 border-blue-100">
+                        <div className="space-y-3 text-center">
+                            <h4 className="text-lg font-semibold text-gray-900">Add a child profile first</h4>
+                            <p className="text-sm text-gray-600">
+                                KidRide now books only for real child profiles saved to your account.
+                            </p>
+                            <Button onClick={() => navigate('/add-child')} className="w-full sm:w-auto">
+                                Add Child
+                            </Button>
                         </div>
-                    ))}
-                </div>
+                    </Card>
+                )}
             </div>
         )}
 
@@ -220,7 +257,7 @@ export const BookRide = () => {
 
         <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 md:relative md:border-none md:p-0 md:mt-8">
             <Button onClick={handleNext} fullWidth disabled={isSearching}>
-                {step === 3 ? 'Confirm & Book' : 'Next'}
+                {!hasChildren ? 'Add a Child First' : step === 3 ? 'Confirm & Book' : 'Next'}
             </Button>
         </div>
     </div>

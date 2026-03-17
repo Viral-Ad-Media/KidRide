@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MapPin, Calendar, ArrowRight, Car } from 'lucide-react';
 import { Card, Button, Badge, StatusChip } from '../components/UIComponents';
-import { MOCK_CHILDREN, MOCK_CARPOOLS } from '../constants';
+import { MOCK_CARPOOLS } from '../constants';
 import {  ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 import { useRide } from '../contexts/RideContext';
@@ -22,7 +22,8 @@ export const ParentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeRide } = useRide();
-  const availableChildren = user?.children && user.children.length > 0 ? user.children : MOCK_CHILDREN;
+  const availableChildren = user?.children || [];
+  const hasChildren = availableChildren.length > 0;
 
   return (
     <div className="space-y-8">
@@ -75,11 +76,14 @@ export const ParentDashboard = () => {
           <span className="text-xs font-medium text-gray-500">Add Child</span>
         </div>
         
-        <div className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer" onClick={() => navigate('/book')}>
-          <div className="w-16 h-16 rounded-full bg-[#3A77FF] flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+        <div
+          className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer"
+          onClick={() => navigate(hasChildren ? '/book' : '/add-child')}
+        >
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg ${hasChildren ? 'bg-[#3A77FF] shadow-blue-500/30' : 'bg-gray-300 shadow-gray-300/30'}`}>
             <Car size={28} />
           </div>
-          <span className="text-xs font-medium text-[#3A77FF]">Book Ride</span>
+          <span className={`text-xs font-medium ${hasChildren ? 'text-[#3A77FF]' : 'text-gray-400'}`}>Book Ride</span>
         </div>
 
         {availableChildren.map(child => (
@@ -89,6 +93,22 @@ export const ParentDashboard = () => {
           </div>
         ))}
       </div>
+
+      {!hasChildren && (
+        <Card className="bg-blue-50 border-blue-100">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-bold text-gray-900">Add your first child profile</h3>
+              <p className="text-sm text-gray-600">
+                You’ll need a saved child profile before you can request a ride.
+              </p>
+            </div>
+            <Button onClick={() => navigate('/add-child')} className="sm:w-auto">
+              Add Child
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Usage Chart */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">

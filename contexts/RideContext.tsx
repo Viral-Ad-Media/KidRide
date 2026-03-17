@@ -7,6 +7,7 @@ interface RideContextType {
   activeRide: Ride | null;
   requestRide: (ride: Ride) => Promise<void>;
   updateRideStatus: (status: RideStatus) => Promise<void>;
+  declineRideRequest: () => Promise<void>;
   cancelRide: () => Promise<void>;
   refreshActiveRide: () => Promise<void>;
 }
@@ -149,8 +150,35 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveRide(null);
   };
 
+  const declineRideRequest = async () => {
+    if (!activeRide) {
+      return;
+    }
+
+    const token = getStoredToken();
+    if (!token) {
+      throw new Error('You must be logged in to decline a ride request.');
+    }
+
+    const decliningOpenRide =
+      activeRide.status === RideStatus.SEARCHING_DRIVER ||
+      activeRide.status === RideStatus.REQUESTED;
+
+    if (!decliningOpenRide) {
+      throw new Error('Only open ride requests can be declined.');
+    }
+
+    await apiRequest(`/rides/${activeRide.id}/decline`, {
+      method: 'PUT',
+      token
+    });
+
+    setActiveRide(null);
+    await refreshActiveRide();
+  };
+
   return (
-    <RideContext.Provider value={{ activeRide, requestRide, updateRideStatus, cancelRide, refreshActiveRide }}>
+    <RideContext.Provider value={{ activeRide, requestRide, updateRideStatus, declineRideRequest, cancelRide, refreshActiveRide }}>
       {children}
     </RideContext.Provider>
   );

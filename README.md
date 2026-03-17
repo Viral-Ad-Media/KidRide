@@ -84,8 +84,9 @@ If `VITE_API_BASE_URL` does not end with `/api`, the app appends it automaticall
 ## Ride Behavior
 - `RideContext` polls active ride state from backend.
 - Parent ride requests call `POST /api/rides/request`.
-- Driver accept and status updates call:
+- Driver request actions and status updates call:
   - `PUT /api/rides/:id/accept`
+  - `PUT /api/rides/:id/decline`
   - `PUT /api/rides/:id/status`
   - `PUT /api/rides/:id/cancel`
 
