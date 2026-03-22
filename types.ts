@@ -29,6 +29,13 @@ export interface Child {
   notes?: string;
 }
 
+export interface VehicleDetails {
+  make?: string;
+  model?: string;
+  color?: string;
+  plate?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -41,16 +48,19 @@ export interface User {
   children?: Child[];
 }
 
+export interface AssignedDriver {
+  id: string;
+  name: string;
+  photoUrl?: string;
+  isVerifiedDriver?: boolean;
+  vehicle?: VehicleDetails;
+}
+
 export interface Driver {
   id: string;
   name: string;
   photoUrl: string;
-  vehicle: {
-    make: string;
-    model: string;
-    color: string;
-    plate: string;
-  };
+  vehicle: VehicleDetails;
   rating: number;
   isVerified: boolean;
   isGoldVerified?: boolean; // Top tier
@@ -61,6 +71,7 @@ export interface Ride {
   id: string;
   childId: string;
   driverId?: string;
+  driver?: AssignedDriver;
   pickupLocation: string;
   dropoffLocation: string;
   pickupTime: string;

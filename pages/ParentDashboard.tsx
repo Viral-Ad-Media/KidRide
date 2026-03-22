@@ -1,29 +1,74 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
-import { ArrowRight, Calendar, Car, Plus, ShieldCheck, Sparkles } from 'lucide-react';
-import { Badge, Button, Card, StatusChip } from '../components/UIComponents';
-import { MOCK_CARPOOLS } from '../constants';
+import { ArrowRight, Car, Plus, ShieldCheck, Sparkles } from 'lucide-react';
+import { Button, Card, StatusChip } from '../components/UIComponents';
 import { useAuth } from '../contexts/AuthContext';
 import { useRide } from '../contexts/RideContext';
+import { fetchUserRides, getStoredToken } from '../services/api';
+import { buildWeeklyRideCounts } from '../utils/rideData';
 
-const data = [
-  { name: 'Mon', rides: 2 },
-  { name: 'Tue', rides: 1 },
-  { name: 'Wed', rides: 3 },
-  { name: 'Thu', rides: 2 },
-  { name: 'Fri', rides: 4 },
-  { name: 'Sat', rides: 5 },
-  { name: 'Sun', rides: 2 }
-];
+const emptyWeeklyActivity = buildWeeklyRideCounts([]);
+
+const childInitials = (name: string) => (
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'C'
+);
 
 export const ParentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeRide } = useRide();
+  const [activityData, setActivityData] = useState(emptyWeeklyActivity);
+  const [isActivityLoading, setIsActivityLoading] = useState(true);
+
   const availableChildren = user?.children || [];
   const hasChildren = availableChildren.length > 0;
   const primaryActionPath = hasChildren ? '/book' : '/add-child';
+  const hasRecordedActivity = activityData.some((entry) => entry.rides > 0);
+  const firstName = user?.name.split(' ')[0] || 'Parent';
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) {
+      setActivityData(emptyWeeklyActivity);
+      setIsActivityLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadActivity = async () => {
+      setIsActivityLoading(true);
+
+      try {
+        const rides = await fetchUserRides('all', token, 100);
+        if (!isMounted) {
+          return;
+        }
+
+        setActivityData(buildWeeklyRideCounts(rides));
+      } catch {
+        if (isMounted) {
+          setActivityData(emptyWeeklyActivity);
+        }
+      } finally {
+        if (isMounted) {
+          setIsActivityLoading(false);
+        }
+      }
+    };
+
+    void loadActivity();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   return (
     <div className="space-y-8">
@@ -32,7 +77,7 @@ export const ParentDashboard = () => {
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/88">Parent Workspace</p>
             <h2 className="mt-3 text-4xl font-bold text-balance sm:text-5xl">
-              Good morning, {user?.name.split(' ')[0] || 'Parent'}.
+              Good morning, {firstName}.
             </h2>
             <p className="mt-4 max-w-xl text-sm leading-7 text-white/78 sm:text-base">
               Keep child profiles, ride activity, and quick actions in one place with a layout that works just as well on a laptop as it does on your phone.
@@ -54,7 +99,9 @@ export const ParentDashboard = () => {
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <StatusChip status={activeRide.status} />
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65">Trip Code {activeRide.tripCode}</span>
+                {activeRide.tripCode && (
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65">Trip Code {activeRide.tripCode}</span>
+                )}
               </div>
               <p className="mt-4 text-xl font-bold text-white">Live ride in progress</p>
               <p className="mt-2 text-sm text-white/75">
@@ -90,11 +137,17 @@ export const ParentDashboard = () => {
                 {availableChildren.map((child) => (
                   <div key={child.id} className="rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
                     <div className="flex items-center gap-4">
-                      <img
-                        src={child.photoUrl}
-                        alt={child.name}
-                        className="h-16 w-16 rounded-[22px] object-cover shadow-[0_10px_24px_rgba(15,23,42,0.12)]"
-                      />
+                      {child.photoUrl ? (
+                        <img
+                          src={child.photoUrl}
+                          alt={child.name}
+                          className="h-16 w-16 rounded-[22px] object-cover shadow-[0_10px_24px_rgba(15,23,42,0.12)]"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-lg font-semibold text-[#1d6fff] shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+                          {childInitials(child.name)}
+                        </div>
+                      )}
                       <div>
                         <p className="text-lg font-semibold text-slate-950">{child.name}</p>
                         <p className="mt-1 text-sm text-slate-500">{child.age} years old</p>
@@ -128,40 +181,21 @@ export const ParentDashboard = () => {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Community</p>
-                <h3 className="mt-2 text-2xl font-bold text-slate-950">Suggested Carpools</h3>
+                <h3 className="mt-2 text-2xl font-bold text-slate-950">Carpools</h3>
               </div>
               <button onClick={() => navigate('/carpools')} className="text-sm font-semibold text-[#1d6fff]">
-                See All
+                Open Board
               </button>
             </div>
 
-            <div className="mt-6 space-y-4">
-              {MOCK_CARPOOLS.slice(0, 2).map((offer) => (
-                <Card key={offer.id} className="bg-slate-50/90" onClick={() => navigate('/carpools')}>
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-4">
-                        <img src={offer.parentPhoto} alt={offer.parentName} className="h-14 w-14 rounded-[20px] object-cover" />
-                        <div>
-                          <p className="font-semibold text-slate-950">{offer.parentName}</p>
-                          <p className="mt-1 text-sm text-slate-500">Going to {offer.eventName}</p>
-                        </div>
-                      </div>
-                      <p className="mt-4 text-sm text-slate-600">
-                        {offer.fromLocation} <ArrowRight size={14} className="mx-1 inline" /> {offer.toLocation}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500">{offer.departureTime}</p>
-                    </div>
-                    <div className="flex items-center justify-between gap-4 lg:flex-col lg:items-end">
-                      <Badge type="team" />
-                      <div className="text-right">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{offer.seatsAvailable} seats left</p>
-                        <p className="mt-2 text-xl font-bold text-[#1d6fff]">${offer.pricePerSeat}/seat</p>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+            <div className="mt-6 rounded-[26px] border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center">
+              <h4 className="text-xl font-bold text-slate-950">No live carpool offers yet</h4>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-500">
+                Community carpools will appear here once verified families publish real ride offers.
+              </p>
+              <Button variant="secondary" onClick={() => navigate('/carpools')} className="mt-5 sm:w-auto">
+                View Carpools
+              </Button>
             </div>
           </Card>
         </div>
@@ -170,20 +204,32 @@ export const ParentDashboard = () => {
           <Card>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Activity</p>
             <h3 className="mt-2 text-2xl font-bold text-slate-950">Ride activity this week</h3>
-            <div className="mt-6 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
-                  <defs>
-                    <linearGradient id="colorRides" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1d6fff" stopOpacity={0.42} />
-                      <stop offset="95%" stopColor="#1d6fff" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Tooltip contentStyle={{ borderRadius: '18px', border: '1px solid rgba(226,232,240,0.9)', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }} />
-                  <Area type="monotone" dataKey="rides" stroke="#1d6fff" strokeWidth={3} fillOpacity={1} fill="url(#colorRides)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+
+            {isActivityLoading ? (
+              <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-12 text-center text-sm text-slate-500">
+                Loading ride activity...
+              </div>
+            ) : !hasRecordedActivity ? (
+              <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-12 text-center">
+                <p className="text-base font-semibold text-slate-950">No ride activity recorded this week</p>
+                <p className="mt-2 text-sm text-slate-500">Booked and completed rides will start filling this chart automatically.</p>
+              </div>
+            ) : (
+              <div className="mt-6 h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={activityData}>
+                    <defs>
+                      <linearGradient id="colorRides" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#1d6fff" stopOpacity={0.42} />
+                        <stop offset="95%" stopColor="#1d6fff" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip contentStyle={{ borderRadius: '18px', border: '1px solid rgba(226,232,240,0.9)', boxShadow: '0 18px 40px rgba(15,23,42,0.08)' }} />
+                    <Area type="monotone" dataKey="rides" stroke="#1d6fff" strokeWidth={3} fillOpacity={1} fill="url(#colorRides)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </Card>
 
           <Card className="overflow-hidden bg-[linear-gradient(145deg,#fff7ed_0%,#ffffff_58%,#eff6ff_100%)]">

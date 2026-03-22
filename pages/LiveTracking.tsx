@@ -1,110 +1,131 @@
-
 import React, { useState, useEffect } from 'react';
 import { RideMap } from '../components/RideMap';
 import { Card, Button, StatusChip, Badge } from '../components/UIComponents';
-import { Phone, MessageSquare, ShieldAlert, X } from 'lucide-react';
+import { ShieldAlert, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_DRIVERS } from '../constants';
 import { useRide } from '../contexts/RideContext';
 import { RideStatus } from '../types';
+
+const driverInitials = (name: string) => (
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'DR'
+);
+
+const formatVehicle = (vehicle?: { color?: string; make?: string; model?: string; plate?: string }) => {
+  if (!vehicle) {
+    return null;
+  }
+
+  const summary = [vehicle.color, vehicle.make, vehicle.model].filter(Boolean).join(' ');
+  return {
+    summary,
+    plate: vehicle.plate
+  };
+};
 
 export const LiveTracking = () => {
   const navigate = useNavigate();
   const { activeRide } = useRide();
   const [localStatus, setLocalStatus] = useState<RideStatus>(RideStatus.DRIVER_ASSIGNED);
-  
-  // Driver Info (Simulated Assigned Driver)
-  const driver = MOCK_DRIVERS[0];
-  const tripCode = activeRide?.tripCode || "4829";
-  const safeWord = activeRide?.safeWord || "Lions";
 
-  // Sync active ride status to local component
   useEffect(() => {
     if (activeRide) {
-        setLocalStatus(activeRide.status);
+      setLocalStatus(activeRide.status);
     }
   }, [activeRide]);
 
   if (!activeRide) {
-      // Fallback for demo direct access without booking
-      return (
-        <div className="h-screen flex items-center justify-center bg-gray-100 flex-col gap-4">
-             <p className="text-gray-500">No active ride found.</p>
-             <Button onClick={() => navigate('/book')}>Book a Ride</Button>
-        </div>
-      );
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-100">
+        <p className="text-gray-500">No active ride found.</p>
+        <Button onClick={() => navigate('/book')}>Book a Ride</Button>
+      </div>
+    );
   }
 
+  const driver = activeRide.driver;
+  const vehicle = formatVehicle(driver?.vehicle);
+  const tripCode = activeRide.tripCode || 'Pending';
+  const safeWord = activeRide.safeWord || 'Pending';
+
   return (
-    <div className="h-[calc(100vh-80px)] md:h-[600px] flex flex-col relative bg-gray-100">
-      {/* Map Area */}
-      <div className="flex-1 relative">
-        <button 
-            onClick={() => navigate('/dashboard')}
-            className="absolute top-4 left-4 z-10 bg-white p-2 rounded-full shadow-md"
+    <div className="relative flex h-[calc(100vh-80px)] flex-col bg-gray-100 md:h-[600px]">
+      <div className="relative flex-1">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="absolute left-4 top-4 z-10 rounded-full bg-white p-2 shadow-md"
         >
-            <X size={24} />
+          <X size={24} />
         </button>
         <RideMap status={localStatus} />
       </div>
 
-      {/* Bottom Sheet */}
-      <div className="bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] p-6 animate-slide-up relative z-10 -mt-6">
-        {/* Drag Handle */}
-        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
+      <div className="relative z-10 -mt-6 rounded-t-3xl bg-white p-6 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] animate-slide-up">
+        <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-gray-300" />
 
-        {/* Status Header */}
-        <div className="flex justify-between items-center mb-6">
-            <StatusChip status={localStatus} />
-            <div className="text-right">
-                <p className="text-xs text-gray-500">Trip Code</p>
-                <p className="text-xl font-mono font-bold text-gray-900 tracking-widest">{tripCode}</p>
-            </div>
+        <div className="mb-6 flex items-center justify-between">
+          <StatusChip status={localStatus} />
+          <div className="text-right">
+            <p className="text-xs text-gray-500">Trip Code</p>
+            <p className="font-mono text-xl font-bold tracking-widest text-gray-900">{tripCode}</p>
+          </div>
         </div>
 
-        {/* Driver Card */}
-        <div className="flex items-center gap-4 mb-6">
-            <div className="relative">
-                <img src={driver.photoUrl} className="w-16 h-16 rounded-full border-2 border-white shadow-md object-cover" />
-                <div className="absolute -bottom-1 -right-1 bg-white rounded-lg p-0.5">
-                     <Badge type={driver.isGoldVerified ? 'gold' : 'verified'} />
-                </div>
+        {driver ? (
+          <Card className="mb-6 border border-slate-100 bg-slate-50/70">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                {driver.photoUrl ? (
+                  <img src={driver.photoUrl} alt={driver.name} className="h-16 w-16 rounded-full border-2 border-white object-cover shadow-md" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white bg-blue-50 text-sm font-semibold text-[#3A77FF] shadow-md">
+                    {driverInitials(driver.name)}
+                  </div>
+                )}
+                {driver.isVerifiedDriver && (
+                  <div className="absolute -bottom-1 -right-1 rounded-lg bg-white p-0.5">
+                    <Badge type="verified" />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-bold">{driver.name}</h3>
+                {vehicle?.summary && <p className="text-sm text-gray-500">{vehicle.summary}</p>}
+                {vehicle?.plate && (
+                  <div className="mt-2 inline-flex rounded bg-gray-100 px-2 py-0.5 text-xs font-mono font-bold">
+                    {vehicle.plate}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex-1">
-                <h3 className="font-bold text-lg">{driver.name}</h3>
-                <p className="text-sm text-gray-500">{driver.vehicle.color} {driver.vehicle.make} {driver.vehicle.model}</p>
-                <div className="flex items-center gap-2 mt-1">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono font-bold">{driver.vehicle.plate}</span>
-                    <span className="text-xs text-gray-400">★ {driver.rating}</span>
-                </div>
+          </Card>
+        ) : (
+          <div className="mb-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+            Driver details will appear here once a driver accepts the trip.
+          </div>
+        )}
+
+        <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-1 shrink-0 text-[#3A77FF]" size={20} />
+            <div>
+              <p className="text-sm font-bold text-[#3A77FF]">Safety Check</p>
+              <p className="mt-1 text-sm text-blue-800">
+                Driver must say the safe word:
+                <span className="ml-2 rounded border border-blue-200 bg-white px-2 py-0.5 font-bold">{safeWord}</span>
+              </p>
             </div>
-            <div className="flex flex-col gap-2">
-                <button className="p-3 bg-green-50 text-green-600 rounded-full hover:bg-green-100">
-                    <Phone size={20} />
-                </button>
-                <button className="p-3 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">
-                    <MessageSquare size={20} />
-                </button>
-            </div>
+          </div>
         </div>
 
-        {/* Safe Word / Safety Info */}
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 mb-6">
-            <div className="flex items-start gap-3">
-                <ShieldAlert className="text-[#3A77FF] mt-1 shrink-0" size={20} />
-                <div>
-                    <p className="text-sm font-bold text-[#3A77FF]">Safety Check</p>
-                    <p className="text-sm text-blue-800 mt-1">
-                        Driver must say the Safe Word: <span className="font-bold bg-white px-2 py-0.5 rounded border border-blue-200">"{safeWord}"</span>
-                    </p>
-                </div>
-            </div>
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+          Direct driver contact is not configured in this build yet.
         </div>
-
-        {/* Actions */}
-        <Button variant="destructive" className="w-full bg-red-50 text-red-500 hover:bg-red-100 border-none">
-            Report Safety Issue
-        </Button>
       </div>
     </div>
   );

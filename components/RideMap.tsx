@@ -76,7 +76,7 @@ export const RideMap: React.FC<RideMapProps> = ({ status }) => {
       <div 
         className="absolute transition-all duration-300 ease-linear shadow-xl bg-white p-1.5 rounded-full"
         style={{
-          // Simple linear interpolation approximation for demo
+          // Simple linear interpolation approximation for the route animation
           // In a real app, we'd calculate point at length on SVG path
           left: `${progress}%`,
           top: `${100 - progress * 0.8}%`, // Rough diagonal movement

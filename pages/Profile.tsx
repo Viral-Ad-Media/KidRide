@@ -4,6 +4,15 @@ import { Button } from '../components/UIComponents';
 import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, Plus, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
+const userInitials = (name: string | undefined) => (
+  name
+    ?.split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'KR'
+);
+
 export const NotificationSettings = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState(true);
@@ -70,20 +79,19 @@ export const PaymentMethods = () => {
         </div>
 
         <div className="space-y-4">
-             <div className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-600">VISA</div>
-                    <div>
-                        <p className="font-bold text-gray-900">Visa ending in 4242</p>
-                        <p className="text-xs text-gray-500">Expires 12/25</p>
-                    </div>
+             <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-200 text-center shadow-sm">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-[#3A77FF]">
+                    <CreditCard size={24} />
                 </div>
-                <div className="w-4 h-4 rounded-full border-4 border-[#3A77FF]"></div>
+                <h3 className="mt-4 font-bold text-gray-900">No payment methods saved</h3>
+                <p className="mt-2 text-sm text-gray-500">
+                    Payment methods have not been added to this account yet.
+                </p>
              </div>
 
-             <button className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 font-medium flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-                <Plus size={20} /> Add Payment Method
-             </button>
+             <div className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 font-medium flex items-center justify-center gap-2">
+                <Plus size={20} /> Payment method management is not available yet
+             </div>
         </div>
      </div>
   );
@@ -123,7 +131,7 @@ export const Profile = () => {
         {/* User Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-                {user?.photoUrl ? <img src={user.photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-[#3A77FF] font-bold text-xl">AJ</span>}
+                {user?.photoUrl ? <img src={user.photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-[#3A77FF] font-bold text-xl">{userInitials(user?.name)}</span>}
             </div>
             <div>
                 <h3 className="font-bold text-lg">{user?.name}</h3>

@@ -104,7 +104,7 @@ export const Welcome = () => {
             <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl">
               <p className="text-sm font-semibold text-white">Parents</p>
               <p className="mt-2 text-sm text-white/75">
-                Sign up, add your children, and request rides without relying on seeded demo credentials.
+                Sign up, add your children, and request rides from your live account.
               </p>
             </div>
             <div className="rounded-3xl border border-white/15 bg-slate-950/20 p-5 backdrop-blur-xl">

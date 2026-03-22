@@ -1,14 +1,63 @@
-import React, { useState } from 'react';
-import { CheckCircle, DollarSign, MapPin, MessageSquare, Navigation, Phone, ShieldCheck, TimerReset } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
 import { Button, Card, StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
+import { fetchUserRides, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
+import { formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
+
+const humanizeStatus = (status: string) => status.replace(/_/g, ' ');
 
 export const DriverDashboard = () => {
   const { activeRide, updateRideStatus, declineRideRequest } = useRide();
   const [isOnline, setIsOnline] = useState(true);
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [isMetricsLoading, setIsMetricsLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) {
+      setCompletedCount(0);
+      setTotalEarnings(0);
+      setIsMetricsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMetrics = async () => {
+      setIsMetricsLoading(true);
+
+      try {
+        const rides = await fetchUserRides('past', token, 100);
+        if (!isMounted) {
+          return;
+        }
+
+        const summary = getCompletedRideSummary(rides);
+        setCompletedCount(summary.completedCount);
+        setTotalEarnings(summary.totalEarnings);
+      } catch {
+        if (isMounted) {
+          setCompletedCount(0);
+          setTotalEarnings(0);
+        }
+      } finally {
+        if (isMounted) {
+          setIsMetricsLoading(false);
+        }
+      }
+    };
+
+    void loadMetrics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleStatusUpdate = async (nextStatus: RideStatus) => {
     try {
@@ -51,19 +100,19 @@ export const DriverDashboard = () => {
                 <p className="text-sm font-semibold text-white">Availability</p>
                 <p className="mt-1 text-xs text-white/60">{isOnline ? 'You are visible to nearby ride requests.' : 'Go online to receive new requests.'}</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={isOnline} onChange={() => setIsOnline(!isOnline)} className="sr-only peer" />
-                <div className="h-7 w-12 rounded-full bg-white/25 transition peer-checked:bg-sky-300/70 peer-checked:after:translate-x-5 after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all" />
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input type="checkbox" checked={isOnline} onChange={() => setIsOnline(!isOnline)} className="peer sr-only" />
+                <div className="after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all h-7 w-12 rounded-full bg-white/25 transition peer-checked:bg-sky-300/70 peer-checked:after:translate-x-5" />
               </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-[22px] bg-white/10 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Today</p>
-                <p className="mt-3 text-2xl font-bold text-white">$84.50</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Completed Earnings</p>
+                <p className="mt-3 text-2xl font-bold text-white">{isMetricsLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</p>
               </div>
               <div className="rounded-[22px] bg-white/10 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Trips</p>
-                <p className="mt-3 text-2xl font-bold text-white">5</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Completed Trips</p>
+                <p className="mt-3 text-2xl font-bold text-white">{isMetricsLoading ? '--' : completedCount}</p>
               </div>
             </div>
           </div>
@@ -106,16 +155,18 @@ export const DriverDashboard = () => {
                     <ShieldCheck size={14} />
                     New Request
                   </div>
-                  <h3 className="mt-4 text-3xl font-bold text-slate-950">${activeRide.price.toFixed(2)}</h3>
-                  <p className="mt-2 text-sm text-slate-500">Estimated earnings for this ride</p>
+                  <h3 className="mt-4 text-3xl font-bold text-slate-950">{formatRidePrice(activeRide.price)}</h3>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {activeRide.price > 0 ? 'Estimated earnings for this ride' : 'Pricing has not been published for this ride yet.'}
+                  </p>
                   <div className="mt-5 inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
-                    {activeRide.serviceType.replace(/_/g, ' ')}
+                    {humanizeStatus(activeRide.serviceType)}
                   </div>
                 </div>
 
                 <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup ETA</p>
-                  <p className="mt-3 text-2xl font-bold text-slate-950">2 min</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
+                  <p className="mt-3 text-lg font-bold text-slate-950">{activeRide.pickupTime || 'Not scheduled'}</p>
                 </div>
               </div>
 
@@ -157,22 +208,18 @@ export const DriverDashboard = () => {
                   </p>
                 </div>
 
-                <div className="flex gap-2">
-                  <button className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-100 text-slate-500 transition hover:bg-slate-200">
-                    <Phone size={18} />
-                  </button>
-                  <button className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-100 text-slate-500 transition hover:bg-slate-200">
-                    <MessageSquare size={18} />
-                  </button>
+                <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
+                  <p className="mt-3 text-lg font-bold text-slate-950">{activeRide.pickupTime || 'Not scheduled'}</p>
                 </div>
               </div>
 
               <div className="mt-8 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-[26px] bg-slate-950 p-5 text-white">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Trip Code</p>
-                  <p className="mt-3 text-3xl font-bold">{activeRide.tripCode}</p>
+                  <p className="mt-3 text-3xl font-bold">{activeRide.tripCode || 'Pending'}</p>
                   <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Safe Word</p>
-                  <p className="mt-3 text-2xl font-bold text-sky-200">"{activeRide.safeWord}"</p>
+                  <p className="mt-3 text-2xl font-bold text-sky-200">"{activeRide.safeWord || 'Pending'}"</p>
                 </div>
 
                 <div className="rounded-[26px] bg-slate-50/90 p-5">
@@ -217,19 +264,15 @@ export const DriverDashboard = () => {
           <Card>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
               <div className="rounded-[24px] bg-blue-50 p-5">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-white text-[#1d6fff] shadow-[0_10px_24px_rgba(29,111,255,0.12)]">
-                  <DollarSign size={20} />
-                </div>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Today</p>
-                <p className="mt-2 text-3xl font-bold text-slate-950">$84.50</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Availability</p>
+                <p className="mt-2 text-3xl font-bold text-slate-950">{isOnline ? 'Online' : 'Offline'}</p>
               </div>
 
               <div className="rounded-[24px] bg-amber-50 p-5">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-white text-amber-600 shadow-[0_10px_24px_rgba(245,158,11,0.16)]">
-                  <Navigation size={20} />
-                </div>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Trips</p>
-                <p className="mt-2 text-3xl font-bold text-slate-950">5</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current Ride</p>
+                <p className="mt-2 text-2xl font-bold text-slate-950">
+                  {activeRide ? humanizeStatus(activeRide.status) : 'No active ride'}
+                </p>
               </div>
             </div>
           </Card>

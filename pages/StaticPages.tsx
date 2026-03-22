@@ -167,31 +167,31 @@ export const ContactPage = () => (
     icon={Mail}
     eyebrow="Contact"
     title="Reach the KidRide team."
-    description="Use these contact paths for support questions, onboarding issues, partnership inquiries, or policy requests."
+    description="Public support channels are still being finalized, so this page reflects only the contact paths that are actually available in this build."
   >
     <div className="grid gap-4 sm:grid-cols-2">
-      <ContactCard icon={Mail} title="General Support">
-        <p>support@kidride.app</p>
-        <p className="mt-1">Response target: within one business day.</p>
+      <ContactCard icon={Mail} title="Account Support">
+        <p>Direct support email is not published yet.</p>
+        <p className="mt-1">Use the Help page and in-app guidance after sign-in for current support instructions.</p>
       </ContactCard>
-      <ContactCard icon={PhoneCall} title="Urgent Ride Issues">
-        <p>+1 (800) 555-0147</p>
-        <p className="mt-1">Use for time-sensitive ride coordination concerns.</p>
+      <ContactCard icon={PhoneCall} title="Urgent Help">
+        <p>Emergency dispatch is not handled inside this app build.</p>
+        <p className="mt-1">Call local emergency services directly if you need immediate help.</p>
       </ContactCard>
-      <ContactCard icon={MapPin} title="Mailing Address">
-        <p>KidRide Operations</p>
-        <p>1450 Lakeview Commons</p>
-        <p>Austin, TX 78701</p>
+      <ContactCard icon={MapPin} title="Operations">
+        <p>Mailing details are not published yet.</p>
+        <p className="mt-1">Check back once operations contact information is configured.</p>
       </ContactCard>
-      <ContactCard icon={Clock3} title="Support Hours">
-        <p>Monday through Friday</p>
-        <p>8:00 AM to 6:00 PM Central Time</p>
+      <ContactCard icon={Clock3} title="Response Timing">
+        <p>Response targets have not been announced for this build.</p>
+        <p className="mt-1">Support availability may vary while channels are still being set up.</p>
       </ContactCard>
     </div>
 
-    <Section title="When to contact support">
-      <p>Contact support if you cannot access your account, if driver application status looks incorrect, or if ride data in the interface appears out of sync with the backend.</p>
-      <p>For production deployment questions, include your frontend origin and API base URL so CORS or environment issues can be diagnosed faster.</p>
+    <Section title="How to get help right now">
+      <p>If you cannot access your account, start from the Help page and confirm the frontend can reach the configured backend API.</p>
+      <p>For urgent safety concerns, do not wait on in-app tools. Use local emergency services and your own emergency contacts directly.</p>
+      <p>For deployment troubleshooting, include your frontend origin and API base URL so environment issues can be diagnosed faster.</p>
     </Section>
   </PublicPageShell>
 );

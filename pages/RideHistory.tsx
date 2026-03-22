@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRide } from '../contexts/RideContext';
 import { Button, Card, StatusChip } from '../components/UIComponents';
-import { apiRequest, getStoredToken, mapRide } from '../services/api';
+import { fetchUserRides, getStoredToken } from '../services/api';
 import { Ride } from '../types';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin } from 'lucide-react';
+import { formatRidePrice } from '../utils/rideData';
 
 export const RideHistory = () => {
   const navigate = useNavigate();
@@ -34,12 +35,11 @@ export const RideHistory = () => {
       setError(null);
 
       try {
-        const response = await apiRequest<unknown[]>(`/rides?scope=${scope}&limit=20`, { token });
+        const mappedRides = await fetchUserRides(scope, token, 20);
         if (!isMounted) {
           return;
         }
 
-        const mappedRides = Array.isArray(response) ? response.map(mapRide) : [];
         if (scope === 'upcoming') {
           setUpcomingRides(mappedRides);
         } else {
@@ -158,7 +158,7 @@ export const RideHistory = () => {
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                     <StatusChip status={ride.status} />
-                    <span className="font-bold text-gray-900">${ride.price.toFixed(2)}</span>
+                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
                   </div>
                 </Card>
               ))
@@ -198,7 +198,7 @@ export const RideHistory = () => {
                   </div>
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-xs text-gray-600">{ride.serviceType.replace(/_/g, ' ')}</span>
-                    <span className="font-bold text-gray-900">${ride.price.toFixed(2)}</span>
+                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
                   </div>
                 </Card>
               ))

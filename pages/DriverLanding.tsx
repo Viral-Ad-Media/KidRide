@@ -85,7 +85,7 @@ export const DriverLanding = () => {
             <div>
                 <h3 className="font-bold text-gray-900">Safety First Community</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                    We verify every parent and driver. Our support team monitors rides 24/7.
+                    We verify every parent and driver and keep safety guidance visible throughout the product.
                 </p>
             </div>
         </div>

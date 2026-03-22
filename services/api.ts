@@ -1,4 +1,4 @@
-import { Child, Ride, RideStatus, ServiceType, User, UserRole } from '../types';
+import { AssignedDriver, Child, Ride, RideStatus, ServiceType, User, UserRole, VehicleDetails } from '../types';
 
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const DEPLOYED_API_BASE_URL = 'https://kidride-backend.vercel.app/api';
@@ -7,6 +7,8 @@ const TOKEN_STORAGE_KEY = 'kidride_token';
 const validRideStatuses = new Set<string>(Object.values(RideStatus));
 const validServiceTypes = new Set<string>(Object.values(ServiceType));
 const validRoles = new Set<string>(Object.values(UserRole));
+
+export type RideScope = 'all' | 'active' | 'upcoming' | 'past';
 
 export class ApiError extends Error {
   status: number;
@@ -152,11 +154,56 @@ export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {
   return payload as T;
 };
 
+export const fetchUserRides = async (
+  scope: RideScope,
+  token: string,
+  limit = 50
+): Promise<Ride[]> => {
+  const response = await apiRequest<unknown[]>(`/rides?scope=${scope}&limit=${limit}`, { token });
+  return Array.isArray(response) ? response.map(mapRide) : [];
+};
+
 const normalizeRole = (role: unknown): UserRole => {
   if (typeof role === 'string' && validRoles.has(role)) {
     return role as UserRole;
   }
   return UserRole.PARENT;
+};
+
+const mapVehicle = (raw: unknown): VehicleDetails | undefined => {
+  if (!raw || typeof raw !== 'object') {
+    return undefined;
+  }
+
+  const vehicle = raw as Record<string, unknown>;
+  const mappedVehicle: VehicleDetails = {
+    make: typeof vehicle.make === 'string' ? vehicle.make : undefined,
+    model: typeof vehicle.model === 'string' ? vehicle.model : undefined,
+    color: typeof vehicle.color === 'string' ? vehicle.color : undefined,
+    plate: typeof vehicle.plate === 'string' ? vehicle.plate : undefined
+  };
+
+  return Object.values(mappedVehicle).some(Boolean) ? mappedVehicle : undefined;
+};
+
+const mapAssignedDriver = (raw: unknown): AssignedDriver | undefined => {
+  if (!raw || typeof raw !== 'object') {
+    return undefined;
+  }
+
+  const driver = raw as Record<string, unknown>;
+  const driverId = driver.id || driver._id;
+  if (!driverId) {
+    return undefined;
+  }
+
+  return {
+    id: String(driverId),
+    name: typeof driver.name === 'string' && driver.name.trim() ? driver.name : 'Assigned driver',
+    photoUrl: typeof driver.photoUrl === 'string' ? driver.photoUrl : undefined,
+    isVerifiedDriver: Boolean(driver.isVerifiedDriver),
+    vehicle: mapVehicle(driver.vehicle)
+  };
 };
 
 export const mapChild = (raw: unknown): Child => {
@@ -227,6 +274,7 @@ export const mapRide = (raw: unknown): Ride => {
     : rawDriver?._id
       ? String(rawDriver._id)
       : undefined;
+  const driver = typeof rawDriver === 'string' ? undefined : mapAssignedDriver(rawDriver);
   const childId = typeof rawChild === 'string'
     ? rawChild
     : rawChild?._id
@@ -237,6 +285,7 @@ export const mapRide = (raw: unknown): Ride => {
     id: rideId ? String(rideId) : `ride-${Date.now()}`,
     childId,
     driverId,
+    driver,
     pickupLocation: typeof ride.pickupLocation === 'string' ? ride.pickupLocation : '',
     dropoffLocation: typeof ride.dropoffLocation === 'string' ? ride.dropoffLocation : '',
     pickupTime: formatPickupTime(ride.pickupTime),
