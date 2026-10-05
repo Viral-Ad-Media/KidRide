@@ -67,7 +67,15 @@ export interface Driver {
   isTeamParent?: boolean; // Parent driver
 }
 
+export interface DriverLocation {
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  recordedAt: string;
+}
+
 export interface Ride {
+  driverLocation?: DriverLocation;
   id: string;
   childId: string;
   driverId?: string;

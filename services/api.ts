@@ -128,7 +128,7 @@ export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {
     }
   }
 
-  const response = await fetch(url, init);
+  const response = await fetch(url, { ...init, signal: init.signal || AbortSignal.timeout(20000) });
   const text = await response.text();
 
   let payload: unknown = null;
@@ -288,7 +288,8 @@ export const mapRide = (raw: unknown): Ride => {
     driver,
     pickupLocation: typeof ride.pickupLocation === 'string' ? ride.pickupLocation : '',
     dropoffLocation: typeof ride.dropoffLocation === 'string' ? ride.dropoffLocation : '',
-    pickupTime: formatPickupTime(ride.pickupTime),
+    pickupTime: typeof ride.pickupTime === 'string' ? ride.pickupTime : '',
+    driverLocation: typeof ride.driverLocation === 'object' && ride.driverLocation !== null ? ride.driverLocation as Ride['driverLocation'] : undefined,
     status: validRideStatuses.has(rawStatus) ? (rawStatus as RideStatus) : RideStatus.REQUESTED,
     price: typeof ride.price === 'number' ? ride.price : Number(ride.price || 0),
     tripCode: typeof ride.tripCode === 'string' ? ride.tripCode : '',

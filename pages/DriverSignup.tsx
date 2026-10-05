@@ -4,6 +4,7 @@ import { Button, Input, FileUpload, CameraCapture, VerificationPhotos } from '..
 import { ArrowLeft, Car, ShieldCheck, CheckCircle, AlertCircle, Home } from 'lucide-react';
 import { getDefaultRouteForUser, useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../services/api';
+import { uploadVerification } from '../services/verification';
 import { UserRole } from '../types';
 
 export const DriverSignup = () => {
@@ -19,7 +20,6 @@ export const DriverSignup = () => {
     fullName: '',
     email: '',
     phone: '',
-    ssn: '',
     password: '',
     make: '',
     model: '',
@@ -47,7 +47,6 @@ export const DriverSignup = () => {
 
   const isStep1Valid =
     formData.phone.trim() !== '' &&
-    formData.ssn.trim() !== '' &&
     (!requiresAccountCreation ||
       (
         formData.fullName.trim() !== '' &&
@@ -115,7 +114,11 @@ export const DriverSignup = () => {
         });
       }
 
+      const documents: Record<string, string> = {};
+      const files = { license: formData.licenseDoc!, insurance: formData.insuranceDoc!, registration: formData.registrationDoc!, photo_front: formData.verificationPhotos!.front, photo_left: formData.verificationPhotos!.left, photo_right: formData.verificationPhotos!.right };
+      for (const [kind, file] of Object.entries(files)) documents[kind] = await uploadVerification(kind, file);
       await submitDriverApplication({
+        documents,
         phone: formData.phone,
         vehicle: {
           make: formData.make,
@@ -152,6 +155,8 @@ export const DriverSignup = () => {
     navigate('/drive');
   };
 
+  if (user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'pending' && !submitted) return <div className="p-8 text-center"><h2 className="text-xl font-bold">Application awaiting review</h2><p className="mt-3">Ride offers become available after approval. Sign out and sign in again to refresh your review status.</p></div>;
+
   if (submitted) {
     const successDestination = user?.role === UserRole.PARENT ? '/profile' : (user ? getDefaultRouteForUser(user) : '/driver-dashboard');
 
@@ -162,11 +167,11 @@ export const DriverSignup = () => {
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Application Received!</h1>
         <p className="text-gray-600 max-w-sm mb-8">
-          Your application has been submitted. We are processing your background check and will update your account status once review is complete.
+          Your application has been submitted. Your documents are awaiting manual review. Ride offers are unavailable until your account is approved.
         </p>
         <Button onClick={() => navigate(successDestination)} className="flex items-center gap-2">
           <Home size={20} />
-          {user?.role === UserRole.PARENT ? 'Return to Profile' : 'Open Driver Dashboard'}
+          {user?.role === UserRole.PARENT ? 'Return to Profile' : 'View Application Status'}
         </Button>
       </div>
     );
@@ -243,13 +248,7 @@ export const DriverSignup = () => {
                 onChange={(event) => handleInputChange('phone', event.target.value)}
                 autoComplete="tel"
               />
-              <Input
-                label="Social Security Number (SSN)"
-                type="text"
-                placeholder="XXX-XX-XXXX"
-                value={formData.ssn}
-                onChange={(event) => handleInputChange('ssn', event.target.value)}
-              />
+
             </div>
 
             {error && (
@@ -374,7 +373,7 @@ export const DriverSignup = () => {
               </div>
 
               <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-600">
-                <p>By submitting, you agree to a background check performed by our third-party provider.</p>
+                <p>By submitting, you consent to manual document review. Approval requires the operator to complete their verification process.</p>
               </div>
             </div>
 

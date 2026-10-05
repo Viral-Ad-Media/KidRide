@@ -4,6 +4,7 @@ import { Button, Input, Card, Select } from '../components/UIComponents';
 import { ArrowLeft, MapPin, Search, ShieldCheck, Map } from 'lucide-react';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
+import { apiRequest, getStoredToken } from '../services/api';
 import { RideStatus, ServiceType, Ride } from '../types';
 
 const childInitials = (name: string) => (
@@ -24,7 +25,10 @@ const serviceTypeLabels: Record<string, string> = {
 export const BookRide = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { requestRide, activeRide } = useRide();
+  const { requestRide, activeRide, syncError } = useRide();
+  const [quote, setQuote] = useState<number | null>(null);
+  const [quoteService, setQuoteService] = useState<string | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
@@ -58,7 +62,7 @@ export const BookRide = () => {
   }, [availableChildren, formData.childId]);
 
   useEffect(() => {
-    if (activeRide && activeRide.status === RideStatus.DRIVER_ASSIGNED) {
+    if (activeRide && [RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVED, RideStatus.IN_PROGRESS].includes(activeRide.status)) {
       navigate(`/tracking/${activeRide.id}`);
     }
   }, [activeRide, navigate]);
@@ -81,6 +85,11 @@ export const BookRide = () => {
       return;
     }
 
+    if (step === 2) {
+      setQuote(null); setQuoteError(null);
+      void apiRequest<{ price: number }>('/rides/quote', { method: 'POST', token: getStoredToken(), body: { serviceType: formData.serviceType } }).then(result => { setQuote(result.price); setQuoteService(formData.serviceType); setStep(3); }).catch(err => setQuoteError(err.message));
+      return;
+    }
     if (step < 3) {
       setStep(step + 1);
       return;
@@ -94,6 +103,7 @@ export const BookRide = () => {
       return;
     }
 
+    if (quote === null || quoteService !== formData.serviceType) return;
     setIsSearching(true);
     setSearchStatus('Broadcasting to verified drivers...');
 
@@ -104,7 +114,7 @@ export const BookRide = () => {
       dropoffLocation: trimmedDropoff,
       pickupTime: new Date().toISOString(),
       status: RideStatus.SEARCHING_DRIVER,
-      price: 0,
+      price: quote,
       tripCode: '',
       safeWord: '',
       serviceType: formData.serviceType as ServiceType,
@@ -158,8 +168,9 @@ export const BookRide = () => {
           </div>
         </div>
 
+        <Button onClick={() => activeRide && navigate(`/tracking/${activeRide.id}`)}>View Request</Button>
         <div className="mt-8 max-w-[220px] text-xs text-gray-400">
-          Tip: Open a second tab, sign in with a driver account, and accept this request.
+          {syncError || 'You can view or cancel your request while waiting.'}
         </div>
       </div>
     );
@@ -174,6 +185,7 @@ export const BookRide = () => {
         <h2 className="text-xl font-bold">Book a Ride</h2>
       </div>
 
+      {quoteError && <p className="mb-4 text-red-600">{quoteError}</p>}
       <div className="mb-8 flex gap-2">
         {[1, 2, 3].map((item) => (
           <div key={item} className={`h-1.5 flex-1 rounded-full transition-colors ${item <= step ? 'bg-[#3A77FF]' : 'bg-gray-200'}`} />
@@ -284,14 +296,14 @@ export const BookRide = () => {
           </div>
 
           <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-4 text-sm text-yellow-800">
-            Pricing is not configured in this build yet. Your ride request will still be created and matched with an available driver.
+            {quote !== null ? `Fixed service fare: $${quote.toFixed(2)}` : 'Quote unavailable'}
           </div>
         </div>
       )}
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white p-6 md:relative md:mt-8 md:border-none md:bg-transparent md:p-0">
         <div className="mx-auto w-full max-w-4xl">
-          <Button onClick={handleNext} fullWidth disabled={isSearching || (hasChildren && !canProceed)}>
+          <Button onClick={handleNext} fullWidth disabled={isSearching || (step === 3 && quote === null) || (hasChildren && !canProceed)}>
             {!hasChildren ? 'Add a Child First' : step === 3 ? 'Confirm & Book' : 'Next'}
           </Button>
         </div>
