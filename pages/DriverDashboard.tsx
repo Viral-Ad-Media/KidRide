@@ -6,10 +6,13 @@ import { fetchUserRides, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
 
+import { useDriverLocation } from '../services/driverLocation';
+
 const humanizeStatus = (status: string) => status.replace(/_/g, ' ');
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, declineRideRequest } = useRide();
+  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide } = useRide();
+  const locationError = useDriverLocation();
   const [isOnline, setIsOnline] = useState(true);
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export const DriverDashboard = () => {
         </div>
       </section>
 
+      {(syncError || locationError) && <div className="rounded-xl bg-amber-50 p-4 text-amber-900">{syncError || locationError}</div>}
       {error && (
         <div className="rounded-[24px] border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-600 shadow-[0_14px_30px_rgba(239,68,68,0.08)]">
           {error}
@@ -127,7 +131,7 @@ export const DriverDashboard = () => {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_340px]">
         <div>
-          {!isOnline ? (
+          {!isOnline && (!activeRide || [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status)) ? (
             <Card className="text-center">
               <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-slate-100 text-slate-500">
                 <TimerReset size={28} />
@@ -231,6 +235,7 @@ export const DriverDashboard = () => {
               </div>
 
               <div className="mt-8 space-y-3">
+                {activeRide.status !== RideStatus.IN_PROGRESS && <Button variant="secondary" onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setError(err.message)); }}>Cancel Ride</Button>}
                 {activeRide.status === RideStatus.DRIVER_ASSIGNED && (
                   <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>
                     Arrived at Pickup

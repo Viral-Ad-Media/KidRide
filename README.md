@@ -1,122 +1,69 @@
-# KidRide Frontend
+# KidRide Web
 
-Frontend application for KidRide parent and driver experiences.
+React 19 + TypeScript + Vite frontend for parent and driver workflows. Production frontend: `https://kid-ride.vercel.app`. Default API: `https://kidride-backend.vercel.app/api`.
 
-## Production
-- Frontend URL: `https://kid-ride.vercel.app/`
-- Backend API URL: `https://kidride-backend.vercel.app/api`
+## Development
 
-## What This App Includes
-- Parent flow: dashboard, add child, book ride, ride history, live tracking, profile.
-- Driver flow: driver landing, application onboarding, job dashboard, status progression.
-- Safety assistant chat powered by Gemini (`@google/genai`).
-- Auth and ride state managed through React Context and backed by live backend endpoints.
-
-## Tech Stack
-- React 19 + TypeScript
-- Vite 6
-- React Router (HashRouter)
-- Recharts
-- Lucide React icons
-
-## Project Structure
-```text
-kidride/
-  components/       # Reusable UI and layout
-  contexts/         # AuthContext and RideContext (API-backed state)
-  pages/            # Parent + driver screens
-  services/         # API client and Gemini service
-  App.tsx           # Route map
-  vite.config.ts    # Dev server and build config
+```sh
+npm ci
+npm run dev
+npx tsc --noEmit
+npm run build
+npm run preview
 ```
 
-## Prerequisites
-- Node.js 18+ (Node.js 20+ recommended)
-- npm
+Use Node.js 22 or newer. Set `VITE_API_BASE_URL=http://localhost:5000/api` for a local backend. URL resolution uses the `kidride_api_base_url` localStorage override first, then `VITE_API_BASE_URL`, then localhost/production defaults. Ensure the backend's `FRONTEND_URLS` includes the browser origin.
 
-## Local Development
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Create `.env.local`:
-   ```bash
-   GEMINI_API_KEY=your_gemini_key
-   ```
-3. Optional API override:
-   ```bash
-   VITE_API_BASE_URL=http://localhost:5000
-   ```
-4. Run dev server:
-   ```bash
-   npm run dev
-   ```
-5. Build for production:
-   ```bash
-   npm run build
-   ```
-6. Preview build output:
-   ```bash
-   npm run preview
-   ```
+**Do not configure a frontend Gemini secret.** Safety chat calls the authenticated backend `/api/safety-chat` proxy. Remove old `GEMINI_API_KEY` frontend settings and revoke any key previously shipped in a bundle.
 
-## Environment Variables
-- `GEMINI_API_KEY` (required for Safety Chat)
-- `VITE_API_BASE_URL` (optional, frontend API override)
+## Layout
 
-## API Base URL Resolution
-`services/api.ts` resolves API base URL in this order:
-1. `localStorage.kidride_api_base_url`
-2. `VITE_API_BASE_URL` from build env
-3. Local fallback (`http://localhost:5000/api`) when host is `localhost` or `127.0.0.1`
-4. Production fallback (`https://kidride-backend.vercel.app/api`) for non-local hosts
+| Directory | Purpose |
+| --- | --- |
+| `pages` | Parent/driver pages and static information |
+| `components` | Layout, controls, camera capture, GPS display |
+| `contexts` | Session restoration and guarded ride state |
+| `services` | API client, server-side safety chat, signed uploads, driver GPS |
+| `utils` | Ride summaries and display helpers |
 
-If `VITE_API_BASE_URL` does not end with `/api`, the app appends it automatically.
+## Backend dependency and deployment
 
-## Auth and Session Behavior
-- `Welcome` supports real signup and login for parent and driver accounts through `/api/auth/register` and `/api/auth/login`.
-- New driver signups are routed into `/driver-signup` to finish verification details and submit a driver application.
-- Token is stored in `localStorage` as `kidride_token`.
-- User profile cache is stored as `kidride_user`.
-- On app load, `AuthContext` calls `GET /api/auth/me` to refresh session state.
-- Protected routes redirect unauthenticated visitors back to `/`.
+1. Apply the backend's `supabase/migrations/2026-10-04_security_services.sql`. Resolve any duplicate active rides through operator review if the migration aborts.
+2. Configure backend Supabase/JWT credentials, CORS, positive fixed USD fares in `SERVICE_PRICES_JSON`, and the backend `GEMINI_API_KEY`.
+3. Deploy the coordinated backend update, then this frontend. Old backend versions lack quotes, document uploads, GPS reporting, and safety chat.
+4. Build with only public frontend configuration. See the backend README for admin provisioning, private document review, push services, and production rate limiting.
 
-## Ride Behavior
-- `RideContext` polls active ride state from backend.
-- Parent ride requests call `POST /api/rides/request`.
-- Driver request actions and status updates call:
-  - `PUT /api/rides/:id/accept`
-  - `PUT /api/rides/:id/decline`
-  - `PUT /api/rides/:id/status`
-  - `PUT /api/rides/:id/cancel`
+## Authentication and driver approval
 
-## Frontend Routes
-- `/` Welcome
-- `/about` About page
-- `/help` Help center
-- `/contact` Contact page
-- `/privacy` Privacy policy
-- `/terms` Terms of service
-- `/dashboard` Parent dashboard
-- `/add-child` Add child profile
-- `/book` Book ride
-- `/rides` Ride history
-- `/tracking/:id` Live tracking
-- `/safety` Safety assistant
-- `/profile` Profile
-- `/profile/notifications` Notification settings
-- `/profile/payments` Payment methods
-- `/drive` Driver landing
-- `/driver-signup` Driver application
-- `/driver-dashboard` Driver dashboard
-- `/driver-map` Driver map placeholder
-- `/earnings` Driver earnings placeholder
+`AuthContext` restores sessions with `/auth/me`; the web JWT and cached profile are stored in localStorage. Public registration supports parents and drivers only. Driver routes require an approved application and verified-driver flag; the backend repeats these checks for offers and acceptance.
 
-## Deployment Notes
-- Uses `HashRouter`, which is friendly for static hosting.
-- Ensure backend CORS `FRONTEND_URLS` includes your frontend origin.
+Driver onboarding uploads license, insurance, registration, and front/left/right photos through short-lived signed URLs to private storage. JPEG/PNG/PDF files are limited to 5 MB; photos must be images. No unused SSN is collected. These photos support manual review, not automated liveness detection. Application submission does not perform a background check or grant approval. Pending drivers see the review state; sign out/sign in to refresh the result after review.
 
-## Troubleshooting
-- `401 Not authorized`: clear `kidride_token` and `kidride_user` in browser storage, then log in again.
-- CORS errors: add frontend URL to backend `FRONTEND_URLS`.
-- Gemini errors in Safety Chat: verify `GEMINI_API_KEY` exists in `.env.local`.
+## Booking and trip state
+
+Parents select a saved child, route, and service, then obtain a server quote before confirming. The backend checks child ownership, uses configured fixed service fares, and ignores client fare manipulation. Missing pricing blocks booking instead of creating a zero-fare ride. Payment collection and distance-based pricing are not implemented.
+
+Ride updates poll every seven seconds. Network failures preserve the last saved trip and show an interruption notice. Session/version guards prevent older responses from overwriting a mutation or leaking previous-account trip state. Cancellation is available before pickup; the backend prevents ordinary cancellation with a child onboard. Active rides remain visible when the driver's offer availability toggle is off.
+
+## Location and safety
+
+Assigned approved drivers report browser GPS while their driver workspace is open and visible. Grant location permission and keep the page open. Parents see actual timestamped GPS on an OpenStreetMap embed. GPS older than 30 seconds is labelled stale; missing coordinates show a waiting state. The embed sends displayed coordinates to OpenStreetMap. Background/closed-browser tracking is not implemented.
+
+Tracking routes check the requested ride ID against the active ride; an unrelated ID does not display another trip. Open ride offers omit trip codes, safe words, parent identity, and child identifiers. Assigned participants receive the safety credentials.
+
+Safety chat is general guidance, not emergency dispatch. Direct driver contact and the carpool publishing workflow remain unimplemented. Earnings represent completed fares rather than paid-out balances.
+
+## Routes
+
+| Access | Routes |
+| --- | --- |
+| Public | `/`, `/about`, `/help`, `/contact`, `/privacy`, `/terms`, `/drive`, `/driver-signup` |
+| Parent | `/dashboard`, `/add-child`, `/book`, `/rides`, `/carpools` |
+| Approved driver | `/driver-dashboard`, `/driver-map`, `/earnings` |
+| Signed-in | `/tracking/:id`, `/safety`, `/profile`, `/profile/notifications`, `/profile/payments` |
+
+HashRouter is used for static hosting. Route visibility is not a substitute for backend authorization.
+
+## Release checks
+
+Run the type check and production build, then verify signup/login, owned-child booking, quote errors, private uploads, pending/approved routing, ride status progression, cancellation, location denial/staleness, interrupted polling, and account switching. Physical-device and deployed-service tests are still required before operational use.

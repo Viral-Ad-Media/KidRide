@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RideMap } from '../components/RideMap';
 import { Card, Button, StatusChip, Badge } from '../components/UIComponents';
 import { ShieldAlert, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useRide } from '../contexts/RideContext';
 import { RideStatus } from '../types';
 
@@ -29,7 +29,9 @@ const formatVehicle = (vehicle?: { color?: string; make?: string; model?: string
 
 export const LiveTracking = () => {
   const navigate = useNavigate();
-  const { activeRide } = useRide();
+  const { activeRide, syncError, cancelRide } = useRide();
+  const { id } = useParams();
+  const [actionError, setActionError] = useState<string | null>(null);
   const [localStatus, setLocalStatus] = useState<RideStatus>(RideStatus.DRIVER_ASSIGNED);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export const LiveTracking = () => {
     }
   }, [activeRide]);
 
-  if (!activeRide) {
+  if (!activeRide || activeRide.id !== id) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-100">
         <p className="text-gray-500">No active ride found.</p>
@@ -61,12 +63,13 @@ export const LiveTracking = () => {
         >
           <X size={24} />
         </button>
-        <RideMap status={localStatus} />
+        <RideMap status={localStatus} location={activeRide.driverLocation} />
       </div>
 
       <div className="relative z-10 -mt-6 rounded-t-3xl bg-white p-6 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] animate-slide-up">
         <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-gray-300" />
 
+        {(syncError || actionError) && <p className="mb-4 text-amber-900">{actionError || syncError}</p>}
         <div className="mb-6 flex items-center justify-between">
           <StatusChip status={localStatus} />
           <div className="text-right">
@@ -123,6 +126,7 @@ export const LiveTracking = () => {
           </div>
         </div>
 
+        {activeRide.status !== RideStatus.IN_PROGRESS && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setActionError(err.message)); }}>Cancel Ride</Button>}
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
           Direct driver contact is not configured in this build yet.
         </div>

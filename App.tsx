@@ -51,6 +51,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: UserRole[
     return <Navigate to="/" replace />;
   }
 
+  if (roles?.includes(UserRole.DRIVER) && user.role === UserRole.DRIVER && (!user.isVerifiedDriver || user.driverApplicationStatus !== 'approved')) return <Navigate to="/driver-signup" replace />;
+
   if (roles && !roles.includes(user.role)) {
     return <Navigate to={getDefaultRouteForUser(user)} replace />;
   }

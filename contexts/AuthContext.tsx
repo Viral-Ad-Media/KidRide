@@ -22,6 +22,7 @@ export interface RegisterPayload extends LoginPayload {
 }
 
 interface DriverApplicationPayload {
+  documents?: Record<string, string>;
   phone?: string;
   vehicle?: {
     make?: string;
@@ -73,7 +74,7 @@ const readStoredUser = (): User | null => {
 
 export const getDefaultRouteForUser = (user: User): string => {
   if (user.role === UserRole.DRIVER) {
-    if (user.driverApplicationStatus === 'none' || user.driverApplicationStatus === 'rejected') {
+    if (user.driverApplicationStatus !== 'approved' || !user.isVerifiedDriver) {
       return '/driver-signup';
     }
 
@@ -216,7 +217,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       token,
       body: {
         phone: payload?.phone,
-        vehicle: incomingVehicle
+        vehicle: incomingVehicle,
+        documents: payload?.documents
       }
     });
 
