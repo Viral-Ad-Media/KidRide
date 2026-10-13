@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Child, User, UserRole } from '../types';
 import {
+  ApiError,
   apiRequest,
   clearStoredToken,
   getStoredToken,
@@ -42,13 +43,14 @@ interface AuthContextType {
   user: User | null;
   isHydrating: boolean;
   login: (payload: LoginPayload) => Promise<User>;
-  register: (payload: RegisterPayload) => Promise<User>;
+  /** Resolves to null when the account must confirm its email before logging in. */
+  register: (payload: RegisterPayload) => Promise<User | null>;
   logout: () => void;
   submitDriverApplication: (payload?: DriverApplicationPayload) => Promise<void>;
   addChild: (child: Child) => Promise<void>;
 }
 
-type AuthResponse = Record<string, unknown> & { token?: string };
+type AuthResponse = Record<string, unknown> & { token?: string; requiresEmailVerification?: boolean };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -149,8 +151,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         persistUser(mapUser(me), token);
-      } catch {
-        if (isMounted) {
+      } catch (error) {
+        // Only an auth rejection invalidates the session; offline, timeouts and
+        // 5xx/429 keep the stored user so the app still opens.
+        if (isMounted && error instanceof ApiError && error.status === 401) {
           clearSession();
         }
       } finally {
@@ -189,6 +193,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role
       }
     });
+
+    if (authResult.requiresEmailVerification) {
+      return null;
+    }
 
     return finalizeAuthentication(authResult);
   };

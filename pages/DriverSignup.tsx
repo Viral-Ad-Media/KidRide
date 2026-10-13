@@ -106,12 +106,18 @@ export const DriverSignup = () => {
 
     try {
       if (requiresAccountCreation) {
-        await register({
+        const registeredUser = await register({
           name: formData.fullName,
           email: formData.email,
           password: formData.password,
           role: UserRole.DRIVER
         });
+
+        if (!registeredUser) {
+          // Uploads need a session, which only exists after email confirmation.
+          setError('Account created. Confirm your email from the link we sent, then log in to finish your application.');
+          return;
+        }
       }
 
       const documents: Record<string, string> = {};

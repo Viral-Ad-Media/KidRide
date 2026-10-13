@@ -38,6 +38,7 @@ export const Welcome = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.PARENT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -59,6 +60,7 @@ export const Welcome = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setNotice(null);
 
     if (isSignup && formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
@@ -79,6 +81,12 @@ export const Welcome = () => {
             email: formData.email,
             password: formData.password
           });
+
+      if (!authenticatedUser) {
+        setNotice('Check your email for a confirmation link, then log in.');
+        setMode('login');
+        return;
+      }
 
       navigate(getDefaultRouteForUser(authenticatedUser));
     } catch (authError) {
@@ -219,6 +227,12 @@ export const Welcome = () => {
                 ? 'After account creation, you will continue into the driver verification application.'
                 : 'We route you based on the actual account returned by the backend after authentication.'}
             </div>
+
+            {notice && (
+              <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {notice}
+              </div>
+            )}
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
