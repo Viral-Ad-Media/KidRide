@@ -17,8 +17,19 @@ import { DriverMap } from './pages/DriverMap';
 import { Earnings } from './pages/Earnings';
 import { AuthProvider, getDefaultRouteForUser, useAuth } from './contexts/AuthContext';
 import { RideProvider } from './contexts/RideContext';
-import { AboutPage, ContactPage, HelpPage, PrivacyPage, TermsPage } from './pages/StaticPages';
+import { HelpPage, PrivacyPage, TermsPage } from './pages/StaticPages';
+import {
+  FaqPage,
+  ForDriversPage,
+  LandingPage,
+  MarketingAboutPage,
+  MarketingContactPage,
+  SafetyInfoPage
+} from './pages/Marketing';
+import { AdminApplications, AdminRides } from './pages/Admin';
 import { UserRole } from './types';
+
+const defaultRouteFor = getDefaultRouteForUser;
 
 const LoadingScreen = () => (
   <div className="flex min-h-[50vh] items-center justify-center text-sm font-medium text-gray-500">
@@ -26,7 +37,7 @@ const LoadingScreen = () => (
   </div>
 );
 
-const LandingRoute = () => {
+const SignedOutOnly: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const { user, isHydrating } = useAuth();
 
   if (isHydrating) {
@@ -34,10 +45,10 @@ const LandingRoute = () => {
   }
 
   if (user) {
-    return <Navigate to={getDefaultRouteForUser(user)} replace />;
+    return <Navigate to={defaultRouteFor(user)} replace />;
   }
 
-  return <Welcome />;
+  return children;
 };
 
 const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: UserRole[] }> = ({ children, roles }) => {
@@ -48,13 +59,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: UserRole[
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (roles?.includes(UserRole.DRIVER) && user.role === UserRole.DRIVER && (!user.isVerifiedDriver || user.driverApplicationStatus !== 'approved')) return <Navigate to="/driver-signup" replace />;
 
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to={getDefaultRouteForUser(user)} replace />;
+    return <Navigate to={defaultRouteFor(user)} replace />;
   }
 
   return children;
@@ -63,14 +74,35 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: UserRole[
 const AppRoutes = () => (
   <Layout>
     <Routes>
-      <Route path="/" element={<LandingRoute />} />
-      <Route path="/about" element={<AboutPage />} />
+      <Route path="/" element={<SignedOutOnly><LandingPage /></SignedOutOnly>} />
+      <Route path="/login" element={<SignedOutOnly><Welcome /></SignedOutOnly>} />
+      <Route path="/about" element={<MarketingAboutPage />} />
+      <Route path="/safety-info" element={<SafetyInfoPage />} />
+      <Route path="/for-drivers" element={<ForDriversPage />} />
+      <Route path="/faq" element={<FaqPage />} />
       <Route path="/help" element={<HelpPage />} />
-      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/contact" element={<MarketingContactPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/drive" element={<DriverLanding />} />
       <Route path="/driver-signup" element={<DriverSignup />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute roles={[UserRole.ADMIN]}>
+            <AdminApplications />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/rides"
+        element={
+          <ProtectedRoute roles={[UserRole.ADMIN]}>
+            <AdminRides />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
       <Route
         path="/driver-dashboard"
         element={

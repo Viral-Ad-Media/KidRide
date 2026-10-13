@@ -6,6 +6,7 @@ import {
   clearStoredToken,
   getStoredToken,
   mapChild,
+  revokeSession,
   mapUser,
   setStoredToken
 } from '../services/api';
@@ -75,6 +76,10 @@ const readStoredUser = (): User | null => {
 };
 
 export const getDefaultRouteForUser = (user: User): string => {
+  if (user.role === UserRole.ADMIN) {
+    return '/admin';
+  }
+
   if (user.role === UserRole.DRIVER) {
     if (user.driverApplicationStatus !== 'approved' || !user.isVerifiedDriver) {
       return '/driver-signup';
@@ -202,7 +207,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    const token = getStoredToken();
+    // Clear locally first so logout never waits on the network; the server call
+    // revokes the token on every device and is best-effort.
     clearSession();
+    if (token) {
+      void revokeSession(token).catch(() => undefined);
+    }
   };
 
   const submitDriverApplication = async (payload?: DriverApplicationPayload) => {

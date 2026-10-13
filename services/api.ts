@@ -154,6 +154,25 @@ export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {
   return payload as T;
 };
 
+export interface DriverSummary {
+  completedCount: number;
+  totalEarnings: number;
+}
+
+/** Server-side totals over every completed ride, not just the latest 100. */
+export const fetchDriverSummary = async (token: string): Promise<DriverSummary> => {
+  const response = await apiRequest<Partial<DriverSummary>>('/rides/summary', { token });
+  return {
+    completedCount: Number(response?.completedCount) || 0,
+    totalEarnings: Number(response?.totalEarnings) || 0
+  };
+};
+
+/** Invalidates every token issued to this account; failures are non-fatal for logout. */
+export const revokeSession = async (token: string): Promise<void> => {
+  await apiRequest('/auth/logout', { method: 'POST', token });
+};
+
 export const fetchUserRides = async (
   scope: RideScope,
   token: string,

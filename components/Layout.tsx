@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Briefcase,
+  ClipboardCheck,
   Car,
   CreditCard,
   DollarSign,
@@ -79,6 +80,14 @@ const routeMeta: Record<string, { title: string; subtitle: string }> = {
     title: 'Driver Map',
     subtitle: 'See the service area and stay oriented while driving.'
   },
+  '/admin': {
+    title: 'Driver Applications',
+    subtitle: 'Review driver documents and approve or reject pending applications.'
+  },
+  '/admin/rides': {
+    title: 'Rides Overview',
+    subtitle: 'Monitor every ride on the platform and intervene when needed.'
+  },
   '/earnings': {
     title: 'Earnings',
     subtitle: 'Track performance and income from completed rides.'
@@ -114,7 +123,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const publicPagePaths = new Set([
     '/',
+    '/login',
     '/about',
+    '/safety-info',
+    '/for-drivers',
+    '/faq',
     '/help',
     '/contact',
     '/privacy',
@@ -141,7 +154,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { icon: User, label: 'Profile', path: '/profile', description: 'Account and verification' }
   ];
 
-  const navItems = user?.role === UserRole.DRIVER ? driverNavItems : parentNavItems;
+  const adminNavItems: NavItem[] = [
+    { icon: ClipboardCheck, label: 'Applications', path: '/admin', description: 'Driver application review' },
+    { icon: Car, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
+    { icon: User, label: 'Profile', path: '/profile', description: 'Account and preferences' }
+  ];
+
+  const isAdmin = user?.role === UserRole.ADMIN;
+  const navItems = isAdmin ? adminNavItems : user?.role === UserRole.DRIVER ? driverNavItems : parentNavItems;
   const routeKey = resolveRouteKey(location.pathname);
   const activeNavItem = navItems.find((item) => location.pathname === item.path);
   const page = routeMeta[routeKey] || {
@@ -151,7 +171,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       : 'Manage rides, children, and account settings from one place.'
   };
 
-  const primaryAction = user?.role === UserRole.DRIVER
+  const primaryAction = isAdmin
+    ? {
+        label: 'Review Applications',
+        path: '/admin',
+        icon: ClipboardCheck,
+        helper: 'Pending driver applications waiting for a decision.'
+      }
+    : user?.role === UserRole.DRIVER
     ? {
         label: 'View Driver Map',
         path: '/driver-map',
@@ -173,6 +200,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         };
 
   const accountSummary = useMemo(() => {
+    if (user?.role === UserRole.ADMIN) {
+      return {
+        eyebrow: 'Admin Console',
+        label: 'Administrator',
+        meta: 'Driver review and ride operations'
+      };
+    }
+
     if (user?.role === UserRole.DRIVER) {
       const applicationStatus = user.driverApplicationStatus || 'none';
       const driverLabel = applicationStatus === 'approved'
@@ -234,7 +269,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="glass-panel sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-hidden rounded-[32px] p-6">
             <button
               type="button"
-              onClick={() => navigate(user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}
+              onClick={() => navigate(isAdmin ? '/admin' : user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}
               className="flex items-center gap-4 rounded-[24px] border border-white/60 bg-white/70 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-white/85"
             >
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#0f3ea8_0%,#1d6fff_58%,#7cc7ff_100%)] text-white shadow-[0_14px_28px_rgba(29,111,255,0.22)]">
