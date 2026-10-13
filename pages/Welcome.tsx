@@ -24,7 +24,9 @@ const roleOptions = [
 ];
 
 const publicLinks = [
+  { path: '/', label: 'Home' },
   { path: '/about', label: 'About' },
+  { path: '/faq', label: 'FAQ' },
   { path: '/help', label: 'Help' },
   { path: '/contact', label: 'Contact' },
   { path: '/privacy', label: 'Privacy' },

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../components/UIComponents';
-import { fetchUserRides, getStoredToken } from '../services/api';
+import { fetchDriverSummary, fetchUserRides, getStoredToken } from '../services/api';
 import { Ride } from '../types';
 import { formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
 
@@ -27,14 +27,13 @@ export const Earnings = () => {
       setError(null);
 
       try {
-        const rides = await fetchUserRides('past', token, 100);
+        const [rides, totals] = await Promise.all([fetchUserRides('past', token, 100), fetchDriverSummary(token)]);
         if (!isMounted) {
           return;
         }
 
-        const summary = getCompletedRideSummary(rides);
-        setCompletedRides(summary.completedRides);
-        setTotalEarnings(summary.totalEarnings);
+        setCompletedRides(getCompletedRideSummary(rides).completedRides);
+        setTotalEarnings(totals.totalEarnings);
       } catch (loadError) {
         if (isMounted) {
           setError(loadError instanceof Error ? loadError.message : 'Unable to load earnings right now.');

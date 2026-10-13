@@ -109,7 +109,7 @@ export const DriverLanding = () => {
             <Button fullWidth onClick={() => navigate('/driver-signup')} className="flex items-center justify-center gap-2">
                 Start Application <ArrowRight size={20} />
             </Button>
-            <Button fullWidth variant="secondary" onClick={() => navigate('/')}>
+            <Button fullWidth variant="secondary" onClick={() => navigate('/login')}>
                 Already have an account? Log In
             </Button>
          </div>

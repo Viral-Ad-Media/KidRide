@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
 import { Button, Card, StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
-import { fetchUserRides, getStoredToken } from '../services/api';
+import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
-import { formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
+import { formatRidePrice } from '../utils/rideData';
 
 import { useDriverLocation } from '../services/driverLocation';
 
@@ -35,12 +35,11 @@ export const DriverDashboard = () => {
       setIsMetricsLoading(true);
 
       try {
-        const rides = await fetchUserRides('past', token, 100);
+        const summary = await fetchDriverSummary(token);
         if (!isMounted) {
           return;
         }
 
-        const summary = getCompletedRideSummary(rides);
         setCompletedCount(summary.completedCount);
         setTotalEarnings(summary.totalEarnings);
       } catch {
