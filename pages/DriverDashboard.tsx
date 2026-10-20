@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
-import { Button, Card, StatusChip } from '../components/UIComponents';
+import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
@@ -15,6 +15,8 @@ export const DriverDashboard = () => {
   const locationError = useDriverLocation();
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [isMetricsLoading, setIsMetricsLoading] = useState(true);
@@ -83,6 +85,12 @@ export const DriverDashboard = () => {
     } finally {
       setIsDeclining(false);
     }
+  };
+
+  const confirmCancel = async () => {
+    setCancelling(true);
+    try { await cancelRide(); } catch (err) { setError(err instanceof Error ? err.message : 'Could not cancel the ride.'); }
+    finally { setCancelling(false); setConfirmingCancel(false); }
   };
 
   return (
@@ -235,7 +243,8 @@ export const DriverDashboard = () => {
               </div>
 
               <div className="mt-8 space-y-3">
-                {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button variant="secondary" onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setError(err.message)); }}>Cancel Ride</Button>}
+                {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button variant="secondary" onClick={() => setConfirmingCancel(true)}>Cancel Ride</Button>}
+                <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for both the parent and the driver." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
                 {activeRide.status === RideStatus.DRIVER_ASSIGNED && (
                   <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>
                     Arrived at Pickup

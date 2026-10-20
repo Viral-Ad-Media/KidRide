@@ -157,6 +157,8 @@ export const Profile = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     
+    const [shareNote, setShareNote] = useState<string | null>(null);
+
     const handleStartVerification = () => {
         navigate('/driver-signup');
     };
@@ -173,7 +175,7 @@ export const Profile = () => {
                 await navigator.share(shareData);
             } else {
                 await navigator.clipboard.writeText(shareData.url);
-                alert("Link copied to clipboard: " + shareData.url);
+                setShareNote('Invite link copied to your clipboard.');
             }
         } catch (err) {
             console.log('Share dismissed', err);
@@ -262,6 +264,7 @@ export const Profile = () => {
                 >
                     <Share2 size={16} /> Share Invite Link
                 </button>
+                {shareNote && <p className="mt-3 text-sm text-white/90">{shareNote}</p>}
              </div>
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full transform translate-x-10 -translate-y-10"></div>
         </div>

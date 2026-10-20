@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ShieldCheck, Users, Crown, Upload, CheckCircle, Camera, RefreshCw, XCircle, ArrowRight, Check } from 'lucide-react';
 
 // --- Button ---
@@ -377,3 +378,67 @@ export const StatusChip: React.FC<{ status: string }> = ({ status }) => {
     </span>
   );
 };
+
+
+// --- Modal ---
+// Rendered into document.body so it is always centred on the viewport: a
+// fixed element inside a blurred/transformed panel would otherwise be
+// positioned relative to that panel instead.
+interface ModalProps {
+    open: boolean;
+    onClose?: () => void;
+    labelledBy?: string;
+    maxWidth?: string;
+    children: React.ReactNode;
+}
+
+export const Modal: React.FC<ModalProps> = ({ open, onClose, labelledBy, maxWidth = 'max-w-md', children }) => {
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose?.(); };
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', onKey);
+        return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', onKey); };
+    }, [open, onClose]);
+
+    if (!open) return null;
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={labelledBy}
+            onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}
+        >
+            <div className={`max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl`}>{children}</div>
+        </div>,
+        document.body
+    );
+};
+
+interface ConfirmModalProps {
+    open: boolean;
+    title: string;
+    body?: React.ReactNode;
+    confirmLabel: string;
+    tone?: 'primary' | 'danger';
+    busy?: boolean;
+    error?: string | null;
+    onConfirm: () => void;
+    onClose: () => void;
+}
+
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, title, body, confirmLabel, tone = 'primary', busy = false, error, onConfirm, onClose }) => (
+    <Modal open={open} onClose={busy ? undefined : onClose} labelledBy="confirm-modal-title">
+        <h2 id="confirm-modal-title" className="text-lg font-bold text-slate-950">{title}</h2>
+        {body && <div className="mt-3 text-sm leading-6 text-slate-600">{body}</div>}
+        {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={onClose} disabled={busy} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" onClick={onConfirm} disabled={busy} className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1d6fff] hover:bg-[#1558d6]'}`}>
+                {busy ? 'Working...' : confirmLabel}
+            </button>
+        </div>
+    </Modal>
+);

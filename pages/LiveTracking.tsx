@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RideMap } from '../components/RideMap';
-import { Card, Button, StatusChip, Badge } from '../components/UIComponents';
+import { Card, Button, ConfirmModal, StatusChip, Badge } from '../components/UIComponents';
 import { ShieldAlert, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRide } from '../contexts/RideContext';
@@ -32,6 +32,8 @@ export const LiveTracking = () => {
   const { activeRide, syncError, cancelRide } = useRide();
   const { id } = useParams();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [localStatus, setLocalStatus] = useState<RideStatus>(RideStatus.DRIVER_ASSIGNED);
 
   useEffect(() => {
@@ -39,6 +41,12 @@ export const LiveTracking = () => {
       setLocalStatus(activeRide.status);
     }
   }, [activeRide]);
+
+  const confirmCancel = async () => {
+    setCancelling(true);
+    try { await cancelRide(); } catch (err) { setActionError(err instanceof Error ? err.message : 'Could not cancel the ride.'); }
+    finally { setCancelling(false); setConfirmingCancel(false); }
+  };
 
   if (!activeRide || activeRide.id !== id) {
     return (
@@ -126,7 +134,8 @@ export const LiveTracking = () => {
           </div>
         </div>
 
-        {activeRide.status !== RideStatus.IN_PROGRESS && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setActionError(err.message)); }}>Cancel Ride</Button>}
+        {activeRide.status !== RideStatus.IN_PROGRESS && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button onClick={() => setConfirmingCancel(true)}>Cancel Ride</Button>}
+        <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for both the parent and the driver." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
           Direct driver contact is not configured in this build yet.
         </div>
