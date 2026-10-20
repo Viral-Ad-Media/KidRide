@@ -334,6 +334,8 @@ export const mapRide = (raw: unknown): Ride => {
     tripCode: typeof ride.tripCode === 'string' ? ride.tripCode : '',
     safeWord: typeof ride.safeWord === 'string' ? ride.safeWord : '',
     rating: ride.rating && typeof ride.rating === 'object' ? ride.rating as Ride['rating'] : null,
+    pickupCoords: ride.pickupCoords && typeof ride.pickupCoords === 'object' ? ride.pickupCoords as Ride['pickupCoords'] : null,
+    dropoffCoords: ride.dropoffCoords && typeof ride.dropoffCoords === 'object' ? ride.dropoffCoords as Ride['dropoffCoords'] : null,
     serviceType: validServiceTypes.has(rawServiceType)
       ? (rawServiceType as ServiceType)
       : ServiceType.PICKUP

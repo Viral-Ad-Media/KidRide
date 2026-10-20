@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { apiRequest, getStoredToken } from './api';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
+// Every few seconds while a trip is active, so the parent sees the car move;
+// the parent's map glides the marker between these updates.
+const SEND_INTERVAL_MS = 4000;
+// Browsers report heading/speed as null (or NaN when not moving).
+const validNumber = (value: number | null, max: number) => (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max ? value : null);
+
 export const useDriverLocation = () => {
   const { user } = useAuth();
   const { activeRide } = useRide();
@@ -13,15 +19,15 @@ export const useDriverLocation = () => {
     let sending = false;
     let lastSent = 0;
     const id = navigator.geolocation.watchPosition(async position => {
-      if (disposed || sending || document.hidden || Date.now() - lastSent < 10000) return;
+      if (disposed || sending || document.hidden || Date.now() - lastSent < SEND_INTERVAL_MS) return;
       sending = true;
       lastSent = Date.now();
       try {
-        await apiRequest(`/rides/${activeRide.id}/location`, { method: 'PUT', token: getStoredToken(), body: { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy } });
+        await apiRequest(`/rides/${activeRide.id}/location`, { method: 'PUT', token: getStoredToken(), body: { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, heading: validNumber(position.coords.heading, 360), speed: validNumber(position.coords.speed, 150) } });
         if (!disposed) setError(null);
       } catch { if (!disposed) setError('Location sharing interrupted. Check your connection and keep this page open.'); }
       finally { sending = false; }
-    }, () => { if (!disposed) setError('Enable location access to share your trip GPS.'); }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+    }, () => { if (!disposed) setError('Enable location access to share your trip GPS.'); }, { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 });
     return () => { disposed = true; navigator.geolocation.clearWatch(id); };
   }, [user?.id, user?.isVerifiedDriver, user?.driverApplicationStatus, activeRide?.id, activeRide?.status]);
   return error;

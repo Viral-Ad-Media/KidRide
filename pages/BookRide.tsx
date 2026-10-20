@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Card, Select } from '../components/UIComponents';
+import { Button, Card, Select } from '../components/UIComponents';
 import { ArrowLeft, MapPin, Search, ShieldCheck, Map } from 'lucide-react';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
-import { RideStatus, ServiceType, Ride } from '../types';
+import { RideStatus, ServiceType, Ride, PlaceCoords } from '../types';
+import { PlacesInput } from '../components/PlacesInput';
 
 const childInitials = (name: string) => (
   name
@@ -56,6 +57,9 @@ export const BookRide = () => {
     childId: '',
     pickup: '',
     dropoff: '',
+    // Set only when the address comes from a suggestion; typing clears it.
+    pickupCoords: null as PlaceCoords | null,
+    dropoffCoords: null as PlaceCoords | null,
     serviceType: 'pickup_only'
   });
 
@@ -129,6 +133,8 @@ export const BookRide = () => {
       childId: formData.childId,
       pickupLocation: trimmedPickup,
       dropoffLocation: trimmedDropoff,
+      pickupCoords: formData.pickupCoords,
+      dropoffCoords: formData.dropoffCoords,
       pickupTime: new Date().toISOString(),
       status: RideStatus.SEARCHING_DRIVER,
       price: quote,
@@ -253,17 +259,19 @@ export const BookRide = () => {
       {step === 2 && (
         <div className="space-y-6 fade-in">
           <h3 className="text-lg font-semibold">Where and when?</h3>
-          <Input
+          <PlacesInput
             label="Pickup Location"
             placeholder="e.g. Home, 123 Maple St"
             value={formData.pickup}
-            onChange={(e) => setFormData({ ...formData, pickup: e.target.value })}
+            onChange={(text) => setFormData((current) => ({ ...current, pickup: text, pickupCoords: null }))}
+            onSelect={({ address, coords }) => setFormData((current) => ({ ...current, pickup: address, pickupCoords: coords }))}
           />
-          <Input
+          <PlacesInput
             label="Drop-off Location"
             placeholder="e.g. Soccer Field"
             value={formData.dropoff}
-            onChange={(e) => setFormData({ ...formData, dropoff: e.target.value })}
+            onChange={(text) => setFormData((current) => ({ ...current, dropoff: text, dropoffCoords: null }))}
+            onSelect={({ address, coords }) => setFormData((current) => ({ ...current, dropoff: address, dropoffCoords: coords }))}
           />
           <Select
             label="Service Type"

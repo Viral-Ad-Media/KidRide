@@ -4,6 +4,7 @@ import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponen
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDriverRating } from '../components/Ratings';
+import { LiveMap } from '../components/LiveMap';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
@@ -246,6 +247,16 @@ export const DriverDashboard = () => {
                   <p className="text-lg font-semibold text-slate-950">{activeRide.dropoffLocation}</p>
                 </div>
               </div>
+
+              <LiveMap
+                pickup={activeRide.pickupLocation}
+                dropoff={activeRide.dropoffLocation}
+                pickupCoords={activeRide.pickupCoords}
+                dropoffCoords={activeRide.dropoffCoords}
+                driverLocation={activeRide.driverLocation}
+                nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
+                className="mt-6 h-64"
+              />
 
               <div className="mt-8 space-y-3">
                 {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button variant="secondary" onClick={() => setConfirmingCancel(true)}>Cancel Ride</Button>}
