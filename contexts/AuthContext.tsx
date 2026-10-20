@@ -52,6 +52,8 @@ interface AuthContextType {
   addChild: (child: Child) => Promise<void>;
   /** Re-reads the account from the server, e.g. to pick up a driver review decision. */
   refreshUser: () => Promise<User | null>;
+  updateChild: (id: string, updates: { name: string; age: number; notes?: string }) => Promise<void>;
+  removeChild: (id: string) => Promise<void>;
   updateProfile: (updates: { name?: string; phone?: string }) => Promise<User>;
 }
 
@@ -256,6 +258,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     persistUser(updatedUser, token);
   };
 
+  const replaceChildren = (response: { children?: unknown[] }, token: string) => {
+    const currentUser = user ?? readStoredUser();
+    if (!currentUser) return;
+    persistUser({ ...currentUser, children: Array.isArray(response.children) ? response.children.map(mapChild) : currentUser.children }, token);
+  };
+
+  const updateChild = async (id: string, updates: { name: string; age: number; notes?: string }) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to edit a child.');
+    replaceChildren(await apiRequest<{ children?: unknown[] }>(`/users/children/${encodeURIComponent(id)}`, { method: 'PUT', token, body: updates }), token);
+  };
+
+  const removeChild = async (id: string) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to remove a child.');
+    replaceChildren(await apiRequest<{ children?: unknown[] }>(`/users/children/${encodeURIComponent(id)}`, { method: 'DELETE', token }), token);
+  };
+
   const refreshUser = async () => {
     const token = getStoredToken();
     if (!token) return null;
@@ -311,7 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild, refreshUser, updateProfile }}>
+    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild, refreshUser, updateProfile, updateChild, removeChild }}>
       {children}
     </AuthContext.Provider>
   );

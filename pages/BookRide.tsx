@@ -17,10 +17,20 @@ const childInitials = (name: string) => (
 );
 
 const serviceTypeLabels: Record<string, string> = {
-  pickup_only: 'Pickup Only',
-  pickup_and_dropoff: 'Round Trip',
-  stay_with_child_and_dropoff: 'Stay & Supervise'
+  pickup_only: 'Pickup only',
+  dropoff_only: 'Drop-off only',
+  pickup_and_dropoff: 'Pickup and drop-off',
+  stay_with_child_and_dropoff: 'Stay with child, then drop-off'
 };
+
+const serviceTypeDescriptions: Record<string, string> = {
+  pickup_only: 'The driver collects your child from the pickup address and brings them to you.',
+  dropoff_only: 'The driver takes your child from you to the drop-off address.',
+  pickup_and_dropoff: 'The driver collects your child and takes them to the drop-off address.',
+  stay_with_child_and_dropoff: 'The driver stays with your child at the activity, then drops them off.'
+};
+
+const formatPrice = (price?: number) => (typeof price === 'number' ? `$${price.toFixed(2)}` : null);
 
 export const BookRide = () => {
   const navigate = useNavigate();
@@ -29,6 +39,13 @@ export const BookRide = () => {
   const [quote, setQuote] = useState<number | null>(null);
   const [quoteService, setQuoteService] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [prices, setPrices] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    apiRequest<{ prices: Record<string, number> }>('/rides/prices', { token: getStoredToken() })
+      .then((result) => setPrices(result.prices || {}))
+      .catch(() => setPrices({}));
+  }, []);
   const [step, setStep] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
@@ -253,10 +270,13 @@ export const BookRide = () => {
             value={formData.serviceType}
             onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
           >
-            <option value="pickup_only">Pickup Only (Driver drops off)</option>
-            <option value="pickup_and_dropoff">Round Trip</option>
-            <option value="stay_with_child_and_dropoff">Stay &amp; Supervise</option>
+            {Object.keys(serviceTypeLabels).map((type) => (
+              <option key={type} value={type}>
+                {serviceTypeLabels[type]}{formatPrice(prices[type]) ? ` - ${formatPrice(prices[type])}` : ''}
+              </option>
+            ))}
           </Select>
+          <p className="-mt-2 text-sm text-slate-500">{serviceTypeDescriptions[formData.serviceType]}</p>
         </div>
       )}
 

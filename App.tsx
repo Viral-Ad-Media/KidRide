@@ -145,6 +145,7 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/edit-child/:id" element={<ProtectedRoute roles={[UserRole.PARENT]}><AddChild /></ProtectedRoute>} />
       <Route
         path="/book"
         element={

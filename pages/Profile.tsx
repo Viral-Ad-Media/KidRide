@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components/UIComponents';
-import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, Plus, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
+import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
@@ -77,13 +77,11 @@ export const NotificationSettings = () => {
   const [push, setPush] = useState(true);
   const [sms, setSms] = useState(false);
 
-  const Toggle = ({ value, onChange }: { value: boolean, onChange: (v: boolean) => void }) => (
-    <div 
-      className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${value ? 'bg-[#3A77FF]' : 'bg-gray-300'}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange(!value);
-      }}
+  // Preferences are not stored yet, so the switches are shown but cannot be changed.
+  const Toggle = ({ value }: { value: boolean, onChange: (v: boolean) => void }) => (
+    <div
+      aria-disabled="true"
+      className={`w-12 h-6 rounded-full p-1 opacity-50 cursor-not-allowed ${value ? 'bg-[#3A77FF]' : 'bg-gray-300'}`}
     >
       <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${value ? 'translate-x-6' : 'translate-x-0'}`} />
     </div>
@@ -96,6 +94,11 @@ export const NotificationSettings = () => {
                 <ArrowLeft size={24} />
             </button>
             <h2 className="text-xl font-bold text-gray-900">Notification Settings</h2>
+        </div>
+
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+            <p className="font-semibold">Coming soon</p>
+            <p className="mt-1">You will be able to choose how KidRide contacts you here. For now, ride updates appear in the app while you have it open.</p>
         </div>
         
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -141,14 +144,11 @@ export const PaymentMethods = () => {
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-[#3A77FF]">
                     <CreditCard size={24} />
                 </div>
-                <h3 className="mt-4 font-bold text-gray-900">No payment methods saved</h3>
+                <span className="mt-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#3A77FF]">Coming soon</span>
+                <h3 className="mt-3 font-bold text-gray-900">Card payments are on the way</h3>
                 <p className="mt-2 text-sm text-gray-500">
-                    Payment methods have not been added to this account yet.
+                    You will be able to save a card and pay for rides here. Until then, there is nothing to set up and rides are not charged in the app.
                 </p>
-             </div>
-
-             <div className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 font-medium flex items-center justify-center gap-2">
-                <Plus size={20} /> Payment method management is not available yet
              </div>
         </div>
      </div>
