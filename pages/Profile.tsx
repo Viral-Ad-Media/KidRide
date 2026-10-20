@@ -4,6 +4,7 @@ import { Button, Input } from '../components/UIComponents';
 import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, Plus, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
+import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 
 // Name and phone are editable here; vehicle details are part of the verified
 // driver application, so changing them means re-applying.
@@ -208,7 +209,14 @@ export const Profile = () => {
                  <h3 className="font-bold text-lg">Driver Verification</h3>
              </div>
 
-             {user?.driverApplicationStatus === 'pending' ? (
+             {user?.role === UserRole.DRIVER ? (
+                 <>
+                    <DriverApplicationStatus />
+                    {user.driverApplicationStatus !== 'approved' && user.driverApplicationStatus !== 'pending' && (
+                        <Button fullWidth className="mt-4" onClick={handleStartVerification}>{user.driverApplicationStatus === 'rejected' ? 'Apply again' : 'Start Verification'}</Button>
+                    )}
+                 </>
+             ) : user?.driverApplicationStatus === 'pending' ? (
                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
                     <Clock className="text-yellow-600 shrink-0 mt-0.5" size={20} />
                     <div>

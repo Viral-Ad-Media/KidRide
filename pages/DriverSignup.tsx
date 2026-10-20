@@ -5,6 +5,7 @@ import { ArrowLeft, Car, ShieldCheck, CheckCircle, AlertCircle, Home } from 'luc
 import { getDefaultRouteForUser, useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../services/api';
 import { uploadVerification } from '../services/verification';
+import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 import { UserRole } from '../types';
 
 export const DriverSignup = () => {
@@ -201,13 +202,9 @@ export const DriverSignup = () => {
     return (
       <div>
       {signedInBar}
-      <div className="mx-auto max-w-md p-8 text-center">
-        <h2 className="text-xl font-bold">Application awaiting review</h2>
-        <p className="mt-3 text-gray-600">Ride offers become available once an admin approves your documents.</p>
-        <Button className="mt-6" onClick={() => void checkStatus()} disabled={checkingStatus}>
-          {checkingStatus ? 'Checking...' : 'Check status'}
-        </Button>
-        {statusNote && <p className="mt-4 text-sm text-gray-500">{statusNote}</p>}
+      <div className="mx-auto max-w-md p-6">
+        <h2 className="mb-4 text-xl font-bold">Your driver application</h2>
+        <DriverApplicationStatus onCheckStatus={() => void checkStatus()} checking={checkingStatus} note={statusNote} />
       </div>
       </div>
     );
@@ -227,7 +224,7 @@ export const DriverSignup = () => {
         <p className="text-gray-600 max-w-sm mb-8">
           Your application has been submitted. Your documents are awaiting manual review. Ride offers are unavailable until your account is approved.
         </p>
-        <Button onClick={() => navigate(successDestination)} className="flex items-center gap-2">
+        <Button onClick={() => (user?.role === UserRole.DRIVER ? setSubmitted(false) : navigate(successDestination))} className="flex items-center gap-2">
           <Home size={20} />
           {user?.role === UserRole.PARENT ? 'Return to Profile' : 'View Application Status'}
         </Button>
@@ -252,11 +249,7 @@ export const DriverSignup = () => {
 
       {signedInBar}
       <div className="max-w-md mx-auto p-6 space-y-6">
-        {step === 1 && user?.driverApplicationStatus === 'rejected' && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Your previous application was not approved. Check your details, upload clear photos of each document, and submit again.
-          </div>
-        )}
+        {step === 1 && user?.driverApplicationStatus === 'rejected' && <DriverApplicationStatus />}
 
         {step === 1 && (
           <div className="animate-fade-in space-y-6">
