@@ -120,6 +120,7 @@ const isPdf = (url: string) => /\.pdf($|\?)/i.test(url.split('#')[0]) || /applic
 
 const DocumentTile: React.FC<{ docKey: DocumentKey; url?: string | null }> = ({ docKey, url }) => {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const label = DOCUMENT_LABELS[docKey];
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -131,8 +132,9 @@ const DocumentTile: React.FC<{ docKey: DocumentKey; url?: string | null }> = ({ 
           <FileText size={18} /> Open document <ExternalLink size={14} />
         </a>
       ) : (
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          <img src={url} alt={label} onError={() => setFailed(true)} className="h-44 w-full rounded-xl bg-white object-contain" />
+        <a href={url} target="_blank" rel="noopener noreferrer" className="relative block">
+          {!loaded && <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-white text-xs text-slate-400">Loading preview...</span>}
+          <img src={url} alt={label} loading="lazy" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} className="h-44 w-full rounded-xl bg-white object-contain" />
         </a>
       )}
     </div>

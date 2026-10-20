@@ -1,5 +1,8 @@
 import { Ride, RideStatus } from '../types';
-import { ApiError, RideScope, apiRequest, getStoredToken, mapRide } from './api';
+import { ApiError, RideScope, apiRequest as baseRequest, getStoredToken, mapRide } from './api';
+
+// Admin screens load larger lists and documents; allow more time than the default.
+const apiRequest = <T>(path: string, options: Parameters<typeof baseRequest>[1] = {}) => baseRequest<T>(path, { timeoutMs: 60000, ...options });
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
 

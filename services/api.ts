@@ -93,6 +93,8 @@ type RequestBody = BodyInit | Record<string, unknown> | null | undefined;
 interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
   body?: RequestBody;
   token?: string | null;
+  /** How long to wait before giving up (default 20 s). */
+  timeoutMs?: number;
 }
 
 const isRawBody = (body: RequestBody): body is BodyInit => (
@@ -105,7 +107,7 @@ const isRawBody = (body: RequestBody): body is BodyInit => (
 );
 
 export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {}): Promise<T> => {
-  const { token, body, headers, ...rest } = options;
+  const { token, body, headers, timeoutMs = 20000, ...rest } = options;
   const resolvedPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${getApiBaseUrl()}${resolvedPath}`;
   const requestHeaders = new Headers(headers || {});
@@ -128,7 +130,16 @@ export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {
     }
   }
 
-  const response = await fetch(url, { ...init, signal: init.signal || AbortSignal.timeout(20000) });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...init, signal: init.signal || AbortSignal.timeout(timeoutMs) });
+  } catch (error) {
+    // Raw fetch errors ("signal timed out", "Failed to fetch") mean nothing to users.
+    if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+      throw new ApiError('The server is taking too long to respond. Please try again.', 0, null);
+    }
+    throw new ApiError('Could not reach the KidRide server. Check your connection and try again.', 0, null);
+  }
   const text = await response.text();
 
   let payload: unknown = null;
