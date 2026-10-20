@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, X, XCircle } from 'lucide-react';
 import { StatusChip } from '../components/UIComponents';
@@ -269,15 +269,19 @@ export const AdminApplications = () => {
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
+  // Switching tabs while a slow request is in flight must not let the old reply win.
+  const latestRequest = useRef(0);
   const load = useCallback(async () => {
+    const request = ++latestRequest.current;
     setLoading(true);
     setError(null);
     try {
-      setItems(await fetchDriverApplications(status));
+      const result = await fetchDriverApplications(status);
+      if (request === latestRequest.current) setItems(result);
     } catch (err) {
-      setError(errorMessage(err, 'Could not load driver applications.'));
+      if (request === latestRequest.current) setError(errorMessage(err, 'Could not load driver applications.'));
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) setLoading(false);
     }
   }, [status]);
 
@@ -363,15 +367,18 @@ export const AdminRides = () => {
   const [overrideChoice, setOverrideChoice] = useState<Record<string, RideStatus>>({});
   const [flash, setFlash] = useState<string | null>(null);
 
+  const latestRequest = useRef(0);
   const load = useCallback(async () => {
+    const request = ++latestRequest.current;
     setLoading(true);
     setError(null);
     try {
-      setRides(await fetchAdminRides(scope, 100));
+      const result = await fetchAdminRides(scope, 100);
+      if (request === latestRequest.current) setRides(result);
     } catch (err) {
-      setError(errorMessage(err, 'Could not load rides.'));
+      if (request === latestRequest.current) setError(errorMessage(err, 'Could not load rides.'));
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) setLoading(false);
     }
   }, [scope]);
 

@@ -18,6 +18,15 @@ export const formatRidePrice = (price: number, fallback = 'Pricing pending'): st
   hasRidePrice(price) ? currencyFormatter.format(price) : fallback
 );
 
+// Pickup times arrive as ISO strings; show them as e.g. "Tue, Oct 20, 3:55 PM".
+export const formatPickupTime = (value?: string | null, fallback = 'Not scheduled'): string => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
 export const getCompletedRideSummary = (rides: Ride[]) => {
   const completedRides = rides.filter((ride) => ride.status === RideStatus.COMPLETED);
   const completedCount = completedRides.length;

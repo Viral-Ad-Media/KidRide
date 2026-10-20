@@ -5,7 +5,7 @@ import { Button, Card, StatusChip } from '../components/UIComponents';
 import { fetchUserRides, getStoredToken } from '../services/api';
 import { Ride } from '../types';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin } from 'lucide-react';
-import { formatRidePrice } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice } from '../utils/rideData';
 
 export const RideHistory = () => {
   const navigate = useNavigate();
@@ -146,7 +146,7 @@ export const RideHistory = () => {
                 <Card key={ride.id}>
                   <div className="flex items-center gap-3 mb-3 text-sm text-gray-600">
                     <Calendar size={16} className="text-[#3A77FF]" />
-                    <span className="font-semibold text-gray-900">{ride.pickupTime}</span>
+                    <span className="font-semibold text-gray-900">{formatPickupTime(ride.pickupTime)}</span>
                   </div>
                   <div className="pl-7 border-l-2 border-gray-100 space-y-2 mb-4">
                     <p className="text-sm flex items-center gap-2">
@@ -189,7 +189,7 @@ export const RideHistory = () => {
                 <Card key={ride.id} className="opacity-80 hover:opacity-100 transition-opacity">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">{ride.pickupTime}</p>
+                      <p className="text-xs text-gray-500 mb-1">{formatPickupTime(ride.pickupTime)}</p>
                       <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
                         {ride.pickupLocation} <ArrowRight size={12} /> {ride.dropoffLocation}
                       </h4>

@@ -271,8 +271,8 @@ export const DriverSignup = () => {
                 <p className="text-center text-xs text-red-400 mt-2 flex items-center justify-center gap-1">
                   <AlertCircle size={12} />
                   {requiresAccountCreation
-                    ? 'Name, email, password, phone, and SSN are required'
-                    : 'Phone number and SSN are required'}
+                    ? 'Name, email, password, and phone are required'
+                    : 'Phone number is required'}
                 </p>
               )}
             </div>

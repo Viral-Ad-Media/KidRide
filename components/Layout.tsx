@@ -136,10 +136,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     '/driver-signup'
   ]);
 
-  if (publicPagePaths.has(location.pathname)) {
-    return <div className="min-h-screen text-slate-900">{children}</div>;
-  }
-
   const parentNavItems: NavItem[] = [
     { icon: Home, label: 'Dashboard', path: '/dashboard', description: 'Overview and family activity' },
     { icon: Car, label: 'Rides', path: '/rides', description: 'Trips, bookings, and history' },
@@ -231,6 +227,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, [user]);
 
+  // Must come after every hook so public and app pages call the same hooks.
+  if (publicPagePaths.has(location.pathname)) {
+    return <div className="min-h-screen text-slate-900">{children}</div>;
+  }
+
   const handleNavigation = (path: string) => {
     navigate(path);
     setIsMenuOpen(false);
@@ -266,7 +267,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1600px] gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 xl:gap-6 xl:px-6">
         <aside className="hidden xl:flex xl:w-[310px] xl:shrink-0">
-          <div className="glass-panel sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-hidden rounded-[32px] p-6">
+          <div className="glass-panel sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-y-auto rounded-[32px] p-6">
             <button
               type="button"
               onClick={() => navigate(isAdmin ? '/admin' : user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}

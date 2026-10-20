@@ -168,7 +168,10 @@ export const BookRide = () => {
           </div>
         </div>
 
-        <Button onClick={() => activeRide && navigate(`/tracking/${activeRide.id}`)}>View Request</Button>
+        {/* The ride id only exists once the request call returns, which can take a few seconds. */}
+        <Button disabled={!activeRide} onClick={() => activeRide && navigate(`/tracking/${activeRide.id}`)}>
+          {activeRide ? 'View Request' : 'Sending request...'}
+        </Button>
         <div className="mt-8 max-w-[220px] text-xs text-gray-400">
           {syncError || 'You can view or cancel your request while waiting.'}
         </div>

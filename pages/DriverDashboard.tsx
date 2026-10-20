@@ -4,7 +4,7 @@ import { Button, Card, StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
-import { formatRidePrice } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice } from '../utils/rideData';
 
 import { useDriverLocation } from '../services/driverLocation';
 
@@ -19,6 +19,8 @@ export const DriverDashboard = () => {
   const [completedCount, setCompletedCount] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [isMetricsLoading, setIsMetricsLoading] = useState(true);
+  // Reload the totals when the current trip finishes so they include it.
+  const rideCompleted = activeRide?.status === RideStatus.COMPLETED;
 
   useEffect(() => {
     const token = getStoredToken();
@@ -59,7 +61,7 @@ export const DriverDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [rideCompleted]);
 
   const handleStatusUpdate = async (nextStatus: RideStatus) => {
     try {
@@ -169,7 +171,7 @@ export const DriverDashboard = () => {
 
                 <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                  <p className="mt-3 text-lg font-bold text-slate-950">{activeRide.pickupTime || 'Not scheduled'}</p>
+                  <p className="mt-3 text-lg font-bold text-slate-950">{formatPickupTime(activeRide.pickupTime)}</p>
                 </div>
               </div>
 
@@ -205,7 +207,7 @@ export const DriverDashboard = () => {
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <StatusChip status={activeRide.status} />
-                  <h3 className="mt-4 text-3xl font-bold text-slate-950">Active trip in progress</h3>
+                  <h3 className="mt-4 text-3xl font-bold text-slate-950">{activeRide.status === RideStatus.COMPLETED ? 'Trip completed' : 'Active trip in progress'}</h3>
                   <p className="mt-3 text-sm leading-7 text-slate-500">
                     Move the ride through each status as the pickup and drop-off happen.
                   </p>
@@ -213,7 +215,7 @@ export const DriverDashboard = () => {
 
                 <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                  <p className="mt-3 text-lg font-bold text-slate-950">{activeRide.pickupTime || 'Not scheduled'}</p>
+                  <p className="mt-3 text-lg font-bold text-slate-950">{formatPickupTime(activeRide.pickupTime)}</p>
                 </div>
               </div>
 
@@ -234,7 +236,7 @@ export const DriverDashboard = () => {
               </div>
 
               <div className="mt-8 space-y-3">
-                {activeRide.status !== RideStatus.IN_PROGRESS && <Button variant="secondary" onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setError(err.message)); }}>Cancel Ride</Button>}
+                {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button variant="secondary" onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setError(err.message)); }}>Cancel Ride</Button>}
                 {activeRide.status === RideStatus.DRIVER_ASSIGNED && (
                   <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>
                     Arrived at Pickup
