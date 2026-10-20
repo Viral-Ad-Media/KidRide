@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, Users, ArrowLeft, Plus, X, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { generateSafetyResponse } from '../services/geminiService';
 import { Button, Card, Input } from '../components/UIComponents';
+import { ApiError, apiRequest, getStoredToken } from '../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -12,8 +13,11 @@ interface TrustedContact {
   id: string;
   name: string;
   phone: string;
-  relation: string;
+  relationship: string | null;
 }
+
+const MAX_CONTACTS = 5;
+const contactsPath = '/users/me/trusted-contacts';
 
 export const SafetyChat = () => {
   const [view, setView] = useState<'menu' | 'chat' | 'contacts'>('menu');
@@ -29,6 +33,17 @@ export const SafetyChat = () => {
   const [contacts, setContacts] = useState<TrustedContact[]>([]);
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContact, setNewContact] = useState({ name: '', phone: '', relation: '' });
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [savingContact, setSavingContact] = useState(false);
+
+  // Trusted contacts are saved to the account, so they are the same on every device.
+  useEffect(() => {
+    apiRequest<{ contacts: TrustedContact[] }>(contactsPath, { token: getStoredToken() })
+      .then((result) => setContacts(result.contacts))
+      .catch((err) => setContactError(err instanceof ApiError ? err.message : 'Could not load your trusted contacts.'))
+      .finally(() => setContactsLoading(false));
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,27 +66,37 @@ export const SafetyChat = () => {
     setIsTyping(false);
   };
 
-  const handleAddContact = () => {
+  const handleAddContact = async () => {
     if (!newContact.name.trim() || !newContact.phone.trim()) {
+      setContactError('Enter a name and a phone number.');
       return;
     }
-
-    setContacts((prev) => [
-      ...prev,
-      {
-        ...newContact,
-        id: Date.now().toString(),
-        name: newContact.name.trim(),
-        phone: newContact.phone.trim(),
-        relation: newContact.relation.trim()
-      }
-    ]);
-    setNewContact({ name: '', phone: '', relation: '' });
-    setShowAddContact(false);
+    setSavingContact(true);
+    setContactError(null);
+    try {
+      const result = await apiRequest<{ contacts: TrustedContact[] }>(contactsPath, {
+        method: 'POST',
+        token: getStoredToken(),
+        body: { name: newContact.name.trim(), phone: newContact.phone.trim(), relationship: newContact.relation.trim() }
+      });
+      setContacts(result.contacts);
+      setNewContact({ name: '', phone: '', relation: '' });
+      setShowAddContact(false);
+    } catch (err) {
+      setContactError(err instanceof ApiError ? err.message : 'Could not save this contact.');
+    } finally {
+      setSavingContact(false);
+    }
   };
 
-  const handleRemoveContact = (id: string) => {
-    setContacts((prev) => prev.filter((contact) => contact.id !== id));
+  const handleRemoveContact = async (id: string) => {
+    setContactError(null);
+    try {
+      const result = await apiRequest<{ contacts: TrustedContact[] }>(`${contactsPath}/${encodeURIComponent(id)}`, { method: 'DELETE', token: getStoredToken() });
+      setContacts(result.contacts);
+    } catch (err) {
+      setContactError(err instanceof ApiError ? err.message : 'Could not remove this contact.');
+    }
   };
 
   const handleSosClick = () => {
@@ -157,23 +182,26 @@ export const SafetyChat = () => {
                 </div>
                 <div>
                   <h4 className="font-bold text-gray-900">{contact.name}</h4>
-                  <p className="text-xs text-gray-500">{contact.relation || 'Trusted contact'} • {contact.phone}</p>
+                  <p className="text-xs text-gray-500">{contact.relationship || 'Trusted contact'} • {contact.phone}</p>
                 </div>
               </div>
-              <button onClick={() => handleRemoveContact(contact.id)} className="rounded-full p-2 text-red-400 hover:bg-red-50">
+              <button onClick={() => void handleRemoveContact(contact.id)} aria-label={`Remove ${contact.name}`} className="rounded-full p-2 text-red-400 hover:bg-red-50">
                 <X size={16} />
               </button>
             </Card>
           ))}
 
-          {contacts.length === 0 && !showAddContact && (
+          {contactError && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{contactError}</p>}
+          {contactsLoading && <p className="text-center text-sm text-slate-500">Loading your trusted contacts...</p>}
+
+          {!contactsLoading && contacts.length === 0 && !showAddContact && (
             <Card className="text-center">
               <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-green-50 text-green-600">
                 <Users size={24} />
               </div>
               <h3 className="mt-4 text-xl font-bold text-slate-950">No trusted contacts yet</h3>
               <p className="mt-2 text-sm leading-7 text-slate-500">
-                Add the people you want ready before contact tools are connected to the app.
+                Save up to {MAX_CONTACTS} people you trust, such as a partner, grandparent or neighbour. They are kept with your account.
               </p>
             </Card>
           )}
@@ -186,13 +214,15 @@ export const SafetyChat = () => {
                 <Input placeholder="Phone" value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} />
                 <Input placeholder="Relation (e.g. Neighbor)" value={newContact.relation} onChange={(e) => setNewContact({ ...newContact, relation: e.target.value })} />
                 <div className="flex gap-2">
-                  <Button onClick={handleAddContact} className="h-10 flex-1">Save</Button>
+                  <Button onClick={() => void handleAddContact()} disabled={savingContact} className="h-10 flex-1">{savingContact ? 'Saving...' : 'Save'}</Button>
                   <Button variant="secondary" onClick={() => setShowAddContact(false)} className="h-10 flex-1">Cancel</Button>
                 </div>
               </div>
             </Card>
+          ) : contacts.length >= MAX_CONTACTS ? (
+            <p className="text-center text-sm text-slate-500">You have saved the maximum of {MAX_CONTACTS} trusted contacts.</p>
           ) : (
-            <Button variant="secondary" fullWidth onClick={() => setShowAddContact(true)} className="border-dashed">
+            <Button variant="secondary" fullWidth onClick={() => { setContactError(null); setShowAddContact(true); }} className="border-dashed" disabled={contactsLoading}>
               <Plus size={20} className="mr-2" /> Add Trusted Contact
             </Button>
           )}
