@@ -77,8 +77,15 @@ export interface DriverLocation {
   recordedAt: string;
 }
 
+export interface RideRating {
+  stars: number;
+  comment?: string | null;
+}
+
 export interface Ride {
   driverLocation?: DriverLocation;
+  /** The parent's rating of this ride, when they have rated it. */
+  rating?: RideRating | null;
   id: string;
   childId: string;
   driverId?: string;

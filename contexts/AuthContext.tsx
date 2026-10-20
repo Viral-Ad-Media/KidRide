@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Child, User, UserRole } from '../types';
 import {
   ApiError,
+  SESSION_ENDED_EVENT,
   apiRequest,
   clearStoredToken,
   getStoredToken,
@@ -177,6 +178,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  // The API reports a blocked account or revoked session; sign out locally too.
+  useEffect(() => {
+    const endSession = () => clearSession();
+    window.addEventListener(SESSION_ENDED_EVENT, endSession);
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, endSession);
   }, []);
 
   const login = async ({ email, password }: LoginPayload) => {

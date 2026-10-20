@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, X, XCircle } from 'lucide-react';
-import { ConfirmModal, StatusChip } from '../components/UIComponents';
+import { ConfirmModal, Modal, StatusChip } from '../components/UIComponents';
 import { ApiError, RideScope } from '../services/api';
 import {
   AdminRide,
@@ -13,6 +13,13 @@ import {
   TERMINAL_RIDE_STATUSES,
   adminCancelRide,
   adminOverrideRideStatus,
+  blockUser,
+  fetchManagedUsers,
+  ManagedUser,
+  ManagedUserPage,
+  RatingSummary,
+  revokeDriverApproval,
+  unblockUser,
   errorMessage,
   fetchAdminRides,
   fetchDriverApplicationDetail,
@@ -33,6 +40,8 @@ const AdminTabs = () => {
   return (
     <div className="mb-6 flex flex-wrap gap-2">
       <NavLink to="/admin" end className={cls}>Driver applications</NavLink>
+      <NavLink to="/admin/drivers" className={cls}>Drivers</NavLink>
+      <NavLink to="/admin/parents" className={cls}>Parents</NavLink>
       <NavLink to="/admin/rides" className={cls}>Rides</NavLink>
     </div>
   );
@@ -163,8 +172,11 @@ const ApplicationDetailPanel: React.FC<{
   const linksMayBeExpired = loadedAt > 0 && Date.now() - loadedAt > 4.5 * 60 * 1000;
   const isPending = application.driverApplicationStatus === 'pending';
 
+  const rejectReason = useRef('');
+
   const startReview = (status: 'approved' | 'rejected') => {
     if (!detail) return;
+    rejectReason.current = '';
     const approve = status === 'approved';
     setConfirm({
       title: approve ? `Approve ${application.name}?` : `Reject ${application.name}?`,
@@ -178,11 +190,17 @@ const ApplicationDetailPanel: React.FC<{
           </p>
         </>
       ) : (
-        <p>The applicant will be marked as rejected and will not be able to accept rides.</p>
+        <>
+          <p>The applicant will be marked as rejected and will not be able to accept rides. They can fix their details and apply again.</p>
+          <label className="block text-sm font-semibold text-slate-700">
+            Reason (shown to the driver)
+            <textarea maxLength={500} rows={3} onChange={(event) => { rejectReason.current = event.target.value; }} placeholder="e.g. The insurance document is unreadable. Please upload a clear photo." className="mt-2 w-full rounded-2xl border border-slate-200 p-3 text-sm font-normal" />
+          </label>
+        </>
       ),
       onConfirm: async () => {
         try {
-          await reviewDriverApplication(application.id, status, detail.submittedAt);
+          await reviewDriverApplication(application.id, status, detail.submittedAt, status === 'rejected' ? rejectReason.current.trim() : undefined);
           onReviewed(status);
         } catch (err) {
           if (err instanceof ApiError && err.status === 409) {
@@ -498,3 +516,224 @@ export const AdminRides = () => {
     </div>
   );
 };
+
+// --- Drivers and parents ---
+
+const formatDay = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const ratingLabel = (rating?: RatingSummary) => (rating?.count && rating.average !== null ? `★ ${rating.average.toFixed(1)} (${rating.count} ${rating.count === 1 ? 'rating' : 'ratings'})` : 'No ratings yet');
+
+const Detail: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div><dt className="text-xs text-slate-400">{label}</dt><dd className="mt-0.5 text-sm font-medium text-slate-800">{value}</dd></div>
+);
+
+const PAGE_SIZE = 20;
+
+const vehicleText = (user: ManagedUser) => {
+  const text = [user.vehicle?.color, user.vehicle?.year, user.vehicle?.make, user.vehicle?.model].filter(Boolean).join(' ');
+  return text ? `${text}${user.vehicle?.plate ? ` (${user.vehicle.plate})` : ''}` : 'Not provided';
+};
+
+const applicationLabel = (status?: string) => (status === 'none' || !status ? 'Not applied' : status === 'rejected' ? 'Not approved' : status === 'approved' ? 'Approved' : 'Pending');
+
+const ManagedUsersPage: React.FC<{ role: 'driver' | 'parent' }> = ({ role }) => {
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<ManagedUserPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<ManagedUser | null>(null);
+  const reason = useRef('');
+  const latestRequest = useRef(0);
+
+  const load = useCallback(async () => {
+    const request = ++latestRequest.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchManagedUsers(role, { search, page, pageSize: PAGE_SIZE });
+      if (request === latestRequest.current) setData(result);
+    } catch (err) {
+      if (request === latestRequest.current) setError(errorMessage(err, `Could not load ${role}s.`));
+    } finally {
+      if (request === latestRequest.current) setLoading(false);
+    }
+  }, [role, search, page]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const reasonField = (label: string, placeholder: string) => (
+    <label className="block text-sm font-semibold text-slate-700">
+      {label}
+      <textarea maxLength={500} rows={3} placeholder={placeholder} onChange={(event) => { reason.current = event.target.value; }} className="mt-2 w-full rounded-2xl border border-slate-200 p-3 text-sm font-normal" />
+    </label>
+  );
+
+  const requireReason = () => {
+    const value = reason.current.trim();
+    if (!value) throw new Error('Please enter a reason.');
+    return value;
+  };
+
+  const askBlock = (user: ManagedUser) => {
+    reason.current = '';
+    setConfirm({
+      title: `Block ${user.name}?`,
+      tone: 'danger',
+      confirmLabel: 'Block account',
+      body: (
+        <>
+          <p>They are signed out on every device straight away and cannot log in until you unblock them.</p>
+          {reasonField('Reason (internal)', 'e.g. Reported unsafe driving on 20 Oct')}
+        </>
+      ),
+      onConfirm: async () => {
+        await blockUser(user.id, requireReason());
+        setFlash(`${user.name} was blocked.`);
+        void load();
+      }
+    });
+  };
+
+  const askUnblock = (user: ManagedUser) => setConfirm({
+    title: `Unblock ${user.name}?`,
+    tone: 'primary',
+    confirmLabel: 'Unblock account',
+    body: <p>They will be able to log in again.{role === 'driver' ? ' Their driver approval is unchanged.' : ''}</p>,
+    onConfirm: async () => {
+      await unblockUser(user.id);
+      setFlash(`${user.name} was unblocked.`);
+      void load();
+    }
+  });
+
+  const askRevoke = (user: ManagedUser) => {
+    reason.current = '';
+    setConfirm({
+      title: `Revoke ${user.name}'s driver approval?`,
+      tone: 'danger',
+      confirmLabel: 'Revoke approval',
+      body: (
+        <>
+          <p>They stop receiving ride offers immediately. Their application is marked "Not approved" and they can apply again.</p>
+          {reasonField('Reason (shown to the driver)', 'e.g. Insurance has expired. Please upload a current policy.')}
+        </>
+      ),
+      onConfirm: async () => {
+        await revokeDriverApproval(user.id, requireReason());
+        setFlash(`${user.name}'s approval was revoked.`);
+        void load();
+      }
+    });
+  };
+
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const noun = role === 'driver' ? 'drivers' : 'parents';
+
+  return (
+    <div>
+      <AdminTabs />
+      <form
+        className="mb-4 flex flex-col gap-2 sm:flex-row"
+        onSubmit={(event) => { event.preventDefault(); setFlash(null); setPage(1); setSearch(searchInput); }}
+      >
+        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder={`Search ${noun} by name or email`} className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm" />
+        <button type="submit" className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">Search</button>
+        <button type="button" onClick={() => void load()} className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-950"><RefreshCw size={16} /> Refresh</button>
+      </form>
+      {flash && <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{flash}</div>}
+      {data && <p className="mb-3 text-xs text-slate-500">{data.total} {noun}{search ? ` matching "${search}"` : ''}</p>}
+
+      {loading && !data ? <Loading label={`Loading ${noun}...`} /> : error ? <ErrorBox message={error} onRetry={load} /> : !data?.users.length ? <Empty label={`No ${noun} found.`} /> : (
+        <div className="space-y-3">
+          {data.users.map((user) => {
+            const approved = user.driverApplicationStatus === 'approved';
+            return (
+              <div key={user.id} className={`rounded-3xl border bg-white p-5 shadow-sm ${user.isBlocked ? 'border-red-200' : 'border-slate-200'}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-bold text-slate-950">{user.name}</p>
+                    <p className="break-all text-sm text-slate-500">{user.email}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {user.isBlocked && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">Blocked</span>}
+                    {role === 'driver' && (
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approved ? 'bg-emerald-100 text-emerald-700' : user.driverApplicationStatus === 'pending' ? 'bg-amber-100 text-amber-700' : user.driverApplicationStatus === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                        {applicationLabel(user.driverApplicationStatus)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Detail label="Phone" value={user.phone || 'Not added'} />
+                  <Detail label="Joined" value={formatDay(user.joinedAt) || 'Unknown'} />
+                  {role === 'driver' ? (
+                    <>
+                      <Detail label="Vehicle" value={vehicleText(user)} />
+                      <Detail label="Rating" value={ratingLabel(user.rating)} />
+                      <Detail label="Completed rides" value={user.completedRides ?? 0} />
+                      <Detail label="Applied" value={formatDay(user.submittedAt) || 'Not yet'} />
+                      <Detail label={approved ? 'Approved' : 'Last decision'} value={formatDay(user.reviewedAt) || (approved ? 'Date not recorded' : 'None yet')} />
+                    </>
+                  ) : (
+                    <>
+                      <Detail label="Children" value={user.children ?? 0} />
+                      <Detail label="Rides booked" value={user.rides ?? 0} />
+                    </>
+                  )}
+                </dl>
+                {user.reviewNote && <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">Review note: {user.reviewNote}</p>}
+                {user.isBlocked && user.blockedReason && <p className="mt-3 rounded-2xl bg-red-50 p-3 text-xs text-red-700">Blocked{formatDay(user.blockedAt) ? ` on ${formatDay(user.blockedAt)}` : ''}: {user.blockedReason}</p>}
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {role === 'driver' && user.submittedAt && (
+                    <button type="button" onClick={() => setViewing(user)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">View documents</button>
+                  )}
+                  {role === 'driver' && approved && (
+                    <button type="button" onClick={() => askRevoke(user)} className="rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">Revoke approval</button>
+                  )}
+                  {user.isBlocked ? (
+                    <button type="button" onClick={() => askUnblock(user)} className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">Unblock</button>
+                  ) : (
+                    <button type="button" onClick={() => askBlock(user)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100">Block</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {data && data.total > PAGE_SIZE && (
+        <div className="mt-6 flex items-center justify-between text-sm">
+          <button type="button" disabled={page <= 1 || loading} onClick={() => setPage(page - 1)} className="rounded-full border border-slate-200 px-4 py-2 font-semibold disabled:opacity-40">Previous</button>
+          <span className="text-slate-500">Page {page} of {totalPages}</span>
+          <button type="button" disabled={page >= totalPages || loading} onClick={() => setPage(page + 1)} className="rounded-full border border-slate-200 px-4 py-2 font-semibold disabled:opacity-40">Next</button>
+        </div>
+      )}
+
+      <Modal open={!!viewing} onClose={() => setViewing(null)} maxWidth="max-w-4xl" labelledBy="driver-documents">
+        {viewing && (
+          <ApplicationDetailPanel
+            application={{ id: viewing.id, name: viewing.name, email: viewing.email, phone: viewing.phone || '', vehicle: viewing.vehicle, driverApplicationStatus: viewing.driverApplicationStatus || 'none', submittedAt: viewing.submittedAt || null }}
+            onClose={() => setViewing(null)}
+            onReviewed={() => { setViewing(null); void load(); }}
+            setConfirm={setConfirm}
+          />
+        )}
+      </Modal>
+      <ConfirmDialog state={confirm} onClose={() => setConfirm(null)} />
+    </div>
+  );
+};
+
+export const AdminDrivers = () => <ManagedUsersPage role="driver" />;
+export const AdminParents = () => <ManagedUsersPage role="parent" />;

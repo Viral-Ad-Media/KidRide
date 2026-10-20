@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useRide } from '../contexts/RideContext';
 import { Button, Card, StatusChip } from '../components/UIComponents';
 import { fetchUserRides, getStoredToken } from '../services/api';
-import { Ride } from '../types';
+import { Ride, RideStatus } from '../types';
+import { RateRideModal, Stars } from '../components/Ratings';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
 
@@ -15,6 +16,7 @@ export const RideHistory = () => {
   const [pastRides, setPastRides] = useState<Ride[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ratingRideId, setRatingRideId] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'active') {
@@ -200,6 +202,18 @@ export const RideHistory = () => {
                     <span className="text-xs text-gray-600">{ride.serviceType.replace(/_/g, ' ')}</span>
                     <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
                   </div>
+                  {ride.status === RideStatus.COMPLETED && (
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                      {ride.rating ? (
+                        <span className="flex items-center gap-2 text-xs text-gray-500">Your rating <Stars value={ride.rating.stars} /></span>
+                      ) : (
+                        <>
+                          <span className="text-xs text-gray-500">How was your driver?</span>
+                          <button type="button" onClick={() => setRatingRideId(ride.id)} className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">Rate driver</button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </Card>
               ))
             )}
@@ -213,6 +227,11 @@ export const RideHistory = () => {
           </div>
         )}
       </div>
+      <RateRideModal
+        rideId={ratingRideId}
+        onClose={() => setRatingRideId(null)}
+        onRated={(rideId, rating) => setPastRides((rides) => rides.map((ride) => (ride.id === rideId ? { ...ride, rating } : ride)))}
+      />
     </div>
   );
 };

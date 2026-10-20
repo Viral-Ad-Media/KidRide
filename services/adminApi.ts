@@ -103,12 +103,60 @@ export const fetchDriverApplicationDetail = async (id: string): Promise<DriverAp
 export const reviewDriverApplication = async (
   id: string,
   status: 'approved' | 'rejected',
-  submittedAt: string | null
+  submittedAt: string | null,
+  reason?: string
 ): Promise<unknown> => apiRequest(`/users/driver-applications/${encodeURIComponent(id)}/review`, {
   method: 'PUT',
   token: requireToken(),
-  body: { status, submittedAt }
+  body: { status, submittedAt, reason }
 });
+
+// --- Admin user management ---
+
+export interface RatingSummary {
+  count: number;
+  average: number | null;
+}
+
+export interface ManagedUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  joinedAt: string;
+  isBlocked: boolean;
+  blockedReason: string | null;
+  blockedAt: string | null;
+  // Drivers
+  vehicle?: DriverApplicationVehicle;
+  isVerifiedDriver?: boolean;
+  driverApplicationStatus?: ApplicationStatus | 'none';
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  completedRides?: number;
+  rating?: RatingSummary;
+  // Parents
+  children?: number;
+  rides?: number;
+}
+
+export interface ManagedUserPage {
+  users: ManagedUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const fetchManagedUsers = async (role: 'driver' | 'parent', { search = '', page = 1, pageSize = 25 } = {}): Promise<ManagedUserPage> => {
+  const params = new URLSearchParams({ role, page: String(page), pageSize: String(pageSize) });
+  if (search.trim()) params.set('search', search.trim());
+  return apiRequest<ManagedUserPage>(`/users?${params.toString()}`, { token: requireToken() });
+};
+
+export const blockUser = (id: string, reason: string) => apiRequest(`/users/${encodeURIComponent(id)}/block`, { method: 'PUT', token: requireToken(), body: { reason } });
+export const unblockUser = (id: string) => apiRequest(`/users/${encodeURIComponent(id)}/unblock`, { method: 'PUT', token: requireToken() });
+export const revokeDriverApproval = (id: string, reason: string) => apiRequest(`/users/driver-applications/${encodeURIComponent(id)}/revoke`, { method: 'PUT', token: requireToken(), body: { reason } });
 
 const mapAdminRide = (raw: unknown): AdminRide => {
   const base = mapRide(raw);

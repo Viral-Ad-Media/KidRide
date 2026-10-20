@@ -5,6 +5,7 @@ import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, Credit
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
+import { DriverReviews } from '../components/Ratings';
 
 // Name and phone are editable here; vehicle details are part of the verified
 // driver application, so changing them means re-applying.
@@ -199,6 +200,8 @@ export const Profile = () => {
         </div>
 
         <AccountDetails />
+
+        {user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'approved' && <DriverReviews driverId={user.id} />}
 
         {/* Verification Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">

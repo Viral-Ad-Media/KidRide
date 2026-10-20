@@ -14,6 +14,7 @@ import {
   Plus,
   Shield,
   User,
+  Users,
   X
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -84,6 +85,14 @@ const routeMeta: Record<string, { title: string; subtitle: string }> = {
     title: 'Driver Applications',
     subtitle: 'Review driver documents and approve or reject pending applications.'
   },
+  '/admin/drivers': {
+    title: 'Drivers',
+    subtitle: 'Every registered driver: details, ratings, approval and account status.'
+  },
+  '/admin/parents': {
+    title: 'Parents',
+    subtitle: 'Every registered parent: children, bookings and account status.'
+  },
   '/admin/rides': {
     title: 'Rides Overview',
     subtitle: 'Monitor every ride on the platform and intervene when needed.'
@@ -152,7 +161,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const adminNavItems: NavItem[] = [
     { icon: ClipboardCheck, label: 'Applications', path: '/admin', description: 'Driver application review' },
-    { icon: Car, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
+    { icon: Car, label: 'Drivers', path: '/admin/drivers', description: 'All drivers, approvals and blocks' },
+    { icon: Users, label: 'Parents', path: '/admin/parents', description: 'All parents and blocks' },
+    { icon: Map, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
     { icon: User, label: 'Profile', path: '/profile', description: 'Account and preferences' }
   ];
 

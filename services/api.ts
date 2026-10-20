@@ -10,6 +10,8 @@ const validRoles = new Set<string>(Object.values(UserRole));
 
 export type RideScope = 'all' | 'active' | 'upcoming' | 'past';
 
+export const SESSION_ENDED_EVENT = 'kidride:session-ended';
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -159,6 +161,11 @@ export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {
       typeof (payload as { message?: unknown }).message === 'string'
     ) ? (payload as { message: string }).message : `Request failed with status ${response.status}`;
 
+    // A blocked account or a revoked token ends the session everywhere in the app.
+    const code = typeof payload === 'object' && payload !== null ? (payload as { code?: unknown }).code : undefined;
+    if (token && (code === 'account_blocked' || response.status === 401) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT, { detail: { message } }));
+    }
     throw new ApiError(message, response.status, payload);
   }
 
@@ -326,6 +333,7 @@ export const mapRide = (raw: unknown): Ride => {
     price: typeof ride.price === 'number' ? ride.price : Number(ride.price || 0),
     tripCode: typeof ride.tripCode === 'string' ? ride.tripCode : '',
     safeWord: typeof ride.safeWord === 'string' ? ride.safeWord : '',
+    rating: ride.rating && typeof ride.rating === 'object' ? ride.rating as Ride['rating'] : null,
     serviceType: validServiceTypes.has(rawServiceType)
       ? (rawServiceType as ServiceType)
       : ServiceType.PICKUP

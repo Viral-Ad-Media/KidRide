@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
 import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useDriverRating } from '../components/Ratings';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
@@ -12,6 +14,8 @@ const humanizeStatus = (status: string) => status.replace(/_/g, ' ');
 
 export const DriverDashboard = () => {
   const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, isOnline, setIsOnline } = useRide();
+  const { user } = useAuth();
+  const rating = useDriverRating(user?.id);
   const locationError = useDriverLocation();
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +128,7 @@ export const DriverDashboard = () => {
               <div className="rounded-[22px] bg-white/10 px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Completed Trips</p>
                 <p className="mt-3 text-2xl font-bold text-white">{isMetricsLoading ? '--' : completedCount}</p>
+                <p className="mt-2 text-xs text-white/70">{rating?.count && rating.average !== null ? `★ ${rating.average.toFixed(1)} from ${rating.count} ${rating.count === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}</p>
               </div>
             </div>
           </div>
