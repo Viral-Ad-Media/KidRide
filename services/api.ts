@@ -248,6 +248,8 @@ export const mapUser = (raw: unknown): User => {
     email: typeof user.email === 'string' ? user.email : '',
     role: normalizeRole(user.role),
     photoUrl: typeof user.photoUrl === 'string' ? user.photoUrl : undefined,
+    phone: typeof user.phone === 'string' ? user.phone : undefined,
+    vehicle: user.vehicle && typeof user.vehicle === 'object' ? user.vehicle as VehicleDetails : undefined,
     isVerifiedDriver: Boolean(user.isVerifiedDriver),
     driverApplicationStatus:
       user.driverApplicationStatus === 'pending' ||

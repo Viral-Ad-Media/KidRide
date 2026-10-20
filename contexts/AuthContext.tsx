@@ -49,6 +49,9 @@ interface AuthContextType {
   logout: () => void;
   submitDriverApplication: (payload?: DriverApplicationPayload) => Promise<void>;
   addChild: (child: Child) => Promise<void>;
+  /** Re-reads the account from the server, e.g. to pick up a driver review decision. */
+  refreshUser: () => Promise<User | null>;
+  updateProfile: (updates: { name?: string; phone?: string }) => Promise<User>;
 }
 
 type AuthResponse = Record<string, unknown> & { token?: string; requiresEmailVerification?: boolean };
@@ -245,6 +248,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     persistUser(updatedUser, token);
   };
 
+  const refreshUser = async () => {
+    const token = getStoredToken();
+    if (!token) return null;
+    const me = await apiRequest<Record<string, unknown>>('/auth/me', { token });
+    const nextUser = mapUser(me);
+    persistUser(nextUser, token);
+    return nextUser;
+  };
+
+  const updateProfile = async (updates: { name?: string; phone?: string }) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to update your profile.');
+    const response = await apiRequest<Record<string, unknown>>('/users/profile', { method: 'PUT', token, body: updates });
+    const mapped = mapUser(response);
+    // Keep children from the session if the response omits them.
+    const nextUser = { ...mapped, children: mapped.children?.length ? mapped.children : (user?.children || []) };
+    persistUser(nextUser, token);
+    return nextUser;
+  };
+
   const addChild = async (child: Child) => {
     const token = getStoredToken();
     if (!token) {
@@ -280,7 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild }}>
+    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild, refreshUser, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

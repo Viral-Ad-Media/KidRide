@@ -11,9 +11,8 @@ import { useDriverLocation } from '../services/driverLocation';
 const humanizeStatus = (status: string) => status.replace(/_/g, ' ');
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide } = useRide();
+  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, isOnline, setIsOnline } = useRide();
   const locationError = useDriverLocation();
-  const [isOnline, setIsOnline] = useState(true);
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);

@@ -9,12 +9,14 @@ import { UserRole } from '../types';
 
 export const DriverSignup = () => {
   const navigate = useNavigate();
-  const { user, register, submitDriverApplication } = useAuth();
+  const { user, register, submitDriverApplication, refreshUser, logout } = useAuth();
   const requiresAccountCreation = !user;
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -41,7 +43,13 @@ export const DriverSignup = () => {
       ...current,
       fullName: current.fullName || user.name,
       email: current.email || user.email,
-      phone: current.phone || ''
+      // Re-applying after a rejection starts from the details already on file.
+      phone: current.phone || user.phone || '',
+      make: current.make || user.vehicle?.make || '',
+      model: current.model || user.vehicle?.model || '',
+      year: current.year || user.vehicle?.year || '',
+      color: current.color || user.vehicle?.color || '',
+      plate: current.plate || user.vehicle?.plate || ''
     }));
   }, [user]);
 
@@ -162,13 +170,56 @@ export const DriverSignup = () => {
     navigate('/drive');
   };
 
-  if (user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'pending' && !submitted) return <div className="p-8 text-center"><h2 className="text-xl font-bold">Application awaiting review</h2><p className="mt-3">Ride offers become available after approval. Sign out and sign in again to refresh your review status.</p></div>;
+  // Unapproved drivers are always routed here, so this page must offer a way out.
+  const signedInBar = user && (
+    <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-6 pt-4 text-xs text-gray-500">
+      <span className="truncate">Signed in as <span className="font-semibold text-gray-700">{user.email}</span></span>
+      <span className="flex shrink-0 gap-3">
+        <button type="button" onClick={() => { logout(); navigate('/login'); }} className="font-semibold text-[#3A77FF] hover:underline">Sign out</button>
+      </span>
+    </div>
+  );
+
+  const checkStatus = async () => {
+    setCheckingStatus(true);
+    setStatusNote(null);
+    try {
+      const latest = await refreshUser();
+      if (latest?.driverApplicationStatus === 'approved' && latest.isVerifiedDriver) {
+        navigate('/driver-dashboard');
+      } else if (latest?.driverApplicationStatus === 'pending') {
+        setStatusNote('Still under review. We will check again whenever you come back.');
+      }
+    } catch {
+      setStatusNote('Could not check your status right now. Please try again.');
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  if (user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'pending' && !submitted) {
+    return (
+      <div>
+      {signedInBar}
+      <div className="mx-auto max-w-md p-8 text-center">
+        <h2 className="text-xl font-bold">Application awaiting review</h2>
+        <p className="mt-3 text-gray-600">Ride offers become available once an admin approves your documents.</p>
+        <Button className="mt-6" onClick={() => void checkStatus()} disabled={checkingStatus}>
+          {checkingStatus ? 'Checking...' : 'Check status'}
+        </Button>
+        {statusNote && <p className="mt-4 text-sm text-gray-500">{statusNote}</p>}
+      </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     const successDestination = user?.role === UserRole.PARENT ? '/profile' : (user ? getDefaultRouteForUser(user) : '/driver-dashboard');
 
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+      <div className="min-h-screen bg-white">
+      {signedInBar}
+      <div className="min-h-[80vh] bg-white flex flex-col items-center justify-center p-6 text-center animate-fade-in">
         <div className="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6 shadow-sm">
           <CheckCircle size={48} />
         </div>
@@ -180,6 +231,7 @@ export const DriverSignup = () => {
           <Home size={20} />
           {user?.role === UserRole.PARENT ? 'Return to Profile' : 'View Application Status'}
         </Button>
+      </div>
       </div>
     );
   }
@@ -198,7 +250,14 @@ export const DriverSignup = () => {
         </div>
       </div>
 
+      {signedInBar}
       <div className="max-w-md mx-auto p-6 space-y-6">
+        {step === 1 && user?.driverApplicationStatus === 'rejected' && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Your previous application was not approved. Check your details, upload clear photos of each document, and submit again.
+          </div>
+        )}
+
         {step === 1 && (
           <div className="animate-fade-in space-y-6">
             <div className="text-center mb-8">

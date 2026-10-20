@@ -1,8 +1,64 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/UIComponents';
+import { Button, Input } from '../components/UIComponents';
 import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, Plus, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../types';
+
+// Name and phone are editable here; vehicle details are part of the verified
+// driver application, so changing them means re-applying.
+const AccountDetails = () => {
+    const { user, updateProfile } = useAuth();
+    const [editing, setEditing] = useState(false);
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    if (!user) return null;
+    const vehicle = user.vehicle;
+    const vehicleText = vehicle && [vehicle.color, vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ');
+
+    const startEditing = () => { setName(user.name); setPhone(user.phone || ''); setError(null); setEditing(true); };
+    const save = async () => {
+        if (!name.trim()) { setError('Name cannot be empty.'); return; }
+        setSaving(true); setError(null);
+        try { await updateProfile({ name: name.trim(), phone: phone.trim() }); setEditing(false); }
+        catch (err) { setError(err instanceof Error ? err.message : 'Could not save your details.'); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg">Account details</h3>
+                {!editing && <button type="button" onClick={startEditing} className="text-sm font-semibold text-[#3A77FF] hover:underline">Edit</button>}
+            </div>
+            {editing ? (
+                <div className="space-y-4">
+                    <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+                    <Input label="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" autoComplete="tel" />
+                    {error && <p className="text-sm text-red-600">{error}</p>}
+                    <div className="flex gap-3">
+                        <Button onClick={() => void save()} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+                        <Button variant="secondary" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+                    </div>
+                </div>
+            ) : (
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div><dt className="text-gray-500">Name</dt><dd className="font-medium text-gray-900">{user.name}</dd></div>
+                    <div><dt className="text-gray-500">Phone</dt><dd className="font-medium text-gray-900">{user.phone || 'Not added'}</dd></div>
+                    {user.role === UserRole.DRIVER && (
+                        <div className="sm:col-span-2">
+                            <dt className="text-gray-500">Vehicle</dt>
+                            <dd className="font-medium text-gray-900">{vehicleText ? `${vehicleText}${vehicle?.plate ? ` (${vehicle.plate})` : ''}` : 'Not provided'}</dd>
+                            <p className="mt-1 text-xs text-gray-400">Vehicle changes need a new driver application so they can be re-verified.</p>
+                        </div>
+                    )}
+                </dl>
+            )}
+        </div>
+    );
+};
 
 const userInitials = (name: string | undefined) => (
   name
@@ -138,6 +194,8 @@ export const Profile = () => {
                 <p className="text-gray-500 text-sm">{user?.email}</p>
             </div>
         </div>
+
+        <AccountDetails />
 
         {/* Verification Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">

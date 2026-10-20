@@ -32,6 +32,7 @@ export interface Child {
 export interface VehicleDetails {
   make?: string;
   model?: string;
+  year?: string;
   color?: string;
   plate?: string;
 }
@@ -44,6 +45,8 @@ export interface User {
   isVerifiedDriver?: boolean;
   isParentDriver?: boolean; // Can offer carpools
   photoUrl?: string;
+  phone?: string;
+  vehicle?: VehicleDetails;
   driverApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   children?: Child[];
 }
