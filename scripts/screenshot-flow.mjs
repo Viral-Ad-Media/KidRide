@@ -27,7 +27,7 @@ if (!parent.email || !parent.password) {
 
 await mkdir(outDir, { recursive: true });
 // Only clear this script's own numbered output; other files in the folder are kept.
-for (const f of await readdir(outDir)) if (/^\d{2}-.*\.png$|^console-log\.txt$/.test(f)) await unlink(path.join(outDir, f));
+for (const f of await readdir(outDir)) if (/^(0[1-9]|1[0-9])-.*\.png$|^console-log\.txt$/.test(f)) await unlink(path.join(outDir, f));
 
 const log = [];
 const note = (line) => { log.push(line); console.log(line); };
