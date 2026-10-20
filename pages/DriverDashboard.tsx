@@ -13,6 +13,25 @@ import { useDriverLocation } from '../services/driverLocation';
 
 const humanizeStatus = (status: string) => status.replace(/_/g, ' ');
 
+// Time left on an offer made to this driver (nearest-driver dispatch).
+const OfferCountdown: React.FC<{ expiresAt: string }> = ({ expiresAt }) => {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(timer); }, []);
+  const total = 20000;
+  const left = Math.max(0, new Date(expiresAt).getTime() - now);
+  return (
+    <div className="mt-4" role="timer" aria-live="polite">
+      <div className="flex items-center justify-between text-xs font-semibold">
+        <span className="text-[#1d6fff]">You are the nearest driver</span>
+        <span className={left < 6000 ? 'text-red-600' : 'text-slate-600'}>{left > 0 ? `${Math.ceil(left / 1000)}s to accept` : 'Offer expired'}</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div className={`h-full rounded-full transition-[width] duration-200 ${left < 6000 ? 'bg-red-500' : 'bg-[#1d6fff]'}`} style={{ width: `${Math.min(100, (left / total) * 100)}%` }} />
+      </div>
+    </div>
+  );
+};
+
 export const DriverDashboard = () => {
   const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, isOnline, setIsOnline } = useRide();
   const { user } = useAuth();
@@ -173,6 +192,7 @@ export const DriverDashboard = () => {
                     <ShieldCheck size={14} />
                     New Request
                   </div>
+                  {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
                   <h3 className="mt-4 text-3xl font-bold text-slate-950">{formatRidePrice(activeRide.price)}</h3>
                   <p className="mt-2 text-sm text-slate-500">
                     {activeRide.price > 0 ? 'Estimated earnings for this ride' : 'Pricing has not been published for this ride yet.'}

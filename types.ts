@@ -93,6 +93,12 @@ export interface RideRating {
 
 export interface Ride {
   driverLocation?: DriverLocation;
+  /** 'targeted' while offered to the nearest drivers one at a time; 'open' when any driver may take it. */
+  dispatchState?: 'targeted' | 'open';
+  /** Driver view: when the offer made to this driver runs out. */
+  offerExpiresAt?: string | null;
+  /** Parent view while searching: online drivers near the pickup. */
+  nearbyDrivers?: number | null;
   /** The parent's rating of this ride, when they have rated it. */
   rating?: RideRating | null;
   id: string;

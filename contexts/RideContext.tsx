@@ -16,6 +16,11 @@ interface RideContextType {
   setIsOnline: (online: boolean) => void;
 }
 const ONLINE_STORAGE_KEY = 'kidride_driver_online';
+// Online drivers report their position this often (for nearest-driver offers).
+const PRESENCE_INTERVAL_MS = 10000;
+// Drivers poll faster than parents: an offer is only theirs for 20 seconds.
+const DRIVER_POLL_MS = 4000;
+const PARENT_POLL_MS = 7000;
 const readOnline = () => { try { return window.localStorage.getItem(ONLINE_STORAGE_KEY) !== 'false'; } catch { return true; } };
 const RideContext = createContext<RideContextType | undefined>(undefined);
 export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -60,7 +65,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSyncError(null);
     if (!user || isHydrating) return;
     void refreshActiveRide();
-    const interval = setInterval(() => void refreshActiveRide(), 7000);
+    const interval = setInterval(() => void refreshActiveRide(), user?.role === UserRole.DRIVER ? DRIVER_POLL_MS : PARENT_POLL_MS);
     return () => { generation.current += 1; clearInterval(interval); };
   }, [user?.id, user?.role, user?.isVerifiedDriver, user?.driverApplicationStatus, isHydrating]);
 
@@ -76,13 +81,24 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session === generation.current) { setActiveRide(clear ? null : mapRide(raw)); setSyncError(null); }
     } finally { if (session === generation.current) busy.current = false; }
   };
-  // Presence heartbeat so admins can see which drivers are online.
+  // Presence heartbeat: tells the server this driver is online and, when the
+  // browser shares it, where they are, so nearby rides are offered to them first.
   useEffect(() => {
     if (!approved || !isOnline) return;
-    const beat = () => { const token = getStoredToken(); if (token) void apiRequest('/users/me/presence', { method: 'PUT', token, body: { online: true } }).catch(() => undefined); };
+    let position: GeolocationPosition | null = null;
+    const watch = navigator.geolocation?.watchPosition((latest) => { position = latest; }, () => undefined, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+    const beat = () => {
+      const token = getStoredToken();
+      if (!token) return;
+      const heading = position?.coords.heading;
+      const body = position
+        ? { online: true, latitude: position.coords.latitude, longitude: position.coords.longitude, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null }
+        : { online: true };
+      void apiRequest('/users/me/presence', { method: 'PUT', token, body }).catch(() => undefined);
+    };
     beat();
-    const interval = setInterval(beat, 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(beat, PRESENCE_INTERVAL_MS);
+    return () => { clearInterval(interval); if (watch !== undefined) navigator.geolocation.clearWatch(watch); };
   }, [approved, isOnline, user?.id]);
 
   const setIsOnline = (next: boolean) => {
