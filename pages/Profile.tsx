@@ -1,8 +1,66 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/UIComponents';
-import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, Plus, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
+import { Button, Input } from '../components/UIComponents';
+import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../types';
+import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
+import { DriverReviews } from '../components/Ratings';
+
+// Name and phone are editable here; vehicle details are part of the verified
+// driver application, so changing them means re-applying.
+const AccountDetails = () => {
+    const { user, updateProfile } = useAuth();
+    const [editing, setEditing] = useState(false);
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    if (!user) return null;
+    const vehicle = user.vehicle;
+    const vehicleText = vehicle && [vehicle.color, vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ');
+
+    const startEditing = () => { setName(user.name); setPhone(user.phone || ''); setError(null); setEditing(true); };
+    const save = async () => {
+        if (!name.trim()) { setError('Name cannot be empty.'); return; }
+        setSaving(true); setError(null);
+        try { await updateProfile({ name: name.trim(), phone: phone.trim() }); setEditing(false); }
+        catch (err) { setError(err instanceof Error ? err.message : 'Could not save your details.'); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg">Account details</h3>
+                {!editing && <button type="button" onClick={startEditing} className="text-sm font-semibold text-[#3A77FF] hover:underline">Edit</button>}
+            </div>
+            {editing ? (
+                <div className="space-y-4">
+                    <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+                    <Input label="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" autoComplete="tel" />
+                    {error && <p className="text-sm text-red-600">{error}</p>}
+                    <div className="flex gap-3">
+                        <Button onClick={() => void save()} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+                        <Button variant="secondary" onClick={() => setEditing(false)} disabled={saving}>Cancel</Button>
+                    </div>
+                </div>
+            ) : (
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div><dt className="text-gray-500">Name</dt><dd className="font-medium text-gray-900">{user.name}</dd></div>
+                    <div><dt className="text-gray-500">Phone</dt><dd className="font-medium text-gray-900">{user.phone || 'Not added'}</dd></div>
+                    {user.role === UserRole.DRIVER && (
+                        <div className="sm:col-span-2">
+                            <dt className="text-gray-500">Vehicle</dt>
+                            <dd className="font-medium text-gray-900">{vehicleText ? `${vehicleText}${vehicle?.plate ? ` (${vehicle.plate})` : ''}` : 'Not provided'}</dd>
+                            <p className="mt-1 text-xs text-gray-400">Vehicle changes need a new driver application so they can be re-verified.</p>
+                        </div>
+                    )}
+                </dl>
+            )}
+        </div>
+    );
+};
 
 const userInitials = (name: string | undefined) => (
   name
@@ -19,13 +77,11 @@ export const NotificationSettings = () => {
   const [push, setPush] = useState(true);
   const [sms, setSms] = useState(false);
 
-  const Toggle = ({ value, onChange }: { value: boolean, onChange: (v: boolean) => void }) => (
-    <div 
-      className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${value ? 'bg-[#3A77FF]' : 'bg-gray-300'}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange(!value);
-      }}
+  // Preferences are not stored yet, so the switches are shown but cannot be changed.
+  const Toggle = ({ value }: { value: boolean, onChange: (v: boolean) => void }) => (
+    <div
+      aria-disabled="true"
+      className={`w-12 h-6 rounded-full p-1 opacity-50 cursor-not-allowed ${value ? 'bg-[#3A77FF]' : 'bg-gray-300'}`}
     >
       <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${value ? 'translate-x-6' : 'translate-x-0'}`} />
     </div>
@@ -38,6 +94,11 @@ export const NotificationSettings = () => {
                 <ArrowLeft size={24} />
             </button>
             <h2 className="text-xl font-bold text-gray-900">Notification Settings</h2>
+        </div>
+
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+            <p className="font-semibold">Coming soon</p>
+            <p className="mt-1">You will be able to choose how KidRide contacts you here. For now, ride updates appear in the app while you have it open.</p>
         </div>
         
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -83,14 +144,11 @@ export const PaymentMethods = () => {
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-[#3A77FF]">
                     <CreditCard size={24} />
                 </div>
-                <h3 className="mt-4 font-bold text-gray-900">No payment methods saved</h3>
+                <span className="mt-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#3A77FF]">Coming soon</span>
+                <h3 className="mt-3 font-bold text-gray-900">Card payments are on the way</h3>
                 <p className="mt-2 text-sm text-gray-500">
-                    Payment methods have not been added to this account yet.
+                    You will be able to save a card and pay for rides here. Until then, there is nothing to set up and rides are not charged in the app.
                 </p>
-             </div>
-
-             <div className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 font-medium flex items-center justify-center gap-2">
-                <Plus size={20} /> Payment method management is not available yet
              </div>
         </div>
      </div>
@@ -101,6 +159,8 @@ export const Profile = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     
+    const [shareNote, setShareNote] = useState<string | null>(null);
+
     const handleStartVerification = () => {
         navigate('/driver-signup');
     };
@@ -117,7 +177,7 @@ export const Profile = () => {
                 await navigator.share(shareData);
             } else {
                 await navigator.clipboard.writeText(shareData.url);
-                alert("Link copied to clipboard: " + shareData.url);
+                setShareNote('Invite link copied to your clipboard.');
             }
         } catch (err) {
             console.log('Share dismissed', err);
@@ -139,6 +199,10 @@ export const Profile = () => {
             </div>
         </div>
 
+        <AccountDetails />
+
+        {user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'approved' && <DriverReviews driverId={user.id} />}
+
         {/* Verification Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
              <div className="flex items-center gap-2 mb-4">
@@ -148,7 +212,14 @@ export const Profile = () => {
                  <h3 className="font-bold text-lg">Driver Verification</h3>
              </div>
 
-             {user?.driverApplicationStatus === 'pending' ? (
+             {user?.role === UserRole.DRIVER ? (
+                 <>
+                    <DriverApplicationStatus />
+                    {user.driverApplicationStatus !== 'approved' && user.driverApplicationStatus !== 'pending' && (
+                        <Button fullWidth className="mt-4" onClick={handleStartVerification}>{user.driverApplicationStatus === 'rejected' ? 'Apply again' : 'Start Verification'}</Button>
+                    )}
+                 </>
+             ) : user?.driverApplicationStatus === 'pending' ? (
                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
                     <Clock className="text-yellow-600 shrink-0 mt-0.5" size={20} />
                     <div>
@@ -204,6 +275,7 @@ export const Profile = () => {
                 >
                     <Share2 size={16} /> Share Invite Link
                 </button>
+                {shareNote && <p className="mt-3 text-sm text-white/90">{shareNote}</p>}
              </div>
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full transform translate-x-10 -translate-y-10"></div>
         </div>

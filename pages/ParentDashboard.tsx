@@ -133,7 +133,7 @@ export const ParentDashboard = () => {
             </div>
 
             {hasChildren ? (
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 {availableChildren.map((child) => (
                   <div key={child.id} className="rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
                     <div className="flex items-center gap-4">
@@ -148,8 +148,8 @@ export const ParentDashboard = () => {
                           {childInitials(child.name)}
                         </div>
                       )}
-                      <div>
-                        <p className="text-lg font-semibold text-slate-950">{child.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-lg font-semibold text-slate-950">{child.name}</p>
                         <p className="mt-1 text-sm text-slate-500">{child.age} years old</p>
                       </div>
                     </div>
@@ -158,6 +158,7 @@ export const ParentDashboard = () => {
                         {child.notes}
                       </p>
                     )}
+                    <button type="button" onClick={() => navigate(`/edit-child/${child.id}`)} className="mt-3 w-full rounded-full border border-slate-200 bg-white py-2 text-sm font-semibold text-[#1d6fff] hover:bg-blue-50">Edit profile</button>
                   </div>
                 ))}
               </div>

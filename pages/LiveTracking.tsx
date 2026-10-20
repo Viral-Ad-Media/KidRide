@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RideMap } from '../components/RideMap';
-import { Card, Button, StatusChip, Badge } from '../components/UIComponents';
+import { Card, Button, ConfirmModal, StatusChip, Badge } from '../components/UIComponents';
+import { RatingBadge, useDriverRating } from '../components/Ratings';
 import { ShieldAlert, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRide } from '../contexts/RideContext';
@@ -32,6 +33,9 @@ export const LiveTracking = () => {
   const { activeRide, syncError, cancelRide } = useRide();
   const { id } = useParams();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const driverRating = useDriverRating(activeRide?.driver?.id || activeRide?.driverId);
+  const [cancelling, setCancelling] = useState(false);
   const [localStatus, setLocalStatus] = useState<RideStatus>(RideStatus.DRIVER_ASSIGNED);
 
   useEffect(() => {
@@ -39,6 +43,12 @@ export const LiveTracking = () => {
       setLocalStatus(activeRide.status);
     }
   }, [activeRide]);
+
+  const confirmCancel = async () => {
+    setCancelling(true);
+    try { await cancelRide(); } catch (err) { setActionError(err instanceof Error ? err.message : 'Could not cancel the ride.'); }
+    finally { setCancelling(false); setConfirmingCancel(false); }
+  };
 
   if (!activeRide || activeRide.id !== id) {
     return (
@@ -98,6 +108,7 @@ export const LiveTracking = () => {
 
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-bold">{driver.name}</h3>
+                <RatingBadge summary={driverRating} className="mt-0.5" />
                 {vehicle?.summary && <p className="text-sm text-gray-500">{vehicle.summary}</p>}
                 {vehicle?.plate && (
                   <div className="mt-2 inline-flex rounded bg-gray-100 px-2 py-0.5 text-xs font-mono font-bold">
@@ -126,7 +137,8 @@ export const LiveTracking = () => {
           </div>
         </div>
 
-        {activeRide.status !== RideStatus.IN_PROGRESS && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setActionError(err.message)); }}>Cancel Ride</Button>}
+        {activeRide.status !== RideStatus.IN_PROGRESS && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button onClick={() => setConfirmingCancel(true)}>Cancel Ride</Button>}
+        <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for both the parent and the driver." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
           Direct driver contact is not configured in this build yet.
         </div>

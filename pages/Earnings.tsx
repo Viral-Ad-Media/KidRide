@@ -3,7 +3,7 @@ import { DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../components/UIComponents';
 import { fetchDriverSummary, fetchUserRides, getStoredToken } from '../services/api';
 import { Ride } from '../types';
-import { formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
 
 export const Earnings = () => {
   const [completedRides, setCompletedRides] = useState<Ride[]>([]);
@@ -94,7 +94,7 @@ export const Earnings = () => {
                   <p className="font-bold text-gray-900">{ride.pickupLocation} to {ride.dropoffLocation}</p>
                   <p className="flex items-center gap-1 text-xs text-gray-500">
                     <Calendar size={12} />
-                    {ride.pickupTime}
+                    {formatPickupTime(ride.pickupTime)}
                   </p>
                 </div>
               </div>

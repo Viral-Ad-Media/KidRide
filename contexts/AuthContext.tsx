@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Child, User, UserRole } from '../types';
 import {
   ApiError,
+  SESSION_ENDED_EVENT,
   apiRequest,
   clearStoredToken,
   getStoredToken,
@@ -49,6 +50,11 @@ interface AuthContextType {
   logout: () => void;
   submitDriverApplication: (payload?: DriverApplicationPayload) => Promise<void>;
   addChild: (child: Child) => Promise<void>;
+  /** Re-reads the account from the server, e.g. to pick up a driver review decision. */
+  refreshUser: () => Promise<User | null>;
+  updateChild: (id: string, updates: { name: string; age: number; notes?: string }) => Promise<void>;
+  removeChild: (id: string) => Promise<void>;
+  updateProfile: (updates: { name?: string; phone?: string }) => Promise<User>;
 }
 
 type AuthResponse = Record<string, unknown> & { token?: string; requiresEmailVerification?: boolean };
@@ -176,6 +182,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // The API reports a blocked account or revoked session; sign out locally too.
+  useEffect(() => {
+    const endSession = () => clearSession();
+    window.addEventListener(SESSION_ENDED_EVENT, endSession);
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, endSession);
+  }, []);
+
   const login = async ({ email, password }: LoginPayload) => {
     const authResult = await apiRequest<AuthResponse>('/auth/login', {
       method: 'POST',
@@ -245,6 +258,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     persistUser(updatedUser, token);
   };
 
+  const replaceChildren = (response: { children?: unknown[] }, token: string) => {
+    const currentUser = user ?? readStoredUser();
+    if (!currentUser) return;
+    persistUser({ ...currentUser, children: Array.isArray(response.children) ? response.children.map(mapChild) : currentUser.children }, token);
+  };
+
+  const updateChild = async (id: string, updates: { name: string; age: number; notes?: string }) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to edit a child.');
+    replaceChildren(await apiRequest<{ children?: unknown[] }>(`/users/children/${encodeURIComponent(id)}`, { method: 'PUT', token, body: updates }), token);
+  };
+
+  const removeChild = async (id: string) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to remove a child.');
+    replaceChildren(await apiRequest<{ children?: unknown[] }>(`/users/children/${encodeURIComponent(id)}`, { method: 'DELETE', token }), token);
+  };
+
+  const refreshUser = async () => {
+    const token = getStoredToken();
+    if (!token) return null;
+    const me = await apiRequest<Record<string, unknown>>('/auth/me', { token });
+    const nextUser = mapUser(me);
+    persistUser(nextUser, token);
+    return nextUser;
+  };
+
+  const updateProfile = async (updates: { name?: string; phone?: string }) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to update your profile.');
+    const response = await apiRequest<Record<string, unknown>>('/users/profile', { method: 'PUT', token, body: updates });
+    const mapped = mapUser(response);
+    // Keep children from the session if the response omits them.
+    const nextUser = { ...mapped, children: mapped.children?.length ? mapped.children : (user?.children || []) };
+    persistUser(nextUser, token);
+    return nextUser;
+  };
+
   const addChild = async (child: Child) => {
     const token = getStoredToken();
     if (!token) {
@@ -280,7 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild }}>
+    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild, refreshUser, updateProfile, updateChild, removeChild }}>
       {children}
     </AuthContext.Provider>
   );

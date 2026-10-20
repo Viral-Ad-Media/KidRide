@@ -11,7 +11,12 @@ interface RideContextType {
   declineRideRequest: () => Promise<void>;
   cancelRide: () => Promise<void>;
   refreshActiveRide: () => Promise<void>;
+  /** Driver availability; offers are only fetched while online. Remembered per browser. */
+  isOnline: boolean;
+  setIsOnline: (online: boolean) => void;
 }
+const ONLINE_STORAGE_KEY = 'kidride_driver_online';
+const readOnline = () => { try { return window.localStorage.getItem(ONLINE_STORAGE_KEY) !== 'false'; } catch { return true; } };
 const RideContext = createContext<RideContextType | undefined>(undefined);
 export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
@@ -22,6 +27,8 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const busy = useRef(false);
   const refreshing = useRef(false);
   const approved = user?.role === UserRole.DRIVER && user.isVerifiedDriver && user.driverApplicationStatus === 'approved';
+  const [isOnline, setIsOnlineState] = useState(readOnline);
+  const online = useRef(isOnline);
 
   const refreshActiveRide = async () => {
     if (!user || isHydrating || busy.current || refreshing.current) return;
@@ -32,7 +39,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = await getStoredToken();
       if (!token) return;
       let raw = await apiRequest<unknown | null>('/rides/active', { token });
-      if (!raw && approved) {
+      if (!raw && approved && online.current) {
         const offers = await apiRequest<unknown[]>('/rides/open?limit=1', { token });
         raw = offers[0] || null;
       }
@@ -69,6 +76,27 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session === generation.current) { setActiveRide(clear ? null : mapRide(raw)); setSyncError(null); }
     } finally { if (session === generation.current) busy.current = false; }
   };
+  // Presence heartbeat so admins can see which drivers are online.
+  useEffect(() => {
+    if (!approved || !isOnline) return;
+    const beat = () => { const token = getStoredToken(); if (token) void apiRequest('/users/me/presence', { method: 'PUT', token, body: { online: true } }).catch(() => undefined); };
+    beat();
+    const interval = setInterval(beat, 60000);
+    return () => clearInterval(interval);
+  }, [approved, isOnline, user?.id]);
+
+  const setIsOnline = (next: boolean) => {
+    online.current = next;
+    setIsOnlineState(next);
+    if (!next && approved) {
+      const token = getStoredToken();
+      if (token) void apiRequest('/users/me/presence', { method: 'PUT', token, body: { online: false } }).catch(() => undefined);
+    }
+    try { window.localStorage.setItem(ONLINE_STORAGE_KEY, String(next)); } catch { /* not persisted */ }
+    if (next) void refreshActiveRide();
+    // Going offline drops an unaccepted offer; an accepted trip stays.
+    else setActiveRide((ride) => ride && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(ride.status) ? null : ride);
+  };
   const requestRide = (ride: Ride) => mutate('/rides/request', { childId: ride.childId, pickup: ride.pickupLocation, dropoff: ride.dropoffLocation, pickupTime: ride.pickupTime, serviceType: ride.serviceType, quotedPrice: ride.price });
   const updateRideStatus = async (status: RideStatus) => {
     if (!activeRide) throw new Error('No active trip.');
@@ -81,7 +109,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await mutate(`/rides/${activeRide.id}/decline`, undefined, true);
     await refreshActiveRide();
   };
-  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, refreshActiveRide }}>{children}</RideContext.Provider>;
+  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
 };
 export const useRide = () => {
   const context = useContext(RideContext);

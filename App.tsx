@@ -26,7 +26,7 @@ import {
   MarketingContactPage,
   SafetyInfoPage
 } from './pages/Marketing';
-import { AdminApplications, AdminRides } from './pages/Admin';
+import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
 import { UserRole } from './types';
 
 const defaultRouteFor = getDefaultRouteForUser;
@@ -102,6 +102,8 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/admin/drivers" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminDrivers /></ProtectedRoute>} />
+      <Route path="/admin/parents" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminParents /></ProtectedRoute>} />
       <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
       <Route
         path="/driver-dashboard"
@@ -143,6 +145,7 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/edit-child/:id" element={<ProtectedRoute roles={[UserRole.PARENT]}><AddChild /></ProtectedRoute>} />
       <Route
         path="/book"
         element={

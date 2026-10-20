@@ -1,24 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
-import { Button, Card, StatusChip } from '../components/UIComponents';
+import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useDriverRating } from '../components/Ratings';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
-import { formatRidePrice } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice } from '../utils/rideData';
 
 import { useDriverLocation } from '../services/driverLocation';
 
 const humanizeStatus = (status: string) => status.replace(/_/g, ' ');
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide } = useRide();
+  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, isOnline, setIsOnline } = useRide();
+  const { user } = useAuth();
+  const rating = useDriverRating(user?.id);
   const locationError = useDriverLocation();
-  const [isOnline, setIsOnline] = useState(true);
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [isMetricsLoading, setIsMetricsLoading] = useState(true);
+  // Reload the totals when the current trip finishes so they include it.
+  const rideCompleted = activeRide?.status === RideStatus.COMPLETED;
 
   useEffect(() => {
     const token = getStoredToken();
@@ -59,7 +66,7 @@ export const DriverDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [rideCompleted]);
 
   const handleStatusUpdate = async (nextStatus: RideStatus) => {
     try {
@@ -82,6 +89,12 @@ export const DriverDashboard = () => {
     } finally {
       setIsDeclining(false);
     }
+  };
+
+  const confirmCancel = async () => {
+    setCancelling(true);
+    try { await cancelRide(); } catch (err) { setError(err instanceof Error ? err.message : 'Could not cancel the ride.'); }
+    finally { setCancelling(false); setConfirmingCancel(false); }
   };
 
   return (
@@ -115,6 +128,7 @@ export const DriverDashboard = () => {
               <div className="rounded-[22px] bg-white/10 px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Completed Trips</p>
                 <p className="mt-3 text-2xl font-bold text-white">{isMetricsLoading ? '--' : completedCount}</p>
+                <p className="mt-2 text-xs text-white/70">{rating?.count && rating.average !== null ? `★ ${rating.average.toFixed(1)} from ${rating.count} ${rating.count === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}</p>
               </div>
             </div>
           </div>
@@ -169,7 +183,7 @@ export const DriverDashboard = () => {
 
                 <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                  <p className="mt-3 text-lg font-bold text-slate-950">{activeRide.pickupTime || 'Not scheduled'}</p>
+                  <p className="mt-3 text-lg font-bold text-slate-950">{formatPickupTime(activeRide.pickupTime)}</p>
                 </div>
               </div>
 
@@ -205,7 +219,7 @@ export const DriverDashboard = () => {
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <StatusChip status={activeRide.status} />
-                  <h3 className="mt-4 text-3xl font-bold text-slate-950">Active trip in progress</h3>
+                  <h3 className="mt-4 text-3xl font-bold text-slate-950">{activeRide.status === RideStatus.COMPLETED ? 'Trip completed' : 'Active trip in progress'}</h3>
                   <p className="mt-3 text-sm leading-7 text-slate-500">
                     Move the ride through each status as the pickup and drop-off happen.
                   </p>
@@ -213,7 +227,7 @@ export const DriverDashboard = () => {
 
                 <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                  <p className="mt-3 text-lg font-bold text-slate-950">{activeRide.pickupTime || 'Not scheduled'}</p>
+                  <p className="mt-3 text-lg font-bold text-slate-950">{formatPickupTime(activeRide.pickupTime)}</p>
                 </div>
               </div>
 
@@ -234,7 +248,8 @@ export const DriverDashboard = () => {
               </div>
 
               <div className="mt-8 space-y-3">
-                {activeRide.status !== RideStatus.IN_PROGRESS && <Button variant="secondary" onClick={() => { if (window.confirm('Cancel this ride?')) void cancelRide().catch(err => setError(err.message)); }}>Cancel Ride</Button>}
+                {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button variant="secondary" onClick={() => setConfirmingCancel(true)}>Cancel Ride</Button>}
+                <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for both the parent and the driver." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
                 {activeRide.status === RideStatus.DRIVER_ASSIGNED && (
                   <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>
                     Arrived at Pickup

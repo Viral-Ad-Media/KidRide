@@ -14,6 +14,7 @@ import {
   Plus,
   Shield,
   User,
+  Users,
   X
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -84,6 +85,14 @@ const routeMeta: Record<string, { title: string; subtitle: string }> = {
     title: 'Driver Applications',
     subtitle: 'Review driver documents and approve or reject pending applications.'
   },
+  '/admin/drivers': {
+    title: 'Drivers',
+    subtitle: 'Every registered driver: details, ratings, approval and account status.'
+  },
+  '/admin/parents': {
+    title: 'Parents',
+    subtitle: 'Every registered parent: children, bookings and account status.'
+  },
   '/admin/rides': {
     title: 'Rides Overview',
     subtitle: 'Monitor every ride on the platform and intervene when needed.'
@@ -136,10 +145,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     '/driver-signup'
   ]);
 
-  if (publicPagePaths.has(location.pathname)) {
-    return <div className="min-h-screen text-slate-900">{children}</div>;
-  }
-
   const parentNavItems: NavItem[] = [
     { icon: Home, label: 'Dashboard', path: '/dashboard', description: 'Overview and family activity' },
     { icon: Car, label: 'Rides', path: '/rides', description: 'Trips, bookings, and history' },
@@ -156,7 +161,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const adminNavItems: NavItem[] = [
     { icon: ClipboardCheck, label: 'Applications', path: '/admin', description: 'Driver application review' },
-    { icon: Car, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
+    { icon: Car, label: 'Drivers', path: '/admin/drivers', description: 'All drivers, approvals and blocks' },
+    { icon: Users, label: 'Parents', path: '/admin/parents', description: 'All parents and blocks' },
+    { icon: Map, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
     { icon: User, label: 'Profile', path: '/profile', description: 'Account and preferences' }
   ];
 
@@ -231,6 +238,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, [user]);
 
+  // Must come after every hook so public and app pages call the same hooks.
+  if (publicPagePaths.has(location.pathname)) {
+    return <div className="min-h-screen text-slate-900">{children}</div>;
+  }
+
   const handleNavigation = (path: string) => {
     navigate(path);
     setIsMenuOpen(false);
@@ -266,7 +278,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1600px] gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 xl:gap-6 xl:px-6">
         <aside className="hidden xl:flex xl:w-[310px] xl:shrink-0">
-          <div className="glass-panel sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-hidden rounded-[32px] p-6">
+          <div className="glass-panel sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-y-auto rounded-[32px] p-6">
             <button
               type="button"
               onClick={() => navigate(isAdmin ? '/admin' : user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}

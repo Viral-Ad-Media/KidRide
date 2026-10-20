@@ -3,6 +3,7 @@ import { Map, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
+import { formatPickupTime } from '../utils/rideData';
 
 export const DriverMap = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export const DriverMap = () => {
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                <p className="mt-2 text-sm text-slate-600">{activeRide.pickupTime || 'Not scheduled'}</p>
+                <p className="mt-2 text-sm text-slate-600">{formatPickupTime(activeRide.pickupTime)}</p>
               </div>
             </div>
 
