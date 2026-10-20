@@ -137,8 +137,9 @@ export const DriverSignup = () => {
 
       setSubmitted(true);
     } catch (submissionError) {
+      // Upload errors are written for the applicant and name the failing document.
       setError(
-        submissionError instanceof ApiError
+        submissionError instanceof ApiError || submissionError instanceof Error
           ? submissionError.message
           : 'Driver application submission failed. Please try again.'
       );
@@ -357,14 +358,17 @@ export const DriverSignup = () => {
             <div className="space-y-4">
               <FileUpload
                 label="Driver&apos;s License (Front)"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
                 onFileSelect={(file) => handleFileSelect('licenseDoc', file)}
               />
               <FileUpload
                 label="Vehicle Insurance"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
                 onFileSelect={(file) => handleFileSelect('insuranceDoc', file)}
               />
               <FileUpload
                 label="Vehicle Registration"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
                 onFileSelect={(file) => handleFileSelect('registrationDoc', file)}
               />
 

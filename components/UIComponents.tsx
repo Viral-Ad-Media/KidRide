@@ -54,15 +54,16 @@ export const Input: React.FC<InputProps> = ({ label, className = '', ...props })
 interface FileUploadProps {
     label: string;
     onFileSelect?: (file: File) => void;
+    accept?: string;
 }
-export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect }) => {
+export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect, accept }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = React.useState<string | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            setFileName(file.name);
+            setFileName(`${file.name} · ${(file.size / (1024 * 1024)).toFixed(1)} MB`);
             if (onFileSelect) {
                 onFileSelect(file);
             }
@@ -74,6 +75,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect }) =
             <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
             <input 
                 type="file" 
+                accept={accept}
                 ref={fileInputRef} 
                 className="hidden" 
                 onChange={handleFileChange}
