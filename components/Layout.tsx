@@ -11,6 +11,7 @@ import {
   Map,
   Menu,
   MessageCircle,
+  Navigation,
   Plus,
   Shield,
   User,
@@ -93,6 +94,10 @@ const routeMeta: Record<string, { title: string; subtitle: string }> = {
     title: 'Parents',
     subtitle: 'Every registered parent: children, bookings and account status.'
   },
+  '/admin/live-map': {
+    title: 'Live Map',
+    subtitle: 'Every online driver and ride in progress, updated every few seconds.'
+  },
   '/admin/rides': {
     title: 'Rides Overview',
     subtitle: 'Monitor every ride on the platform and intervene when needed.'
@@ -164,6 +169,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { icon: Car, label: 'Drivers', path: '/admin/drivers', description: 'All drivers, approvals and blocks' },
     { icon: Users, label: 'Parents', path: '/admin/parents', description: 'All parents and blocks' },
     { icon: Map, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
+    { icon: Navigation, label: 'Live map', path: '/admin/live-map', description: 'Drivers and rides right now' },
     { icon: User, label: 'Profile', path: '/profile', description: 'Account and preferences' }
   ];
 
