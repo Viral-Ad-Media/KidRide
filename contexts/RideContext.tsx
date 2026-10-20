@@ -76,9 +76,22 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session === generation.current) { setActiveRide(clear ? null : mapRide(raw)); setSyncError(null); }
     } finally { if (session === generation.current) busy.current = false; }
   };
+  // Presence heartbeat so admins can see which drivers are online.
+  useEffect(() => {
+    if (!approved || !isOnline) return;
+    const beat = () => { const token = getStoredToken(); if (token) void apiRequest('/users/me/presence', { method: 'PUT', token, body: { online: true } }).catch(() => undefined); };
+    beat();
+    const interval = setInterval(beat, 60000);
+    return () => clearInterval(interval);
+  }, [approved, isOnline, user?.id]);
+
   const setIsOnline = (next: boolean) => {
     online.current = next;
     setIsOnlineState(next);
+    if (!next && approved) {
+      const token = getStoredToken();
+      if (token) void apiRequest('/users/me/presence', { method: 'PUT', token, body: { online: false } }).catch(() => undefined);
+    }
     try { window.localStorage.setItem(ONLINE_STORAGE_KEY, String(next)); } catch { /* not persisted */ }
     if (next) void refreshActiveRide();
     // Going offline drops an unaccepted offer; an accepted trip stays.

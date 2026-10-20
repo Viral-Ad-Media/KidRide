@@ -136,6 +136,8 @@ export interface ManagedUser {
   reviewNote?: string | null;
   completedRides?: number;
   rating?: RatingSummary;
+  isOnline?: boolean;
+  lastOnlineAt?: string | null;
   // Parents
   children?: number;
   rides?: number;
@@ -146,6 +148,8 @@ export interface ManagedUserPage {
   total: number;
   page: number;
   pageSize: number;
+  /** Drivers only: how many sent a heartbeat in the last 2 minutes. */
+  onlineCount?: number;
 }
 
 export const fetchManagedUsers = async (role: 'driver' | 'parent', { search = '', page = 1, pageSize = 25 } = {}): Promise<ManagedUserPage> => {

@@ -642,14 +642,27 @@ const ManagedUsersPage: React.FC<{ role: 'driver' | 'parent' }> = ({ role }) => 
       <AdminTabs />
       <form
         className="mb-4 flex flex-col gap-2 sm:flex-row"
-        onSubmit={(event) => { event.preventDefault(); setFlash(null); setPage(1); setSearch(searchInput); }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          setFlash(null);
+          // Same search and page: reload anyway so Search always shows fresh data.
+          if (searchInput === search && page === 1) void load();
+          else { setPage(1); setSearch(searchInput); }
+        }}
       >
         <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder={`Search ${noun} by name or email`} className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm" />
         <button type="submit" className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">Search</button>
         <button type="button" onClick={() => void load()} className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-950"><RefreshCw size={16} /> Refresh</button>
       </form>
       {flash && <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{flash}</div>}
-      {data && <p className="mb-3 text-xs text-slate-500">{data.total} {noun}{search ? ` matching "${search}"` : ''}</p>}
+      {data && (
+        <p className="mb-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <span>{data.total} {noun}{search ? ` matching "${search}"` : ''}</span>
+          {role === 'driver' && data.onlineCount !== undefined && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" />{data.onlineCount} online now</span>
+          )}
+        </p>
+      )}
 
       {loading && !data ? <Loading label={`Loading ${noun}...`} /> : error ? <ErrorBox message={error} onRetry={load} /> : !data?.users.length ? <Empty label={`No ${noun} found.`} /> : (
         <div className="space-y-3">
@@ -664,6 +677,11 @@ const ManagedUsersPage: React.FC<{ role: 'driver' | 'parent' }> = ({ role }) => 
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {user.isBlocked && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">Blocked</span>}
+                    {role === 'driver' && user.driverApplicationStatus === 'approved' && (
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${user.isOnline ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`} title={user.lastOnlineAt ? `Last seen ${new Date(user.lastOnlineAt).toLocaleString()}` : 'Not seen online yet'}>
+                        <span className={`h-2 w-2 rounded-full ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`} />{user.isOnline ? 'Online' : 'Offline'}
+                      </span>
+                    )}
                     {role === 'driver' && (
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approved ? 'bg-emerald-100 text-emerald-700' : user.driverApplicationStatus === 'pending' ? 'bg-amber-100 text-amber-700' : user.driverApplicationStatus === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
                         {applicationLabel(user.driverApplicationStatus)}
