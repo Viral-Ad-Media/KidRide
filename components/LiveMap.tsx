@@ -1,7 +1,7 @@
 /// <reference types="google.maps" />
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPinOff } from 'lucide-react';
-import { LatLng, useGoogleMaps } from '../services/googleMaps';
+import { LatLng, computeRoute, useGoogleMaps } from '../services/googleMaps';
 import { DriverLocation } from '../types';
 
 // Trip map: pickup (A) and drop-off (B) pins, the driving route, and the
@@ -91,25 +91,25 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
       clickableIcons: false
     });
     mapRef.current = map;
-    const renderer = new maps.DirectionsRenderer({ map, suppressMarkers: true, preserveViewport: false, polylineOptions: { strokeColor: '#1d6fff', strokeWeight: 5, strokeOpacity: 0.85 } });
+    const routeLine = new maps.Polyline({ map, strokeColor: '#1d6fff', strokeWeight: 5, strokeOpacity: 0.85 });
     const markers: google.maps.Marker[] = [];
     const addStop = (position: google.maps.LatLng | LatLng, label: string, color: string, title: string) => {
       const icon = pin(maps, color);
       markers.push(new maps.Marker({ map, position, icon, label: { text: label, color: '#ffffff', fontWeight: '700', fontSize: '12px' }, title, zIndex: 2 }));
     };
 
-    new maps.DirectionsService().route({
-      origin: pickupCoords || pickup,
-      destination: dropoffCoords || dropoff,
-      travelMode: maps.TravelMode.DRIVING
-    }).then((result) => {
-      renderer.setDirections(result);
-      const leg = result.routes[0]?.legs[0];
-      if (!leg) return;
-      stopsRef.current = { pickup: leg.start_location, dropoff: leg.end_location };
-      addStop(leg.start_location, 'A', '#1d6fff', `Pickup: ${pickup}`);
-      addStop(leg.end_location, 'B', '#059669', `Drop-off: ${dropoff}`);
-      publish({ tripDuration: leg.duration?.text, tripDistance: leg.distance?.text });
+    computeRoute(maps, pickupCoords || pickup, dropoffCoords || dropoff).then((route) => {
+      routeLine.setPath(route.path);
+      const start = route.path[0];
+      const end = route.path[route.path.length - 1];
+      stopsRef.current = { pickup: start, dropoff: end };
+      addStop(start, 'A', '#1d6fff', `Pickup: ${pickup}`);
+      addStop(end, 'B', '#059669', `Drop-off: ${dropoff}`);
+      const bounds = new maps.LatLngBounds();
+      route.path.forEach((point) => bounds.extend(point));
+      // Extra room at the bottom: the tracking sheet overlaps the map edge.
+      map.fitBounds(bounds, { top: 72, right: 48, bottom: 96, left: 48 });
+      publish({ tripDuration: route.duration, tripDistance: route.distance });
       setRouteError(null);
     }).catch(() => {
       // No drivable route (or the addresses could not be found): still show what we can.
@@ -120,7 +120,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     });
 
     return () => {
-      renderer.setMap(null);
+      routeLine.setMap(null);
       markers.forEach((marker) => marker.setMap(null));
       carRef.current?.setMap(null);
       carRef.current = null;
@@ -166,8 +166,9 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     const stop = stopsRef.current[nextStop] || (nextStop === 'pickup' ? pickupCoords : dropoffCoords);
     if (stop && Date.now() - lastEtaAt.current > 60000) {
       lastEtaAt.current = Date.now();
-      new maps.DirectionsService().route({ origin: target, destination: stop, travelMode: maps.TravelMode.DRIVING })
-        .then((result) => publish({ driverEta: result.routes[0]?.legs[0]?.duration?.text }))
+      const stopPoint = stop instanceof maps.LatLng ? { lat: stop.lat(), lng: stop.lng() } : stop;
+      computeRoute(maps, target, stopPoint)
+        .then((route) => publish({ driverEta: route.duration }))
         .catch(() => undefined);
     }
   }, [mapsState.status, driverLocation?.latitude, driverLocation?.longitude, driverLocation?.heading, nextStop]);

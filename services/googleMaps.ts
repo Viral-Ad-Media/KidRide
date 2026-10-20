@@ -61,3 +61,35 @@ export interface LatLng {
   lat: number;
   lng: number;
 }
+
+export interface ComputedRoute {
+  path: google.maps.LatLng[];
+  duration?: string;
+  distance?: string;
+}
+
+// Driving route via the Routes API. (New Google projects cannot enable the
+// legacy Directions API that google.maps.DirectionsService uses.) Default,
+// non-traffic routing keeps this on the cheapest Routes tier.
+export const computeRoute = async (maps: typeof google.maps, origin: LatLng | string, destination: LatLng | string): Promise<ComputedRoute> => {
+  const waypoint = (point: LatLng | string) => (typeof point === 'string'
+    ? { address: point }
+    : { location: { latLng: { latitude: point.lat, longitude: point.lng } } });
+  const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': API_KEY,
+      'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.localizedValues'
+    },
+    body: JSON.stringify({ origin: waypoint(origin), destination: waypoint(destination), travelMode: 'DRIVE' })
+  });
+  const result = await response.json();
+  const route = result?.routes?.[0];
+  if (!response.ok || !route?.polyline?.encodedPolyline) throw new Error(result?.error?.message || 'No driving route found');
+  return {
+    path: maps.geometry.encoding.decodePath(route.polyline.encodedPolyline),
+    duration: route.localizedValues?.duration?.text,
+    distance: route.localizedValues?.distance?.text
+  };
+};

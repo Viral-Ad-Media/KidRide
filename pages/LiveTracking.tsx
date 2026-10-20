@@ -74,8 +74,9 @@ export const LiveTracking = () => {
   const safeWord = activeRide.safeWord || 'Pending';
 
   return (
-    <div className="relative flex h-[calc(100vh-80px)] flex-col bg-gray-100 md:h-[600px]">
-      <div className="relative flex-1">
+    <div className="relative flex flex-col bg-gray-100">
+      {/* Map keeps a real height on every screen; the details sheet sits below it. */}
+      <div className="relative h-[45vh] min-h-[300px] md:h-[460px]">
         <button
           onClick={() => navigate('/dashboard')}
           className="absolute left-4 top-4 z-10 rounded-full bg-white p-2 shadow-md"
