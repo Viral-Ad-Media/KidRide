@@ -50,10 +50,10 @@ export const Notifications = () => {
 
   if (notifications.length === 0) {
     return (
-      <div className="rounded-card border border-dashed border-line bg-white px-6 py-14 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand-deep"><Bell size={24} /></div>
-        <h3 className="mt-4 text-lead font-bold">Nothing yet</h3>
-        <p className="mt-1 text-sm text-muted">Ride updates will show up here as they happen.</p>
+      <div className="mx-auto max-w-sm px-6 py-20 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand-deep"><Bell size={28} strokeWidth={1.75} /></div>
+        <h3 className="mt-5 text-title font-extrabold tracking-tight">You're all caught up</h3>
+        <p className="mt-2 text-label text-muted">Updates about your rides will appear here as they happen.</p>
       </div>
     );
   }
@@ -66,26 +66,30 @@ export const Notifications = () => {
   }
 
   return (
-    <div className="space-y-6">
+    // A plain list, the way Uber and Bolt do it: day headings, hairlines between
+    // rows, an unread dot, no boxes around boxes.
+    <div className="mx-auto max-w-2xl">
       {groups.map((group) => (
-        <section key={group.label}>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{group.label}</h3>
-          <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-white">
+        <section key={group.label} className="mb-6">
+          <h3 className="mb-1 text-sm font-semibold text-muted">{group.label}</h3>
+          <ul className="divide-y divide-line">
             {group.items.map((item) => {
               const Icon = ICONS[item.kind] || Bell;
               const unread = !item.readAt;
               return (
                 <li key={item.id}>
-                  <button type="button" onClick={() => open(item)} disabled={!item.rideId} className="flex w-full items-start gap-3 px-4 py-4 text-left hover:bg-surface disabled:cursor-default disabled:hover:bg-white">
-                    <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${item.kind === 'cancelled' ? 'bg-danger/10 text-danger' : 'bg-brand/10 text-brand-deep'}`}><Icon size={20} /></span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className={`truncate text-[15px] ${unread ? 'font-bold' : 'font-semibold'}`}>{item.title}</span>
-                        {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" aria-label="Unread" />}
-                      </span>
-                      <span className="mt-0.5 block text-sm text-muted">{item.body}</span>
+                  <button type="button" onClick={() => open(item)} disabled={!item.rideId} className="-mx-2 flex w-[calc(100%+1rem)] items-start gap-4 rounded-control px-2 py-4 text-left transition-colors hover:bg-surface-2/60 disabled:cursor-default disabled:hover:bg-transparent">
+                    <span className={`relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.kind === 'cancelled' ? 'bg-danger/10 text-danger' : item.kind === 'completed' ? 'bg-success/10 text-success' : 'bg-brand/15 text-brand-deep'}`}>
+                      <Icon size={22} strokeWidth={1.75} />
+                      {unread && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-surface bg-brand" aria-label="Unread" />}
                     </span>
-                    <span className="shrink-0 text-xs text-muted tabular-nums">{when(item.createdAt)}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className={`truncate text-body ${unread ? 'font-bold text-ink' : 'font-semibold text-ink'}`}>{item.title}</span>
+                        <span className="shrink-0 text-caption text-muted tabular-nums">{when(item.createdAt)}</span>
+                      </span>
+                      <span className={`mt-0.5 block text-label ${unread ? 'text-ink' : 'text-muted'}`}>{item.body}</span>
+                    </span>
                   </button>
                 </li>
               );

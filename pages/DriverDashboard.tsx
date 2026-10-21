@@ -96,7 +96,8 @@ export const DriverDashboard = () => {
       await updateRideStatus(nextStatus);
     } catch (statusError) {
       console.error('Unable to update ride status:', statusError);
-      setError('Unable to update ride status right now.');
+      // Show the server's reason (wrong order, trip already changed, signed out) rather than a generic line.
+      setError(statusError instanceof Error && statusError.message ? `Could not update the trip: ${statusError.message}` : 'Could not update the trip. Check your connection and try again.');
     }
   };
 
