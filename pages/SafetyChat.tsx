@@ -111,7 +111,7 @@ export const SafetyChat = () => {
             <ArrowLeft size={20} />
           </button>
           <h2 className="flex items-center gap-2 text-lg font-bold">
-            <Bot className="text-[#3A77FF]" /> Safety Assistant
+            <Bot className="text-brand-deep" /> Safety Assistant
           </h2>
         </div>
 
@@ -121,7 +121,7 @@ export const SafetyChat = () => {
               <div
                 className={`max-w-[80%] rounded-2xl p-4 text-sm ${
                   msg.role === 'user'
-                    ? 'rounded-br-none bg-[#3A77FF] text-white'
+                    ? 'rounded-br-none bg-brand-deep text-white'
                     : 'rounded-bl-none border border-gray-200 bg-white text-gray-800 shadow-sm'
                 }`}
               >
@@ -148,12 +148,12 @@ export const SafetyChat = () => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void handleSend()}
               placeholder="Ask a safety question..."
-              className="h-12 flex-1 rounded-xl border border-gray-200 px-4 focus:border-[#3A77FF] focus:outline-none"
+              className="h-12 flex-1 rounded-xl border border-gray-200 px-4 focus:border-brand-deep focus:outline-none"
             />
             <button
               onClick={() => void handleSend()}
               disabled={isTyping}
-              className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#3A77FF] text-white hover:bg-blue-600 disabled:opacity-50"
+              className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-deep text-white hover:bg-ink disabled:opacity-50"
             >
               <Send size={20} />
             </button>
@@ -207,7 +207,7 @@ export const SafetyChat = () => {
           )}
 
           {showAddContact ? (
-            <Card className="border-2 border-[#3A77FF] bg-blue-50/50">
+            <Card className="border-2 border-brand bg-brand/5">
               <h4 className="mb-3 text-sm font-bold">Add New Contact</h4>
               <div className="space-y-3">
                 <Input placeholder="Name" value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} />
@@ -267,8 +267,8 @@ export const SafetyChat = () => {
           </div>
         </Card>
 
-        <Card onClick={() => setView('chat')} className="flex flex-col items-center justify-center gap-3 py-6 transition-colors hover:border-blue-200 hover:bg-blue-50">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-[#3A77FF]">
+        <Card onClick={() => setView('chat')} className="flex flex-col items-center justify-center gap-3 py-6 transition-colors hover:border-brand/30 hover:bg-brand/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/15 text-brand-deep">
             <Bot size={24} />
           </div>
           <div className="text-center">

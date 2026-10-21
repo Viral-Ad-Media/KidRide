@@ -210,7 +210,7 @@ export const BookRide = () => {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Ride scheduled</h2>
-          <p className="mt-2 text-lg font-semibold text-[#1d6fff]">{formatScheduledTime(scheduledRide.pickupTime)}</p>
+          <p className="mt-2 text-lg font-semibold text-brand-deep">{formatScheduledTime(scheduledRide.pickupTime)}</p>
           <p className="mt-3 text-sm leading-6 text-slate-500">
             We start offering it to the nearest verified drivers 30 minutes before pickup. You can change the time or cancel from your dashboard until then.
           </p>
@@ -228,17 +228,17 @@ export const BookRide = () => {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-8 p-6 text-center animate-fade-in">
         <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-blue-500 opacity-20 animate-ping" />
-          <div className="absolute inset-[-20px] rounded-full bg-blue-500 opacity-10 animate-ping animation-delay-500" />
+          <div className="absolute inset-0 rounded-full bg-brand-deep opacity-20 animate-ping" />
+          <div className="absolute inset-[-20px] rounded-full bg-brand-deep opacity-10 animate-ping animation-delay-500" />
 
-          <div className="relative z-10 rounded-full border-4 border-blue-50 bg-white p-6 shadow-xl">
-            <Search size={48} className="text-[#3A77FF]" />
+          <div className="relative z-10 rounded-full border-4 border-brand/30 bg-white p-6 shadow-xl">
+            <Search size={48} className="text-brand-deep" />
           </div>
         </div>
 
         <div>
           <h2 className="mb-2 text-2xl font-bold text-gray-900">Finding your ride</h2>
-          <p className="h-6 font-medium text-[#3A77FF]">{searchStatus}</p>
+          <p className="h-6 font-medium text-brand-deep">{searchStatus}</p>
           {activeRide && activeRide.nearbyDrivers !== null && activeRide.nearbyDrivers !== undefined && (
             <p className="mt-3 text-sm text-slate-500">
               {activeRide.nearbyDrivers === 0
@@ -254,7 +254,7 @@ export const BookRide = () => {
             <span className="text-xs text-gray-600">Request sent to nearby drivers</span>
           </div>
           <div className="flex items-center gap-3">
-            <Map size={16} className="text-blue-500" />
+            <Map size={16} className="text-brand-deep" />
             <span className="text-xs text-gray-600">Waiting for driver confirmation...</span>
           </div>
         </div>
@@ -283,7 +283,7 @@ export const BookRide = () => {
       {scheduleError && <p className="mb-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{scheduleError}</p>}
       <div className="mb-8 flex gap-2">
         {[1, 2, 3].map((item) => (
-          <div key={item} className={`h-1.5 flex-1 rounded-full transition-colors ${item <= step ? 'bg-[#3A77FF]' : 'bg-gray-200'}`} />
+          <div key={item} className={`h-1.5 flex-1 rounded-full transition-colors ${item <= step ? 'bg-brand' : 'bg-gray-200'}`} />
         ))}
       </div>
 
@@ -296,12 +296,12 @@ export const BookRide = () => {
                 <div
                   key={child.id}
                   onClick={() => setFormData({ ...formData, childId: child.id })}
-                  className={`flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 p-4 transition-all ${formData.childId === child.id ? 'border-[#3A77FF] bg-blue-50' : 'border-gray-100 bg-white'}`}
+                  className={`flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 p-4 transition-all ${formData.childId === child.id ? 'border-brand bg-brand/10' : 'border-gray-100 bg-white'}`}
                 >
                   {child.photoUrl ? (
                     <img src={child.photoUrl} alt={child.name} className="h-16 w-16 rounded-full object-cover" />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-lg font-semibold text-[#3A77FF]">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10 text-lg font-semibold text-brand-deep">
                       {childInitials(child.name)}
                     </div>
                   )}
@@ -310,7 +310,7 @@ export const BookRide = () => {
               ))}
             </div>
           ) : (
-            <Card className="border-blue-100 bg-blue-50">
+            <Card className="border-brand/30 bg-brand/10">
               <div className="space-y-3 text-center">
                 <h4 className="text-lg font-semibold text-gray-900">Add a child profile first</h4>
                 <p className="text-sm text-gray-600">
@@ -366,7 +366,7 @@ export const BookRide = () => {
                   role="radio"
                   aria-checked={when === value}
                   onClick={() => { setWhen(value); setScheduleError(null); }}
-                  className={`inline-flex items-center justify-center gap-2 rounded-[16px] py-3 text-sm font-semibold transition ${when === value ? 'bg-white text-[#1d6fff] shadow' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-[16px] py-3 text-sm font-semibold transition ${when === value ? 'bg-white text-brand-deep shadow' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   <Icon size={16} /> {label}
                 </button>
@@ -405,7 +405,7 @@ export const BookRide = () => {
 
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-white p-2 shadow-sm">
-                  <MapPin size={20} className="text-[#3A77FF]" />
+                  <MapPin size={20} className="text-brand-deep" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Pickup</p>
@@ -415,7 +415,7 @@ export const BookRide = () => {
               <div className="my-1 ml-5 h-4 w-0.5 bg-gray-300" />
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-white p-2 shadow-sm">
-                  <MapPin size={20} className="text-[#26C281]" />
+                  <MapPin size={20} className="text-success" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Drop-off</p>

@@ -98,7 +98,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
     const start = latestPosition.current!.point;
     const map = createKidRideMap(maps, containerRef.current, { center: start, zoom: 14 });
     mapRef.current = map;
-    radiusRef.current = new maps.Circle({ map, center: start, radius: 5000, strokeColor: BRAND.blue, strokeOpacity: 0.3, strokeWeight: 1.5, fillColor: BRAND.sky, fillOpacity: 0.05, clickable: false });
+    radiusRef.current = new maps.Circle({ map, center: start, radius: 5000, strokeColor: BRAND.deep, strokeOpacity: 0.3, strokeWeight: 1.5, fillColor: BRAND.sky, fillOpacity: 0.05, clickable: false });
     // Once the driver pans away, stop re-centring until they tap the recenter button.
     map.addListener('dragstart', () => { following.current = false; });
     map.addListener('click', () => setSelectedId(null));
@@ -126,7 +126,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
 
     if (!carRef.current || !from) {
       const rotation = position.heading ?? 0;
-      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.blue, rotation), title: 'You', zIndex: 3 });
+      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.sky, rotation), title: 'You', zIndex: 3 });
       carState.current = { position: target, rotation };
       return;
     }

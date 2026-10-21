@@ -77,8 +77,8 @@ export const AddChild = () => {
 
       <div className="surface-card space-y-6 rounded-[30px] p-6 sm:p-8">
         <div className="mb-6 flex justify-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-blue-200 bg-blue-50">
-            <UserPlus size={32} className="text-[#3A77FF]" />
+          <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-brand/30 bg-brand/10">
+            <UserPlus size={32} className="text-brand-deep" />
           </div>
         </div>
 
@@ -100,7 +100,7 @@ export const AddChild = () => {
         <div className="mb-4 w-full">
           <label className="mb-1 block text-sm font-medium text-gray-700">Medical Notes / Allergies</label>
           <textarea
-            className="min-h-[100px] w-full rounded-xl border border-gray-200 p-4 focus:border-[#3A77FF] focus:outline-none"
+            className="min-h-[100px] w-full rounded-xl border border-gray-200 p-4 focus:border-brand-deep focus:outline-none"
             placeholder="e.g. Peanut allergy, carries EpiPen..."
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

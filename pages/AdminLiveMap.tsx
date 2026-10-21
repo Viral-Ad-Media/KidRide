@@ -13,8 +13,8 @@ import { LiveDriver, LiveMapSnapshot, errorMessage, fetchLiveMap } from '../serv
 // Markers are kept between polls and only moved or recoloured when needed.
 
 const REFRESH_MS = 5000;
-const FREE_COLOR = BRAND.green;
-const BUSY_COLOR = BRAND.blue;
+const FREE_COLOR = BRAND.leaf;
+const BUSY_COLOR = BRAND.sky;
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
 
 type Filter = 'all' | 'free' | 'on_ride';
@@ -191,7 +191,7 @@ export const AdminLiveMap = () => {
           <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
             {visibleDrivers.map((driver) => (
               <li key={driver.id}>
-                <button type="button" onClick={() => setSelected(driver.id === selected ? null : driver.id)} className={`w-full rounded-2xl border px-3 py-2.5 text-left ${driver.id === selected ? 'border-[#1d6fff] bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                <button type="button" onClick={() => setSelected(driver.id === selected ? null : driver.id)} className={`w-full rounded-2xl border px-3 py-2.5 text-left ${driver.id === selected ? 'border-brand bg-brand/10' : 'border-slate-200 hover:bg-slate-50'}`}>
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-semibold text-slate-900">{driver.name}</span>
                     <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ background: driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{driver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>

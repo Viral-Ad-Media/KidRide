@@ -33,7 +33,7 @@ const AccountDetails = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg">Account details</h3>
-                {!editing && <button type="button" onClick={startEditing} className="text-sm font-semibold text-[#3A77FF] hover:underline">Edit</button>}
+                {!editing && <button type="button" onClick={startEditing} className="text-sm font-semibold text-brand-deep hover:underline">Edit</button>}
             </div>
             {editing ? (
                 <div className="space-y-4">
@@ -81,7 +81,7 @@ export const NotificationSettings = () => {
   const Toggle = ({ value }: { value: boolean, onChange: (v: boolean) => void }) => (
     <div
       aria-disabled="true"
-      className={`w-12 h-6 rounded-full p-1 opacity-50 cursor-not-allowed ${value ? 'bg-[#3A77FF]' : 'bg-gray-300'}`}
+      className={`w-12 h-6 rounded-full p-1 opacity-50 cursor-not-allowed ${value ? 'bg-brand' : 'bg-gray-300'}`}
     >
       <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${value ? 'translate-x-6' : 'translate-x-0'}`} />
     </div>
@@ -96,7 +96,7 @@ export const NotificationSettings = () => {
             <h2 className="text-xl font-bold text-gray-900">Notification Settings</h2>
         </div>
 
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+        <div className="rounded-2xl border border-brand/30 bg-brand/10 p-4 text-sm text-brand-deep">
             <p className="font-semibold">Coming soon</p>
             <p className="mt-1">You will be able to choose how KidRide contacts you here. For now, ride updates appear in the app while you have it open.</p>
         </div>
@@ -104,7 +104,7 @@ export const NotificationSettings = () => {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Mail size={20}/></div>
+                    <div className="p-2 bg-brand/10 text-brand-deep rounded-lg"><Mail size={20}/></div>
                     <span className="font-medium text-gray-900">Email Notifications</span>
                 </div>
                 <Toggle value={email} onChange={setEmail} />
@@ -141,10 +141,10 @@ export const PaymentMethods = () => {
 
         <div className="space-y-4">
              <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-200 text-center shadow-sm">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-[#3A77FF]">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand-deep">
                     <CreditCard size={24} />
                 </div>
-                <span className="mt-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#3A77FF]">Coming soon</span>
+                <span className="mt-4 inline-block rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand-deep">Coming soon</span>
                 <h3 className="mt-3 font-bold text-gray-900">Card payments are on the way</h3>
                 <p className="mt-2 text-sm text-gray-500">
                     You will be able to save a card and pay for rides here. Until then, there is nothing to set up and rides are not charged in the app.
@@ -190,8 +190,8 @@ export const Profile = () => {
         
         {/* User Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-                {user?.photoUrl ? <img src={user.photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-[#3A77FF] font-bold text-xl">{userInitials(user?.name)}</span>}
+            <div className="w-16 h-16 bg-brand/15 rounded-full flex items-center justify-center overflow-hidden">
+                {user?.photoUrl ? <img src={user.photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-brand-deep font-bold text-xl">{userInitials(user?.name)}</span>}
             </div>
             <div>
                 <h3 className="font-bold text-lg">{user?.name}</h3>
@@ -206,7 +206,7 @@ export const Profile = () => {
         {/* Verification Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
              <div className="flex items-center gap-2 mb-4">
-                 <div className="p-2 bg-blue-50 rounded-lg text-[#3A77FF]">
+                 <div className="p-2 bg-brand/10 rounded-lg text-brand-deep">
                     <ShieldCheck size={24} /> 
                  </div>
                  <h3 className="font-bold text-lg">Driver Verification</h3>

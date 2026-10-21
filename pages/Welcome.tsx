@@ -1,9 +1,10 @@
 import React, { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components/UIComponents';
-import { ShieldCheck, Heart, Car, UserPlus, LogIn } from 'lucide-react';
+import { Heart, Car, UserPlus, LogIn } from 'lucide-react';
 import { getDefaultRouteForUser, useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../services/api';
+import { BrandLockup } from '../components/brand/BrandLockup';
 import { UserRole } from '../types';
 
 type AuthMode = 'login' | 'signup';
@@ -99,13 +100,14 @@ export const Welcome = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#7cc7ff_0%,#3A77FF_32%,#123a9b_100%)] px-6 py-10 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-brand via-brand-deep to-ink px-6 py-10 text-white">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center gap-10 lg:flex-row lg:items-center lg:gap-16">
         <section className="max-w-xl">
-          <div className="mb-8 inline-flex h-20 w-20 items-center justify-center rounded-[28px] bg-white/15 backdrop-blur-xl">
-            <ShieldCheck size={40} className="text-white" />
+          <div className="mb-8 inline-flex rounded-card bg-white px-5 py-4 shadow-float">
+            <BrandLockup size={84} />
           </div>
-          <h1 className="text-4xl font-bold leading-tight sm:text-5xl">KidRide</h1>
+          {/* The lockup above shows the name; the heading stays for screen readers. */}
+          <h1 className="sr-only">KidRide</h1>
           <p className="mt-4 max-w-lg text-lg text-white/82">
             Real parent and driver accounts backed by the API, with session restore and protected app routes.
           </p>
@@ -132,7 +134,7 @@ export const Welcome = () => {
               type="button"
               onClick={() => handleModeChange('login')}
               className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                mode === 'login' ? 'bg-white text-[#1A1D26] shadow-sm' : 'text-slate-500'
+                mode === 'login' ? 'bg-white text-ink shadow-sm' : 'text-slate-500'
               }`}
             >
               <span className="inline-flex items-center gap-2">
@@ -144,7 +146,7 @@ export const Welcome = () => {
               type="button"
               onClick={() => handleModeChange('signup')}
               className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                mode === 'signup' ? 'bg-white text-[#1A1D26] shadow-sm' : 'text-slate-500'
+                mode === 'signup' ? 'bg-white text-ink shadow-sm' : 'text-slate-500'
               }`}
             >
               <span className="inline-flex items-center gap-2">
@@ -167,10 +169,10 @@ export const Welcome = () => {
                     setError(null);
                   }}
                   className={`rounded-3xl border p-4 text-left transition ${
-                    active ? 'border-[#3A77FF] bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+                    active ? 'border-brand bg-brand/10 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-[#3A77FF]">
+                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-brand-deep">
                     <Icon size={20} className={role === UserRole.PARENT ? 'fill-current' : ''} />
                   </div>
                   <p className="font-semibold text-slate-900">{label}</p>
@@ -258,7 +260,7 @@ export const Welcome = () => {
             <button
               type="button"
               onClick={() => handleModeChange(isSignup ? 'login' : 'signup')}
-              className="mt-2 text-sm font-semibold text-[#3A77FF]"
+              className="mt-2 text-sm font-semibold text-brand-deep"
             >
               {isSignup ? 'Switch to Log In' : 'Switch to Sign Up'}
             </button>

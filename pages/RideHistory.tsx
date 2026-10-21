@@ -70,7 +70,7 @@ export const RideHistory = () => {
       onClick={() => setActiveTab(id)}
       className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
         activeTab === id
-          ? 'border-[#3A77FF] text-[#3A77FF]'
+          ? 'border-brand text-brand-deep'
           : 'border-transparent text-gray-500 hover:text-gray-700'
       }`}
     >
@@ -82,7 +82,7 @@ export const RideHistory = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">My Rides</h2>
-        <Button variant="ghost" className="text-[#3A77FF] font-semibold" onClick={() => navigate('/book')}>
+        <Button variant="ghost" className="text-brand-deep font-semibold" onClick={() => navigate('/book')}>
           + Book Ride
         </Button>
       </div>
@@ -98,7 +98,7 @@ export const RideHistory = () => {
           <>
             {!activeRide ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                <div className="w-16 h-16 bg-blue-50 text-[#3A77FF] rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-brand/10 text-brand-deep rounded-full flex items-center justify-center mx-auto mb-4">
                   <Car size={32} />
                 </div>
                 <h3 className="font-bold text-gray-900">No active rides</h3>
@@ -113,7 +113,7 @@ export const RideHistory = () => {
                 </div>
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center gap-3">
-                    <MapPin size={16} className="text-[#3A77FF]" />
+                    <MapPin size={16} className="text-brand-deep" />
                     <span className="text-sm font-medium">{activeRide.pickupLocation}</span>
                     <ArrowRight size={12} className="text-gray-400" />
                     <span className="text-sm font-medium">{activeRide.dropoffLocation}</span>
@@ -137,7 +137,7 @@ export const RideHistory = () => {
               </div>
             ) : upcomingRides.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                <div className="w-16 h-16 bg-blue-50 text-[#3A77FF] rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-brand/10 text-brand-deep rounded-full flex items-center justify-center mx-auto mb-4">
                   <Calendar size={32} />
                 </div>
                 <h3 className="font-bold text-gray-900">No upcoming rides</h3>
@@ -147,7 +147,7 @@ export const RideHistory = () => {
               upcomingRides.map((ride) => (
                 <Card key={ride.id}>
                   <div className="flex items-center gap-3 mb-3 text-sm text-gray-600">
-                    <Calendar size={16} className="text-[#3A77FF]" />
+                    <Calendar size={16} className="text-brand-deep" />
                     <span className="font-semibold text-gray-900">{formatPickupTime(ride.pickupTime)}</span>
                   </div>
                   <div className="pl-7 border-l-2 border-gray-100 space-y-2 mb-4">
@@ -180,7 +180,7 @@ export const RideHistory = () => {
               </div>
             ) : pastRides.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                <div className="w-16 h-16 bg-blue-50 text-[#3A77FF] rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-brand/10 text-brand-deep rounded-full flex items-center justify-center mx-auto mb-4">
                   <Clock size={32} />
                 </div>
                 <h3 className="font-bold text-gray-900">No completed rides yet</h3>
@@ -219,7 +219,7 @@ export const RideHistory = () => {
             )}
             {pastRides.length > 0 && (
               <div className="text-center py-4">
-                <button className="text-sm text-gray-500 font-medium flex items-center justify-center gap-1 mx-auto hover:text-[#3A77FF]">
+                <button className="text-sm text-gray-500 font-medium flex items-center justify-center gap-1 mx-auto hover:text-brand-deep">
                   Showing latest rides <ChevronRight size={16} />
                 </button>
               </div>

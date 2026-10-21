@@ -56,7 +56,7 @@ export const Earnings = () => {
     <div className="space-y-6 animate-fade-in">
       <h2 className="text-2xl font-bold text-gray-900">Earnings</h2>
 
-      <div className="rounded-2xl bg-[#3A77FF] p-6 text-white shadow-lg shadow-blue-500/30">
+      <div className="rounded-2xl bg-brand-deep p-6 text-white shadow-lg shadow-brand-deep/20">
         <p className="mb-1 font-medium text-blue-100">Completed Ride Earnings</p>
         <h1 className="mb-4 text-4xl font-bold">{isLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</h1>
         <div className="rounded-lg bg-white/20 px-4 py-3 text-sm font-semibold backdrop-blur-sm">
@@ -74,7 +74,7 @@ export const Earnings = () => {
         <Card className="text-sm text-gray-500">Loading earnings activity...</Card>
       ) : completedRides.length === 0 ? (
         <Card className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-[#3A77FF]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand/10 text-brand-deep">
             <DollarSign size={28} />
           </div>
           <h3 className="mt-4 text-xl font-bold text-slate-950">No completed ride earnings yet</h3>

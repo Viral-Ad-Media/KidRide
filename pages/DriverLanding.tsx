@@ -17,7 +17,7 @@ export const DriverLanding = () => {
   return (
     <div className="bg-white min-h-screen pb-24">
       {/* Header Image Area */}
-      <div className="relative h-64 bg-[#3A77FF] overflow-hidden">
+      <div className="relative h-64 bg-brand-deep overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-transparent z-10"></div>
         <img 
             src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=2070&auto=format&fit=crop" 
@@ -40,8 +40,8 @@ export const DriverLanding = () => {
         
         {/* Value Props */}
         <div className="grid grid-cols-2 gap-4">
-            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                <div className="bg-white w-10 h-10 rounded-full flex items-center justify-center text-[#3A77FF] mb-3 shadow-sm">
+            <div className="bg-brand/10 p-4 rounded-2xl border border-brand/30">
+                <div className="bg-white w-10 h-10 rounded-full flex items-center justify-center text-brand-deep mb-3 shadow-sm">
                     <DollarSign size={20} />
                 </div>
                 <h3 className="font-bold text-gray-900">Good Earnings</h3>
@@ -81,7 +81,7 @@ export const DriverLanding = () => {
 
         {/* Safety First */}
         <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl">
-            <Shield className="text-[#3A77FF] shrink-0 mt-1" size={24} />
+            <Shield className="text-brand-deep shrink-0 mt-1" size={24} />
             <div>
                 <h3 className="font-bold text-gray-900">Safety First Community</h3>
                 <p className="text-sm text-gray-600 mt-1">

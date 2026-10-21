@@ -37,7 +37,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 
 const ContactCard: React.FC<{ icon: LucideIcon; title: string; children: React.ReactNode }> = ({ icon: Icon, title, children }) => (
   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#3A77FF]">
+    <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand-deep">
       <Icon size={20} />
     </div>
     <h3 className="font-semibold text-slate-950">{title}</h3>
@@ -52,7 +52,7 @@ const PublicPageShell: React.FC<{
   description: string;
   children: React.ReactNode;
 }> = ({ icon: Icon, eyebrow, title, description, children }) => (
-  <div className="min-h-screen bg-[linear-gradient(180deg,#e8f3ff_0%,#f8fbff_42%,#ffffff_100%)]">
+  <div className="min-h-screen bg-surface">
     <div className="mx-auto max-w-6xl px-6 py-8 sm:py-10">
       <Link
         to="/"

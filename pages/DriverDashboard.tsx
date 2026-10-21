@@ -24,11 +24,11 @@ const OfferCountdown: React.FC<{ expiresAt: string }> = ({ expiresAt }) => {
   return (
     <div className="mt-4" role="timer" aria-live="polite">
       <div className="flex items-center justify-between text-xs font-semibold">
-        <span className="text-[#1d6fff]">You are the nearest driver</span>
+        <span className="text-brand-deep">You are the nearest driver</span>
         <span className={left < 6000 ? 'text-red-600' : 'text-slate-600'}>{left > 0 ? `${Math.ceil(left / 1000)}s to accept` : 'Offer expired'}</span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-        <div className={`h-full rounded-full transition-[width] duration-200 ${left < 6000 ? 'bg-red-500' : 'bg-[#1d6fff]'}`} style={{ width: `${Math.min(100, (left / total) * 100)}%` }} />
+        <div className={`h-full rounded-full transition-[width] duration-200 ${left < 6000 ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${Math.min(100, (left / total) * 100)}%` }} />
       </div>
     </div>
   );
@@ -121,7 +121,7 @@ export const DriverDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#020617_0%,#0f172a_48%,#1d4ed8_100%)] p-6 text-white shadow-[0_28px_70px_rgba(15,23,42,0.25)] sm:p-8">
+      <section className="overflow-hidden rounded-[34px] bg-gradient-to-br from-ink via-ink to-brand-deep p-6 text-white shadow-[0_28px_70px_rgba(15,23,42,0.25)] sm:p-8">
         <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200/88">Driver Workspace</p>
@@ -139,7 +139,7 @@ export const DriverDashboard = () => {
               </div>
               <label className="relative inline-flex cursor-pointer items-center">
                 <input type="checkbox" checked={isOnline} onChange={() => setIsOnline(!isOnline)} className="peer sr-only" />
-                <div className="after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all h-7 w-12 rounded-full bg-white/25 transition peer-checked:bg-sky-300/70 peer-checked:after:translate-x-5" />
+                <div className="after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all h-7 w-12 rounded-full bg-white/25 transition peer-checked:bg-brand peer-checked:after:translate-x-5" />
               </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -180,8 +180,8 @@ export const DriverDashboard = () => {
             </Card>
           ) : !activeRide ? (
             <Card className="text-center">
-              <div className="relative mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-[#1d6fff]">
-                <span className="absolute inset-0 animate-ping rounded-[22px] bg-blue-200/60" aria-hidden="true" />
+              <div className="relative mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-brand/10 text-brand-deep">
+                <span className="absolute inset-0 animate-ping rounded-[22px] bg-brand/15" aria-hidden="true" />
                 <MapPin size={28} className="relative" />
               </div>
               <h3 className="mt-5 text-2xl font-bold text-slate-950">Scanning the area</h3>
@@ -191,10 +191,10 @@ export const DriverDashboard = () => {
               <DriverIdleMap onAccept={acceptRide} />
             </Card>
           ) : activeRide.status === RideStatus.SEARCHING_DRIVER || activeRide.status === RideStatus.REQUESTED ? (
-            <Card className="overflow-hidden border-[#bfdbfe] bg-[linear-gradient(145deg,#f8fbff_0%,#ffffff_54%,#eff6ff_100%)]">
+            <Card className="overflow-hidden border-brand/40 bg-white">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-xl">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#1d6fff]">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-deep">
                     <ShieldCheck size={14} />
                     New Request
                   </div>
@@ -219,7 +219,7 @@ export const DriverDashboard = () => {
                 <div className="flex flex-col items-center gap-2 pt-1">
                   <div className="h-3 w-3 rounded-full bg-slate-300" />
                   <div className="h-12 w-0.5 bg-slate-200" />
-                  <div className="h-3 w-3 rounded-full bg-[#1d6fff]" />
+                  <div className="h-3 w-3 rounded-full bg-brand" />
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -243,7 +243,7 @@ export const DriverDashboard = () => {
               </div>
             </Card>
           ) : (
-            <Card className="overflow-hidden bg-[linear-gradient(145deg,#ffffff_0%,#f8fbff_100%)]">
+            <Card className="overflow-hidden bg-white">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <StatusChip status={activeRide.status} />
@@ -302,7 +302,7 @@ export const DriverDashboard = () => {
                   <Button
                     fullWidth
                     onClick={() => handleStatusUpdate(RideStatus.COMPLETED)}
-                    className="bg-[linear-gradient(135deg,#059669_0%,#18b37e_100%)] text-white hover:bg-[linear-gradient(135deg,#047857_0%,#119e6e_100%)]"
+                    className="bg-success text-white hover:brightness-95"
                   >
                     Complete Ride
                   </Button>
@@ -320,7 +320,7 @@ export const DriverDashboard = () => {
         <div className="space-y-6">
           <Card>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-[24px] bg-blue-50 p-5">
+              <div className="rounded-[24px] bg-brand/10 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Availability</p>
                 <p className="mt-2 text-3xl font-bold text-slate-950">{isOnline ? 'Online' : 'Offline'}</p>
               </div>

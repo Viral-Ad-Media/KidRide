@@ -29,6 +29,7 @@ import {
 import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
 import { AdminLiveMap } from './pages/AdminLiveMap';
 import { UserRole } from './types';
+import { SplashLoader } from './components/brand/SplashLoader';
 
 const defaultRouteFor = getDefaultRouteForUser;
 
@@ -221,6 +222,7 @@ const App = () => {
     <AuthProvider>
       <RideProvider>
         <Router>
+          <SplashLoader />
           <AppRoutes />
         </Router>
       </RideProvider>

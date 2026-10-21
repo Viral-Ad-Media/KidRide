@@ -31,7 +31,7 @@ const TripStatusCard: React.FC<{
   return (
     <div className="absolute left-16 right-4 top-4 z-10 sm:left-auto sm:w-[320px]" role="status" aria-live="polite">
       <div className="flex items-center gap-3 rounded-[22px] border border-white/70 bg-white/95 p-3 pr-4 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur">
-        <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${searching ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-[#1d6fff]'}`}>
+        <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${searching ? 'bg-amber-50 text-amber-600' : 'bg-brand/10 text-brand-deep'}`}>
           {searching && <span className="absolute inset-0 animate-ping rounded-2xl bg-amber-200/60" />}
           <Icon size={20} className="relative" />
         </span>
@@ -163,7 +163,7 @@ export const LiveTracking = () => {
                 {driver.photoUrl ? (
                   <img src={driver.photoUrl} alt={driver.name} className="h-16 w-16 rounded-full border-2 border-white object-cover shadow-md" />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white bg-blue-50 text-sm font-semibold text-[#3A77FF] shadow-md">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white bg-brand/10 text-sm font-semibold text-brand-deep shadow-md">
                     {driverInitials(driver.name)}
                   </div>
                 )}
@@ -192,14 +192,14 @@ export const LiveTracking = () => {
           </div>
         )}
 
-        <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
+        <div className="mb-6 rounded-xl border border-brand/30 bg-brand/10 p-4">
           <div className="flex items-start gap-3">
-            <ShieldAlert className="mt-1 shrink-0 text-[#3A77FF]" size={20} />
+            <ShieldAlert className="mt-1 shrink-0 text-brand-deep" size={20} />
             <div>
-              <p className="text-sm font-bold text-[#3A77FF]">Safety Check</p>
-              <p className="mt-1 text-sm text-blue-800">
+              <p className="text-sm font-bold text-brand-deep">Safety Check</p>
+              <p className="mt-1 text-sm text-brand-deep">
                 Driver must say the safe word:
-                <span className="ml-2 rounded border border-blue-200 bg-white px-2 py-0.5 font-bold">{safeWord}</span>
+                <span className="ml-2 rounded border border-brand/30 bg-white px-2 py-0.5 font-bold">{safeWord}</span>
               </p>
             </div>
           </div>

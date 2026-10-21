@@ -91,7 +91,7 @@ export const RateRideModal: React.FC<{ rideId: string | null; onClose: () => voi
       {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" onClick={onClose} disabled={saving} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Not now</button>
-        <button type="button" onClick={() => void submit()} disabled={saving} className="rounded-full bg-[#1d6fff] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1558d6] disabled:opacity-60">{saving ? 'Saving...' : 'Submit rating'}</button>
+        <button type="button" onClick={() => void submit()} disabled={saving} className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-ink hover:brightness-95 disabled:opacity-60">{saving ? 'Saving...' : 'Submit rating'}</button>
       </div>
     </Modal>
   );

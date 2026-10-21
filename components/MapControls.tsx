@@ -11,20 +11,20 @@ interface MapControlsProps {
   className?: string;
 }
 
-const buttonClass = 'inline-flex h-10 w-10 items-center justify-center text-slate-700 transition hover:bg-slate-50 hover:text-[#1d6fff] active:scale-95';
+const buttonClass = 'inline-flex h-10 w-10 items-center justify-center text-ink transition hover:bg-surface hover:text-brand-deep active:scale-95';
 
 export const MapControls: React.FC<MapControlsProps> = ({ map, onRecenter, recenterLabel = 'Recenter map', className = 'right-3 top-3' }) => {
   const zoomBy = (delta: number) => { const current = map.current; if (current) current.setZoom((current.getZoom() ?? 13) + delta); };
   return (
     <div className={`absolute z-10 flex flex-col gap-2 ${className}`}>
       {onRecenter && (
-        <button type="button" onClick={onRecenter} aria-label={recenterLabel} title={recenterLabel} className={`${buttonClass} rounded-full bg-white shadow-[0_8px_20px_rgba(15,23,42,0.15)]`}>
+        <button type="button" onClick={onRecenter} aria-label={recenterLabel} title={recenterLabel} className={`${buttonClass} rounded-control border border-line bg-white`}>
           <Crosshair size={18} />
         </button>
       )}
-      <div className="flex flex-col overflow-hidden rounded-full bg-white shadow-[0_8px_20px_rgba(15,23,42,0.15)]">
+      <div className="flex flex-col overflow-hidden rounded-control border border-line bg-white">
         <button type="button" onClick={() => zoomBy(1)} aria-label="Zoom in" className={buttonClass}><Plus size={18} /></button>
-        <span className="mx-2 h-px bg-slate-200" />
+        <span className="mx-2 h-px bg-line" />
         <button type="button" onClick={() => zoomBy(-1)} aria-label="Zoom out" className={buttonClass}><Minus size={18} /></button>
       </div>
     </div>
