@@ -5,6 +5,7 @@ import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDriverRating } from '../components/Ratings';
 import { LiveMap } from '../components/LiveMap';
+import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
@@ -155,6 +156,8 @@ export const DriverDashboard = () => {
         </div>
       </section>
 
+      <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
+
       {(syncError || locationError) && <div className="rounded-xl bg-amber-50 p-4 text-amber-900">{syncError || locationError}</div>}
       {error && (
         <div className="rounded-[24px] border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-600 shadow-[0_14px_30px_rgba(239,68,68,0.08)]">
@@ -192,6 +195,7 @@ export const DriverDashboard = () => {
                     <ShieldCheck size={14} />
                     New Request
                   </div>
+                  {activeRide.isScheduled && <div className="mt-3"><ScheduleChip state="scheduled" /> <span className="ml-1 text-xs font-semibold text-slate-500">Booked ahead for {formatPickupTime(activeRide.pickupTime)}</span></div>}
                   {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
                   <h3 className="mt-4 text-3xl font-bold text-slate-950">{formatRidePrice(activeRide.price)}</h3>
                   <p className="mt-2 text-sm text-slate-500">

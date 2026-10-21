@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Select } from '../components/UIComponents';
-import { ArrowLeft, MapPin, Search, ShieldCheck, Map } from 'lucide-react';
+import { Button, Card, Input, Select } from '../components/UIComponents';
+import { ArrowLeft, CalendarClock, CheckCircle, MapPin, Search, ShieldCheck, Map, Zap } from 'lucide-react';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
 import { RideStatus, ServiceType, Ride, PlaceCoords } from '../types';
 import { PlacesInput } from '../components/PlacesInput';
+import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalInputValue, validateScheduleInput } from '../services/scheduledRides';
 
 const childInitials = (name: string) => (
   name
@@ -50,6 +51,13 @@ export const BookRide = () => {
   const [step, setStep] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
+  // Now, or a pickup time chosen in local time (sent as UTC).
+  const [when, setWhen] = useState<'now' | 'later'>('now');
+  const [scheduleValue, setScheduleValue] = useState(() => toLocalInputValue(firstSlot()));
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [scheduledRide, setScheduledRide] = useState<Ride | null>(null);
+  const scheduleProblem = when === 'later' ? validateScheduleInput(scheduleValue) : null;
   const availableChildren = user?.children || [];
   const hasChildren = availableChildren.length > 0;
 
@@ -82,18 +90,19 @@ export const BookRide = () => {
     }
   }, [availableChildren, formData.childId]);
 
+  // After booking for now, follow the ride once a driver takes it.
   useEffect(() => {
-    if (activeRide && [RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVED, RideStatus.IN_PROGRESS].includes(activeRide.status)) {
+    if (isSearching && activeRide && [RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVED, RideStatus.IN_PROGRESS].includes(activeRide.status)) {
       navigate(`/tracking/${activeRide.id}`);
     }
-  }, [activeRide, navigate]);
+  }, [activeRide, navigate, isSearching]);
 
   const canProceed = !hasChildren
     ? false
     : step === 1
       ? Boolean(formData.childId)
       : step === 2
-        ? Boolean(trimmedPickup && trimmedDropoff)
+        ? Boolean(trimmedPickup && trimmedDropoff) && !scheduleProblem
         : true;
 
   const handleNext = () => {
@@ -116,7 +125,37 @@ export const BookRide = () => {
       return;
     }
 
-    void startDriverSearch();
+    if (when === 'later') void scheduleRide();
+    else void startDriverSearch();
+  };
+
+  const scheduleRide = async () => {
+    if (quote === null || quoteService !== formData.serviceType) return;
+    const problem = validateScheduleInput(scheduleValue);
+    if (problem) { setScheduleError(problem); setStep(2); return; }
+    setIsScheduling(true);
+    setScheduleError(null);
+    try {
+      const booked = await bookScheduledRide({
+        id: '',
+        childId: formData.childId,
+        pickupLocation: trimmedPickup,
+        dropoffLocation: trimmedDropoff,
+        pickupCoords: formData.pickupCoords,
+        dropoffCoords: formData.dropoffCoords,
+        pickupTime: new Date(scheduleValue).toISOString(),
+        status: RideStatus.SEARCHING_DRIVER,
+        price: quote,
+        tripCode: '',
+        safeWord: '',
+        serviceType: formData.serviceType as ServiceType
+      });
+      setScheduledRide(booked);
+    } catch (error) {
+      setScheduleError(error instanceof Error ? error.message : 'Could not schedule this ride. Please try again.');
+    } finally {
+      setIsScheduling(false);
+    }
   };
 
   const startDriverSearch = async () => {
@@ -162,6 +201,28 @@ export const BookRide = () => {
       setTimeout(() => setSearchStatus(msg), delay);
     });
   };
+
+  if (scheduledRide) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center space-y-6 p-6 text-center fade-in">
+        <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+          <CheckCircle size={40} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Ride scheduled</h2>
+          <p className="mt-2 text-lg font-semibold text-[#1d6fff]">{formatScheduledTime(scheduledRide.pickupTime)}</p>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            We start offering it to the nearest verified drivers 30 minutes before pickup. You can change the time or cancel from your dashboard until then.
+          </p>
+        </div>
+        <div className="w-full rounded-2xl bg-slate-50 p-4 text-left text-sm text-slate-600">
+          <p className="font-semibold text-slate-900">{scheduledRide.pickupLocation}</p>
+          <p className="mt-1">to {scheduledRide.dropoffLocation}</p>
+        </div>
+        <Button fullWidth onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+      </div>
+    );
+  }
 
   if (isSearching) {
     return (
@@ -219,6 +280,7 @@ export const BookRide = () => {
       </div>
 
       {quoteError && <p className="mb-4 text-red-600">{quoteError}</p>}
+      {scheduleError && <p className="mb-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{scheduleError}</p>}
       <div className="mb-8 flex gap-2">
         {[1, 2, 3].map((item) => (
           <div key={item} className={`h-1.5 flex-1 rounded-full transition-colors ${item <= step ? 'bg-[#3A77FF]' : 'bg-gray-200'}`} />
@@ -293,6 +355,40 @@ export const BookRide = () => {
             ))}
           </Select>
           <p className="-mt-2 text-sm text-slate-500">{serviceTypeDescriptions[formData.serviceType]}</p>
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-slate-700">Pickup time</p>
+            <div className="grid grid-cols-2 gap-2 rounded-[20px] bg-slate-100 p-1" role="radiogroup" aria-label="Pickup time">
+              {([['now', 'Now', Zap], ['later', 'Schedule', CalendarClock]] as const).map(([value, label, Icon]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={when === value}
+                  onClick={() => { setWhen(value); setScheduleError(null); }}
+                  className={`inline-flex items-center justify-center gap-2 rounded-[16px] py-3 text-sm font-semibold transition ${when === value ? 'bg-white text-[#1d6fff] shadow' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <Icon size={16} /> {label}
+                </button>
+              ))}
+            </div>
+            {when === 'later' && (
+              <div className="mt-4">
+                <Input
+                  type="datetime-local"
+                  aria-label="Pickup date and time"
+                  value={scheduleValue}
+                  min={toLocalInputValue(firstSlot(30))}
+                  max={toLocalInputValue(latestSlot())}
+                  step={300}
+                  onChange={(event) => { setScheduleValue(event.target.value); setScheduleError(null); }}
+                />
+                <p className={`-mt-2 text-sm ${scheduleProblem ? 'text-red-600' : 'text-slate-500'}`}>
+                  {scheduleProblem || `${formatScheduledTime(scheduleValue)} · in your local time. Between 30 minutes and 30 days ahead, in 5-minute steps.`}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -329,7 +425,11 @@ export const BookRide = () => {
             </div>
           </Card>
 
-          <div className="flex items-center justify-between border-y border-gray-100 py-4">
+          <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+            <span className="text-gray-600">Pickup</span>
+            <span className="text-lg font-semibold text-gray-900">{when === 'later' ? formatScheduledTime(scheduleValue) : 'Now'}</span>
+          </div>
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
             <span className="text-gray-600">Service Type</span>
             <span className="text-lg font-semibold text-gray-900">{serviceTypeLabels[formData.serviceType]}</span>
           </div>
@@ -342,8 +442,8 @@ export const BookRide = () => {
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white p-6 md:relative md:mt-8 md:border-none md:bg-transparent md:p-0">
         <div className="mx-auto w-full max-w-4xl">
-          <Button onClick={handleNext} fullWidth disabled={isSearching || (step === 3 && quote === null) || (hasChildren && !canProceed)}>
-            {!hasChildren ? 'Add a Child First' : step === 3 ? 'Confirm & Book' : 'Next'}
+          <Button onClick={handleNext} fullWidth disabled={isSearching || isScheduling || (step === 3 && quote === null) || (hasChildren && !canProceed)}>
+            {!hasChildren ? 'Add a Child First' : step === 3 ? (when === 'later' ? (isScheduling ? 'Scheduling...' : 'Confirm & Schedule') : 'Confirm & Book') : 'Next'}
           </Button>
         </div>
       </div>

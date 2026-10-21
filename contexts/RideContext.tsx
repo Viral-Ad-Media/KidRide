@@ -21,6 +21,11 @@ const PRESENCE_INTERVAL_MS = 10000;
 // Drivers poll faster than parents: an offer is only theirs for 20 seconds.
 const DRIVER_POLL_MS = 4000;
 const PARENT_POLL_MS = 7000;
+// Matches the API: a ride booked for later becomes the current trip 15 minutes before pickup.
+const CURRENT_LEAD_MS = 15 * 60 * 1000;
+const isLaterRide = (ride: Ride) => !!ride.isScheduled
+  && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER, RideStatus.DRIVER_ASSIGNED].includes(ride.status)
+  && new Date(ride.pickupTime).getTime() - Date.now() > CURRENT_LEAD_MS;
 const readOnline = () => { try { return window.localStorage.getItem(ONLINE_STORAGE_KEY) !== 'false'; } catch { return true; } };
 const RideContext = createContext<RideContextType | undefined>(undefined);
 export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,7 +83,9 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = await getStoredToken();
       if (!token || session !== generation.current) throw new Error('Sign in again to update this trip.');
       const raw = await apiRequest<unknown>(path, { method: path === '/rides/request' ? 'POST' : 'PUT', token, body });
-      if (session === generation.current) { setActiveRide(clear ? null : mapRide(raw)); setSyncError(null); }
+      // A ride for later that was just accepted waits in the Upcoming list, not as the current trip.
+      const ride = clear ? null : mapRide(raw);
+      if (session === generation.current) { setActiveRide(ride && !isLaterRide(ride) ? ride : null); setSyncError(null); }
     } finally { if (session === generation.current) busy.current = false; }
   };
   // Presence heartbeat: tells the server this driver is online and, when the

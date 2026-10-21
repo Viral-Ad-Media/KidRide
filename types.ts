@@ -91,10 +91,17 @@ export interface RideRating {
   comment?: string | null;
 }
 
+export type ScheduleState = 'scheduled' | 'dispatching' | 'assigned' | 'needs_attention';
+export const SCHEDULE_STATES: ScheduleState[] = ['scheduled', 'dispatching', 'assigned', 'needs_attention'];
+
 export interface Ride {
   driverLocation?: DriverLocation;
   /** 'targeted' while offered to the nearest drivers one at a time; 'open' when any driver may take it. */
   dispatchState?: 'targeted' | 'open';
+  /** Booked for later (pickupTime is then the scheduled pickup). */
+  isScheduled?: boolean;
+  /** Rides for later: not yet offered to drivers, being offered, accepted, or no driver 5 min before pickup. */
+  scheduleState?: ScheduleState | null;
   /** Driver view: when the offer made to this driver runs out. */
   offerExpiresAt?: string | null;
   /** Parent view while searching: online drivers near the pickup. */
