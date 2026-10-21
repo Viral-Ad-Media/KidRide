@@ -74,7 +74,16 @@ export interface DriverLocation {
   latitude: number;
   longitude: number;
   accuracy?: number | null;
+  /** Degrees clockwise from north, when the device reports it. */
+  heading?: number | null;
+  /** Metres per second, when the device reports it. */
+  speed?: number | null;
   recordedAt: string;
+}
+
+export interface PlaceCoords {
+  lat: number;
+  lng: number;
 }
 
 export interface RideRating {
@@ -92,6 +101,9 @@ export interface Ride {
   driver?: AssignedDriver;
   pickupLocation: string;
   dropoffLocation: string;
+  /** Set when the address was picked from Google Places suggestions. */
+  pickupCoords?: PlaceCoords | null;
+  dropoffCoords?: PlaceCoords | null;
   pickupTime: string;
   status: RideStatus;
   price: number;

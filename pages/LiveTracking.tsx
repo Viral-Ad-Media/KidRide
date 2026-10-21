@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { RideMap } from '../components/RideMap';
+import React, { useState, useEffect, useRef } from 'react';
+import { LiveMap, RouteInfo } from '../components/LiveMap';
 import { Card, Button, ConfirmModal, StatusChip, Badge } from '../components/UIComponents';
 import { RatingBadge, useDriverRating } from '../components/Ratings';
 import { ShieldAlert, X } from 'lucide-react';
@@ -30,7 +30,16 @@ const formatVehicle = (vehicle?: { color?: string; make?: string; model?: string
 
 export const LiveTracking = () => {
   const navigate = useNavigate();
-  const { activeRide, syncError, cancelRide } = useRide();
+  const { activeRide, syncError, cancelRide, refreshActiveRide } = useRide();
+  const [route, setRoute] = useState<RouteInfo>({});
+
+  // Poll faster while the parent is watching the map so the car keeps moving.
+  const refresh = useRef(refreshActiveRide);
+  refresh.current = refreshActiveRide;
+  useEffect(() => {
+    const timer = setInterval(() => void refresh.current(), 3000);
+    return () => clearInterval(timer);
+  }, []);
   const { id } = useParams();
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -65,15 +74,40 @@ export const LiveTracking = () => {
   const safeWord = activeRide.safeWord || 'Pending';
 
   return (
-    <div className="relative flex h-[calc(100vh-80px)] flex-col bg-gray-100 md:h-[600px]">
-      <div className="relative flex-1">
+    <div className="relative flex flex-col bg-gray-100">
+      {/* Map keeps a real height on every screen; the details sheet sits below it. */}
+      <div className="relative h-[45vh] min-h-[300px] md:h-[460px]">
         <button
           onClick={() => navigate('/dashboard')}
           className="absolute left-4 top-4 z-10 rounded-full bg-white p-2 shadow-md"
         >
           <X size={24} />
         </button>
-        <RideMap status={localStatus} location={activeRide.driverLocation} />
+        <LiveMap
+          pickup={activeRide.pickupLocation}
+          dropoff={activeRide.dropoffLocation}
+          pickupCoords={activeRide.pickupCoords}
+          dropoffCoords={activeRide.dropoffCoords}
+          driverLocation={activeRide.driverLocation}
+          nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
+          onRoute={setRoute}
+          className="h-full rounded-none"
+        />
+        {(route.driverEta || route.tripDuration) && (
+          <div className="absolute right-4 top-4 z-10 rounded-2xl bg-white/95 px-4 py-2 text-right shadow-md">
+            {route.driverEta && activeRide.driverLocation ? (
+              <>
+                <p className="text-xs text-slate-500">{activeRide.status === RideStatus.IN_PROGRESS ? 'Arriving at drop-off in' : 'Driver arriving in'}</p>
+                <p className="text-lg font-bold text-slate-950">{route.driverEta}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500">Trip</p>
+                <p className="text-lg font-bold text-slate-950">{route.tripDuration}{route.tripDistance ? ` · ${route.tripDistance}` : ''}</p>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="relative z-10 -mt-6 rounded-t-3xl bg-white p-6 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] animate-slide-up">
