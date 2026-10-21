@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { Ride, RideStatus, UserRole } from '../types';
 import { useAuth } from './AuthContext';
 import { apiRequest, getStoredToken, mapRide } from '../services/api';
+import { watchSharedPosition } from '../services/sharedPosition';
 
 interface RideContextType {
   activeRide: Ride | null;
@@ -9,6 +10,8 @@ interface RideContextType {
   requestRide: (ride: Ride) => Promise<void>;
   updateRideStatus: (status: RideStatus) => Promise<void>;
   declineRideRequest: () => Promise<void>;
+  /** Driver accepts a specific waiting ride (e.g. one picked on the map). */
+  acceptRide: (rideId: string) => Promise<void>;
   cancelRide: () => Promise<void>;
   refreshActiveRide: () => Promise<void>;
   /** Driver availability; offers are only fetched while online. Remembered per browser. */
@@ -21,6 +24,11 @@ const PRESENCE_INTERVAL_MS = 10000;
 // Drivers poll faster than parents: an offer is only theirs for 20 seconds.
 const DRIVER_POLL_MS = 4000;
 const PARENT_POLL_MS = 7000;
+// Matches the API: a ride booked for later becomes the current trip 15 minutes before pickup.
+const CURRENT_LEAD_MS = 15 * 60 * 1000;
+const isLaterRide = (ride: Ride) => !!ride.isScheduled
+  && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER, RideStatus.DRIVER_ASSIGNED].includes(ride.status)
+  && new Date(ride.pickupTime).getTime() - Date.now() > CURRENT_LEAD_MS;
 const readOnline = () => { try { return window.localStorage.getItem(ONLINE_STORAGE_KEY) !== 'false'; } catch { return true; } };
 const RideContext = createContext<RideContextType | undefined>(undefined);
 export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,7 +86,9 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = await getStoredToken();
       if (!token || session !== generation.current) throw new Error('Sign in again to update this trip.');
       const raw = await apiRequest<unknown>(path, { method: path === '/rides/request' ? 'POST' : 'PUT', token, body });
-      if (session === generation.current) { setActiveRide(clear ? null : mapRide(raw)); setSyncError(null); }
+      // A ride for later that was just accepted waits in the Upcoming list, not as the current trip.
+      const ride = clear ? null : mapRide(raw);
+      if (session === generation.current) { setActiveRide(ride && !isLaterRide(ride) ? ride : null); setSyncError(null); }
     } finally { if (session === generation.current) busy.current = false; }
   };
   // Presence heartbeat: tells the server this driver is online and, when the
@@ -86,7 +96,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!approved || !isOnline) return;
     let position: GeolocationPosition | null = null;
-    const watch = navigator.geolocation?.watchPosition((latest) => { position = latest; }, () => undefined, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+    const unwatch = watchSharedPosition((latest) => { position = latest; });
     const beat = () => {
       const token = getStoredToken();
       if (!token) return;
@@ -98,7 +108,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     beat();
     const interval = setInterval(beat, PRESENCE_INTERVAL_MS);
-    return () => { clearInterval(interval); if (watch !== undefined) navigator.geolocation.clearWatch(watch); };
+    return () => { clearInterval(interval); unwatch(); };
   }, [approved, isOnline, user?.id]);
 
   const setIsOnline = (next: boolean) => {
@@ -119,13 +129,14 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const accepting = status === RideStatus.DRIVER_ASSIGNED && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);
     await mutate(`/rides/${activeRide.id}/${accepting ? 'accept' : 'status'}`, accepting ? undefined : { status });
   };
+  const acceptRide = (rideId: string) => mutate(`/rides/${rideId}/accept`);
   const cancelRide = async () => { if (!activeRide) throw new Error('No active trip.'); await mutate(`/rides/${activeRide.id}/cancel`, undefined, true); };
   const declineRideRequest = async () => {
     if (!activeRide) throw new Error('No open trip.');
     await mutate(`/rides/${activeRide.id}/decline`, undefined, true);
     await refreshActiveRide();
   };
-  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
+  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
 };
 export const useRide = () => {
   const context = useContext(RideContext);

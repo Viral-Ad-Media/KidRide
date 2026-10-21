@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, X, XCircle } from 'lucide-react';
 import { ConfirmModal, Modal, StatusChip } from '../components/UIComponents';
+import { ScheduleChip } from '../components/UpcomingRides';
 import { ApiError, RideScope } from '../services/api';
 import {
   AdminRide,
@@ -394,7 +395,12 @@ export const AdminRides = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const visible = statusFilter === 'any' ? rides : rides.filter((ride) => ride.status === statusFilter);
+  const [bookingFilter, setBookingFilter] = useState<'all' | 'scheduled' | 'needs_attention'>('all');
+  const scheduledCount = rides.filter((ride) => ride.isScheduled).length;
+  const attentionCount = rides.filter((ride) => ride.scheduleState === 'needs_attention').length;
+  const visible = rides
+    .filter((ride) => statusFilter === 'any' || ride.status === statusFilter)
+    .filter((ride) => bookingFilter === 'all' || (bookingFilter === 'scheduled' ? ride.isScheduled : ride.scheduleState === 'needs_attention'));
 
   const askCancel = (ride: AdminRide) => setConfirm({
     title: 'Cancel this ride?',
@@ -465,6 +471,15 @@ export const AdminRides = () => {
         })}
       </div>
 
+      <div className="mb-5 flex flex-wrap gap-2" aria-label="Booked for later">
+        {([['all', 'Now and later', rides.length], ['scheduled', 'Scheduled', scheduledCount], ['needs_attention', 'Needs attention', attentionCount]] as const).map(([value, label, count]) => (
+          <button key={value} type="button" onClick={() => setBookingFilter(value)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${bookingFilter === value ? (value === 'needs_attention' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white') : value === 'needs_attention' && count > 0 ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            {label} ({count})
+          </button>
+        ))}
+      </div>
+
       {flash && <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{flash}</div>}
 
       {loading ? <Loading /> : error ? <ErrorBox message={error} onRetry={load} /> : visible.length === 0 ? (
@@ -479,6 +494,7 @@ export const AdminRides = () => {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusChip status={ride.status} />
+                      {ride.isScheduled && <ScheduleChip state={ride.scheduleState === 'needs_attention' ? 'needs_attention' : 'scheduled'} />}
                       <span className="text-xs font-semibold uppercase text-slate-400">{ride.serviceType.replace(/_/g, ' ')}</span>
                     </div>
                     <p className="mt-2 break-words text-sm font-semibold text-slate-950">{ride.pickupLocation || 'Unknown pickup'} &rarr; {ride.dropoffLocation || 'Unknown drop-off'}</p>

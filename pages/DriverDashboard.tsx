@@ -5,6 +5,8 @@ import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDriverRating } from '../components/Ratings';
 import { LiveMap } from '../components/LiveMap';
+import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
+import { DriverIdleMap } from '../components/DriverIdleMap';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
@@ -33,7 +35,7 @@ const OfferCountdown: React.FC<{ expiresAt: string }> = ({ expiresAt }) => {
 };
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, isOnline, setIsOnline } = useRide();
+  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline } = useRide();
   const { user } = useAuth();
   const rating = useDriverRating(user?.id);
   const locationError = useDriverLocation();
@@ -155,6 +157,8 @@ export const DriverDashboard = () => {
         </div>
       </section>
 
+      <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
+
       {(syncError || locationError) && <div className="rounded-xl bg-amber-50 p-4 text-amber-900">{syncError || locationError}</div>}
       {error && (
         <div className="rounded-[24px] border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-600 shadow-[0_14px_30px_rgba(239,68,68,0.08)]">
@@ -176,13 +180,15 @@ export const DriverDashboard = () => {
             </Card>
           ) : !activeRide ? (
             <Card className="text-center">
-              <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-[#1d6fff]">
-                <MapPin size={28} />
+              <div className="relative mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-[#1d6fff]">
+                <span className="absolute inset-0 animate-ping rounded-[22px] bg-blue-200/60" aria-hidden="true" />
+                <MapPin size={28} className="relative" />
               </div>
               <h3 className="mt-5 text-2xl font-bold text-slate-950">Scanning the area</h3>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">
-                When a new request matches your area, it will appear here with pickup details, service type, and quick accept or decline actions.
+                When a new request matches your area, it will appear here with pickup details, service type, and quick accept or decline actions. Amber pins on the map are rides waiting nearby; tap one to see the trip.
               </p>
+              <DriverIdleMap onAccept={acceptRide} />
             </Card>
           ) : activeRide.status === RideStatus.SEARCHING_DRIVER || activeRide.status === RideStatus.REQUESTED ? (
             <Card className="overflow-hidden border-[#bfdbfe] bg-[linear-gradient(145deg,#f8fbff_0%,#ffffff_54%,#eff6ff_100%)]">
@@ -192,6 +198,7 @@ export const DriverDashboard = () => {
                     <ShieldCheck size={14} />
                     New Request
                   </div>
+                  {activeRide.isScheduled && <div className="mt-3"><ScheduleChip state="scheduled" /> <span className="ml-1 text-xs font-semibold text-slate-500">Booked ahead for {formatPickupTime(activeRide.pickupTime)}</span></div>}
                   {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
                   <h3 className="mt-4 text-3xl font-bold text-slate-950">{formatRidePrice(activeRide.price)}</h3>
                   <p className="mt-2 text-sm text-slate-500">

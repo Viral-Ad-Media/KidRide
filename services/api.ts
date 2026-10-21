@@ -1,4 +1,4 @@
-import { AssignedDriver, Child, Ride, RideStatus, ServiceType, User, UserRole, VehicleDetails } from '../types';
+import { AssignedDriver, Child, Ride, RideStatus, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
 
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const DEPLOYED_API_BASE_URL = 'https://kidride-backend.vercel.app/api';
@@ -336,6 +336,8 @@ export const mapRide = (raw: unknown): Ride => {
     rating: ride.rating && typeof ride.rating === 'object' ? ride.rating as Ride['rating'] : null,
     pickupCoords: ride.pickupCoords && typeof ride.pickupCoords === 'object' ? ride.pickupCoords as Ride['pickupCoords'] : null,
     dispatchState: ride.dispatchState === 'targeted' ? 'targeted' : 'open',
+    isScheduled: ride.isScheduled === true,
+    scheduleState: typeof ride.scheduleState === 'string' && SCHEDULE_STATES.includes(ride.scheduleState as ScheduleState) ? ride.scheduleState as ScheduleState : null,
     offerExpiresAt: typeof ride.offerExpiresAt === 'string' ? ride.offerExpiresAt : null,
     nearbyDrivers: ride.dispatch && typeof (ride.dispatch as { nearbyDrivers?: unknown }).nearbyDrivers === 'number' ? (ride.dispatch as { nearbyDrivers: number }).nearbyDrivers : null,
     dropoffCoords: ride.dropoffCoords && typeof ride.dropoffCoords === 'object' ? ride.dropoffCoords as Ride['dropoffCoords'] : null,

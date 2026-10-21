@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRide } from '../contexts/RideContext';
 import { fetchUserRides, getStoredToken } from '../services/api';
 import { buildWeeklyRideCounts } from '../utils/rideData';
+import { ParentUpcomingRides } from '../components/UpcomingRides';
 
 const emptyWeeklyActivity = buildWeeklyRideCounts([]);
 
@@ -117,6 +118,8 @@ export const ParentDashboard = () => {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
         <div className="space-y-6">
+          <ParentUpcomingRides />
+
           <Card>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
