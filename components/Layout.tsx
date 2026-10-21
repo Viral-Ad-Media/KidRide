@@ -229,7 +229,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </header>
 
-          {mapScreenPaths.has(location.pathname) ? (
+          {mapScreenPaths.has(location.pathname) || location.pathname.startsWith('/tracking/') ? (
             // Map-first screens draw edge to edge and bring their own sheet.
             <main className="flex-1">{children}</main>
           ) : (

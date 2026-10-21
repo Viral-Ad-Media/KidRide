@@ -238,6 +238,7 @@ const mapAssignedDriver = (raw: unknown): AssignedDriver | undefined => {
     id: String(driverId),
     name: typeof driver.name === 'string' && driver.name.trim() ? driver.name : 'Assigned driver',
     photoUrl: typeof driver.photoUrl === 'string' ? driver.photoUrl : undefined,
+    phone: typeof driver.phone === 'string' && driver.phone.trim() ? driver.phone : undefined,
     isVerifiedDriver: Boolean(driver.isVerifiedDriver),
     vehicle: mapVehicle(driver.vehicle)
   };

@@ -67,6 +67,7 @@ export interface AssignedDriver {
   id: string;
   name: string;
   photoUrl?: string;
+  phone?: string;
   isVerifiedDriver?: boolean;
   vehicle?: VehicleDetails;
 }
