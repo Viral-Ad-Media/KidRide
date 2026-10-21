@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrandLockup } from './brand/BrandLockup';
 import { BrandMark } from './brand/BrandMark';
 import {
+  Bell,
   Briefcase,
   ChevronsLeft,
   ChevronsRight,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationsContext';
 import { UserRole } from '../types';
 
 // App shell: a collapsible icon rail on large screens (full labels or icons
@@ -42,7 +44,8 @@ const pageTitles: Record<string, string> = {
   '/tracking/:id': 'Live tracking',
   '/safety': 'Safety',
   '/profile': 'Profile',
-  '/profile/notifications': 'Notifications',
+  '/notifications': 'Notifications',
+  '/profile/notifications': 'Notification settings',
   '/profile/payments': 'Payments',
   '/driver-dashboard': 'Jobs',
   '/driver-map': 'Map',
@@ -97,6 +100,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [railOpen, setRailOpen] = useState(readRailPreference);
   // Hovering the collapsed rail opens it as a flyout until the pointer leaves.
@@ -126,6 +130,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <span className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-sm font-semibold text-brand-deep" style={{ width: size, height: size }}>
       {user?.photoUrl ? <img src={user.photoUrl} alt="" className="h-full w-full object-cover" /> : userInitials(user?.name)}
     </span>
+  );
+
+  const badge = unreadCount > 0 && (
+    <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[11px] font-bold leading-none text-white" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
   );
 
   const railItem = (item: NavItem) => {
@@ -170,7 +178,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
           </div>
 
-          <nav className="mt-4 flex flex-col gap-1 px-3">{navItems.map(railItem)}</nav>
+          <nav className="mt-4 flex flex-col gap-1 px-3">
+            {navItems.map(railItem)}
+            <button
+              type="button"
+              onClick={() => go('/notifications')}
+              title={expanded ? undefined : 'Inbox'}
+              aria-current={location.pathname === '/notifications' ? 'page' : undefined}
+              className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors ${expanded ? 'gap-3 px-3' : 'justify-center'} ${
+                location.pathname === '/notifications' ? 'bg-brand/15 font-semibold text-ink' : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
+              }`}
+            >
+              <span className="relative"><Bell size={22} strokeWidth={location.pathname === '/notifications' ? 2.25 : 1.75} className={location.pathname === '/notifications' ? 'text-brand-deep' : ''} />{badge}</span>
+              {expanded && <span className="truncate">Inbox</span>}
+            </button>
+          </nav>
 
           <div className={`mt-auto flex flex-col gap-1 px-3 pb-4 ${expanded ? '' : 'items-center'}`}>
             <button type="button" onClick={() => go('/help')} title={expanded ? undefined : 'Help'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-ink ${expanded ? 'gap-3 px-3' : 'justify-center'}`}>
@@ -199,7 +221,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white/95 px-4 backdrop-blur lg:hidden">
             <button type="button" onClick={() => go(homePath)} aria-label="KidRide home"><BrandMark size={40} title="KidRide" /></button>
             <h1 className="truncate text-lg font-extrabold tracking-tight">{title}</h1>
-            <button type="button" onClick={() => setIsMenuOpen(true)} aria-label="Account menu"><Avatar size={34} /></button>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => go('/notifications')} className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink" aria-label="Inbox"><Bell size={22} strokeWidth={1.75} />{badge}</button>
+              <button type="button" onClick={() => setIsMenuOpen(true)} aria-label="Account menu"><Avatar size={34} /></button>
+            </div>
           </header>
 
           <main className="flex-1 pb-24 lg:pb-10">

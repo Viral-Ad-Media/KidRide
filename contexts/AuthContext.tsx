@@ -54,7 +54,7 @@ interface AuthContextType {
   refreshUser: () => Promise<User | null>;
   updateChild: (id: string, updates: { name: string; age: number; notes?: string }) => Promise<void>;
   removeChild: (id: string) => Promise<void>;
-  updateProfile: (updates: { name?: string; phone?: string }) => Promise<User>;
+  updateProfile: (updates: { name?: string; phone?: string; notifyEmail?: boolean }) => Promise<User>;
 }
 
 type AuthResponse = Record<string, unknown> & { token?: string; requiresEmailVerification?: boolean };
@@ -285,7 +285,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return nextUser;
   };
 
-  const updateProfile = async (updates: { name?: string; phone?: string }) => {
+  const updateProfile = async (updates: { name?: string; phone?: string; notifyEmail?: boolean }) => {
     const token = getStoredToken();
     if (!token) throw new Error('You must be logged in to update your profile.');
     const response = await apiRequest<Record<string, unknown>>('/users/profile', { method: 'PUT', token, body: updates });

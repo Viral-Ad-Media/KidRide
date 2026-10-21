@@ -269,6 +269,7 @@ export const mapUser = (raw: unknown): User => {
     phone: typeof user.phone === 'string' ? user.phone : undefined,
     vehicle: user.vehicle && typeof user.vehicle === 'object' ? user.vehicle as VehicleDetails : undefined,
     isVerifiedDriver: Boolean(user.isVerifiedDriver),
+    notifyEmail: user.notifyEmail !== false,
     driverApplicationStatus:
       user.driverApplicationStatus === 'pending' ||
       user.driverApplicationStatus === 'approved' ||

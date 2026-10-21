@@ -49,6 +49,18 @@ export interface User {
   vehicle?: VehicleDetails;
   driverApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   children?: Child[];
+  /** Email on ride updates (on by default). */
+  notifyEmail?: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  rideId: string | null;
+  kind: string;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface AssignedDriver {

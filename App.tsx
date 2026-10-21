@@ -17,6 +17,8 @@ import { DriverMap } from './pages/DriverMap';
 import { Earnings } from './pages/Earnings';
 import { AuthProvider, getDefaultRouteForUser, useAuth } from './contexts/AuthContext';
 import { RideProvider } from './contexts/RideContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
+import { Notifications } from './pages/Notifications';
 import { HelpPage, PrivacyPage, TermsPage } from './pages/StaticPages';
 import {
   FaqPage,
@@ -197,6 +199,7 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route
         path="/profile/notifications"
         element={
@@ -221,10 +224,12 @@ const App = () => {
   return (
     <AuthProvider>
       <RideProvider>
+        <NotificationsProvider>
         <Router>
           <SplashLoader />
           <AppRoutes />
         </Router>
+        </NotificationsProvider>
       </RideProvider>
     </AuthProvider>
   );
