@@ -57,6 +57,8 @@ const pageTitles: Record<string, string> = {
   '/earnings': 'Earnings'
 };
 
+const mapScreenPaths = new Set(['/dashboard', '/book']);
+
 const publicPagePaths = new Set(['/', '/login', '/about', '/safety-info', '/for-drivers', '/faq', '/help', '/contact', '/privacy', '/terms', '/drive', '/driver-signup']);
 
 const parentNavItems: NavItem[] = [
@@ -227,13 +229,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </header>
 
-          <main className="flex-1 pb-24 lg:pb-10">
-            <div className="mx-auto w-full max-w-[1180px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8">
-              {/* Home screens open with their own greeting, so no page title there. */}
-              {location.pathname !== homePath && <h1 className="mb-6 hidden text-headline font-extrabold tracking-tight lg:block">{title}</h1>}
-              {children}
-            </div>
-          </main>
+          {mapScreenPaths.has(location.pathname) ? (
+            // Map-first screens draw edge to edge and bring their own sheet.
+            <main className="flex-1">{children}</main>
+          ) : (
+            <main className="flex-1 pb-24 lg:pb-10">
+              <div className="mx-auto w-full max-w-[1180px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8">
+                {/* Home screens open with their own greeting, so no page title there. */}
+                {location.pathname !== homePath && <h1 className="mb-6 hidden text-headline font-extrabold tracking-tight lg:block">{title}</h1>}
+                {children}
+              </div>
+            </main>
+          )}
         </div>
       </div>
 
