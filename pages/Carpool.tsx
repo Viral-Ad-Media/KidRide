@@ -16,7 +16,7 @@ export const Carpool = () => {
       </div>
 
       <Card className="text-center">
-        <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-[#3A77FF]">
+        <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-brand/10 text-brand-deep">
           <Users size={28} />
         </div>
         <h3 className="mt-5 text-2xl font-bold text-slate-950">No live carpool offers available</h3>

@@ -16,12 +16,12 @@ export const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const baseStyle = "min-h-[52px] rounded-[18px] px-6 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgba(29,111,255,0.35)] disabled:cursor-not-allowed disabled:opacity-55";
+  const baseStyle = "min-h-[52px] rounded-full px-6 text-sm font-semibold tracking-[-0.01em] transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-deep disabled:cursor-not-allowed disabled:opacity-55";
   const variants = {
-    primary: "border border-transparent bg-[linear-gradient(135deg,#1257db_0%,#1d6fff_58%,#66b8ff_100%)] text-white shadow-[0_18px_36px_rgba(29,111,255,0.24)] hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(29,111,255,0.3)]",
-    secondary: "border border-slate-200 bg-white/82 text-slate-800 shadow-[0_14px_28px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50",
-    destructive: "border border-transparent bg-[linear-gradient(135deg,#ef4444_0%,#f97316_100%)] text-white shadow-[0_18px_36px_rgba(239,68,68,0.18)] hover:-translate-y-0.5",
-    ghost: "border border-transparent bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+    primary: "border border-transparent bg-brand text-ink hover:brightness-95 active:brightness-90",
+    secondary: "border border-line bg-white text-ink hover:bg-surface",
+    destructive: "border border-transparent bg-danger text-white hover:brightness-95",
+    ghost: "border border-transparent bg-transparent text-muted hover:bg-surface-2 hover:text-ink"
   };
 
   return (
@@ -42,9 +42,9 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input: React.FC<InputProps> = ({ label, className = '', ...props }) => {
   return (
     <div className="w-full mb-4">
-      {label && <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>}
+      {label && <label className="mb-2 block text-sm font-semibold text-ink">{label}</label>}
       <input 
-        className={`h-[54px] w-full rounded-[18px] border border-slate-200 bg-white/88 px-4 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all placeholder:text-slate-400 focus:border-[#1d6fff] focus:outline-none focus:ring-4 focus:ring-[rgba(29,111,255,0.12)] ${className}`}
+        className={`h-[52px] w-full rounded-input border border-transparent bg-surface-2 px-4 text-ink transition-all placeholder:text-muted focus:border-brand-deep focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-deep/15 ${className}`}
         {...props}
       />
     </div>
@@ -83,7 +83,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect, acc
             />
             <div 
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors cursor-pointer group ${fileName ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-[#3A77FF] hover:bg-blue-50'}`}
+                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors cursor-pointer group ${fileName ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-brand-deep hover:bg-brand/10'}`}
             >
                 {fileName ? (
                     <>
@@ -92,8 +92,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ label, onFileSelect, acc
                     </>
                 ) : (
                     <>
-                        <Upload size={24} className="mb-2 text-gray-400 group-hover:text-[#3A77FF]" />
-                        <span className="text-xs text-gray-400 group-hover:text-[#3A77FF]">Click to upload</span>
+                        <Upload size={24} className="mb-2 text-gray-400 group-hover:text-brand-deep" />
+                        <span className="text-xs text-gray-400 group-hover:text-brand-deep">Click to upload</span>
                     </>
                 )}
             </div>
@@ -216,7 +216,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
                 
                 {step === 'intro' && (
                     <div className="flex flex-col items-center gap-3 p-4 text-center">
-                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-[#3A77FF] mb-2">
+                        <div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center text-brand-deep mb-2">
                             <Camera size={32} />
                         </div>
                         <h3 className="font-semibold text-gray-900">Liveness Check</h3>
@@ -252,7 +252,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
                                onClick={captureCurrentStep}
                                className="bg-white p-1 rounded-full border-4 border-gray-200/50 hover:scale-105 transition-transform"
                            >
-                               <div className="w-16 h-16 bg-white border-4 border-[#3A77FF] rounded-full"></div>
+                               <div className="w-16 h-16 bg-white border-4 border-brand rounded-full"></div>
                            </button>
                        </div>
                    </div>
@@ -299,10 +299,10 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 export const Select: React.FC<SelectProps> = ({ label, children, className = '', ...props }) => {
     return (
       <div className="w-full mb-4">
-        {label && <label className="mb-2 block text-sm font-semibold text-slate-700">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-semibold text-ink">{label}</label>}
         <div className="relative">
             <select 
-            className={`h-[54px] w-full appearance-none rounded-[18px] border border-slate-200 bg-white/88 px-4 text-slate-900 transition-all focus:border-[#1d6fff] focus:outline-none focus:ring-4 focus:ring-[rgba(29,111,255,0.12)] ${className}`}
+            className={`h-[52px] w-full appearance-none rounded-input border border-transparent bg-surface-2 px-4 text-ink transition-all focus:border-brand-deep focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-deep/15 ${className}`}
             {...props}
             >
             {children}
@@ -326,7 +326,9 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onClick })
   return (
     <div 
       onClick={onClick}
-      className={`surface-card rounded-[28px] p-5 sm:p-6 ${onClick ? 'cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-[0_24px_50px_rgba(15,23,42,0.1)]' : ''} ${className}`}
+      // White with a Pebble hairline unless the caller sets its own background or
+      // border colour (two utilities for the same property would fight).
+      className={`rounded-card border p-5 ${/(^|\s)border-[a-z]/.test(className) ? '' : 'border-line'} ${/(^|\s)bg-/.test(className) ? '' : 'bg-white'} ${onClick ? 'cursor-pointer transition-colors hover:border-brand' : ''} ${className}`}
     >
       {children}
     </div>
@@ -337,7 +339,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onClick })
 export const Badge: React.FC<{ type: 'verified' | 'gold' | 'team' }> = ({ type }) => {
   if (type === 'verified') {
     return (
-      <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-green-100 text-[#26C281]">
+      <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-green-100 text-success">
         <ShieldCheck size={12} className="mr-1" /> Verified
       </span>
     );
@@ -351,7 +353,7 @@ export const Badge: React.FC<{ type: 'verified' | 'gold' | 'team' }> = ({ type }
   }
   if (type === 'team') {
     return (
-      <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-orange-100 text-[#FFA93A]">
+      <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-orange-100 text-warning">
         <Users size={12} className="mr-1" /> Team Parent
       </span>
     );
@@ -365,11 +367,11 @@ export const StatusChip: React.FC<{ status: string }> = ({ status }) => {
   let label = status.replace(/_/g, ' ');
 
   if (['driver_assigned', 'driver_arrived_at_pickup'].includes(status)) {
-    colorClass = "bg-blue-100 text-[#3A77FF]";
+    colorClass = "bg-brand/15 text-brand-deep";
   } else if (['child_picked_up'].includes(status)) {
-    colorClass = "bg-green-100 text-[#26C281]";
+    colorClass = "bg-green-100 text-success";
   } else if (['searching_driver'].includes(status)) {
-    colorClass = "bg-orange-100 text-[#FFA93A] animate-pulse";
+    colorClass = "bg-orange-100 text-warning animate-pulse";
   }
 
   return (
@@ -436,7 +438,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, title, body, c
         {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} disabled={busy} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={onConfirm} disabled={busy} className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1d6fff] hover:bg-[#1558d6]'}`}>
+            <button type="button" onClick={onConfirm} disabled={busy} className={`rounded-full px-5 py-2.5 text-sm font-semibold text-ink disabled:opacity-60 ${tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-brand hover:brightness-95'}`}>
                 {busy ? 'Working...' : confirmLabel}
             </button>
         </div>

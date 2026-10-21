@@ -24,7 +24,7 @@ const REFRESH_MS = 30000;
 const REMINDER_MINUTES = 15;
 
 const chipTone: Record<string, string> = {
-  scheduled: 'bg-indigo-50 text-indigo-700',
+  scheduled: 'bg-indigo-50 text-brand-deep',
   dispatching: 'bg-orange-50 text-orange-700',
   assigned: 'bg-emerald-50 text-emerald-700',
   needs_attention: 'bg-red-50 text-red-700'
@@ -118,7 +118,7 @@ export const ParentUpcomingRides: React.FC = () => {
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {ride.scheduleState === 'scheduled' && (
-                  <button type="button" onClick={() => openEdit(ride)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#1d6fff] hover:bg-blue-50">Change time</button>
+                  <button type="button" onClick={() => openEdit(ride)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-deep hover:bg-brand/10">Change time</button>
                 )}
                 <button type="button" onClick={() => { setActionError(null); setCancelling(ride); }} className="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100">Cancel</button>
               </div>
@@ -137,7 +137,7 @@ export const ParentUpcomingRides: React.FC = () => {
         {actionError && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{actionError}</p>}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" onClick={() => setEditing(null)} disabled={busy} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Keep time</button>
-          <button type="button" onClick={() => void saveEdit()} disabled={busy || !!editProblem} className="rounded-full bg-[#1d6fff] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1558d6] disabled:opacity-60">{busy ? 'Saving...' : 'Save new time'}</button>
+          <button type="button" onClick={() => void saveEdit()} disabled={busy || !!editProblem} className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-ink hover:brightness-95 disabled:opacity-60">{busy ? 'Saving...' : 'Save new time'}</button>
         </div>
       </Modal>
 

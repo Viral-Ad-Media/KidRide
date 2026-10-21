@@ -128,7 +128,7 @@ const DocumentTile: React.FC<{ docKey: DocumentKey; url?: string | null }> = ({ 
       {!url ? (
         <p className="py-6 text-center text-sm text-slate-400">Not provided</p>
       ) : isPdf(url) || failed ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-white py-6 text-sm font-semibold text-[#1d6fff] hover:underline">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-white py-6 text-sm font-semibold text-brand-deep hover:underline">
           <FileText size={18} /> Open document <ExternalLink size={14} />
         </a>
       ) : (
@@ -243,7 +243,7 @@ const ApplicationDetailPanel: React.FC<{
           <>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
               <span>Document links expire 5 minutes after loading.</span>
-              <button type="button" onClick={load} className="inline-flex items-center gap-1 font-semibold text-[#1d6fff] hover:underline"><RefreshCw size={12} /> Refresh links</button>
+              <button type="button" onClick={load} className="inline-flex items-center gap-1 font-semibold text-brand-deep hover:underline"><RefreshCw size={12} /> Refresh links</button>
             </div>
             {linksMayBeExpired && <p className="mb-3 text-xs font-medium text-amber-700">Links may have expired. Refresh to view documents.</p>}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -308,7 +308,7 @@ export const AdminApplications = () => {
         <div className="flex flex-wrap gap-2" role="tablist">
           {applicationTabs.map((tab) => (
             <button key={tab} type="button" role="tab" aria-selected={status === tab} onClick={() => { setFlash(null); setStatus(tab); }}
-              className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition ${status === tab ? 'bg-[#1d6fff] text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}>
+              className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition ${status === tab ? 'bg-brand text-ink' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}>
               {tab}
             </button>
           ))}
@@ -327,7 +327,7 @@ export const AdminApplications = () => {
               {items.map((app) => (
                 <li key={app.id}>
                   <button type="button" onClick={() => setSelected(app)}
-                    className={`w-full rounded-2xl border p-4 text-left transition ${selected?.id === app.id ? 'border-[#1d6fff] bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                    className={`w-full rounded-2xl border p-4 text-left transition ${selected?.id === app.id ? 'border-brand bg-brand/10' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
                     <p className="font-semibold text-slate-950">{app.name}</p>
                     <p className="mt-1 truncate text-sm text-slate-500">{app.email}</p>
                     <p className="mt-1 text-xs text-slate-400">Submitted {formatDate(app.submittedAt)}</p>
@@ -451,7 +451,7 @@ export const AdminRides = () => {
         <div className="flex flex-wrap gap-2">
           {scopes.map((s) => (
             <button key={s} type="button" onClick={() => { setFlash(null); setScope(s); }}
-              className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition ${scope === s ? 'bg-[#1d6fff] text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}>
+              className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition ${scope === s ? 'bg-brand text-ink' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}>
               {s}
             </button>
           ))}
@@ -474,7 +474,7 @@ export const AdminRides = () => {
       <div className="mb-5 flex flex-wrap gap-2" aria-label="Booked for later">
         {([['all', 'Now and later', rides.length], ['scheduled', 'Scheduled', scheduledCount], ['needs_attention', 'Needs attention', attentionCount]] as const).map(([value, label, count]) => (
           <button key={value} type="button" onClick={() => setBookingFilter(value)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${bookingFilter === value ? (value === 'needs_attention' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white') : value === 'needs_attention' && count > 0 ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${bookingFilter === value ? (value === 'needs_attention' ? 'bg-red-600 text-white' : 'bg-brand-deep text-white') : value === 'needs_attention' && count > 0 ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
             {label} ({count})
           </button>
         ))}

@@ -82,7 +82,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
         map,
         position,
         anchor: 'bottom',
-        html: stopPinHtml(kind === 'pickup' ? pickupLabel : dropoffLabel, kind === 'pickup' ? BRAND.blue : BRAND.green, kind),
+        html: stopPinHtml(kind === 'pickup' ? pickupLabel : dropoffLabel, kind === 'pickup' ? BRAND.marigold : BRAND.ink, kind),
         title,
         zIndex: 2
       }));
@@ -133,7 +133,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
 
     if (!carRef.current || !from) {
       const rotation = typeof driverLocation.heading === 'number' ? driverLocation.heading : 0;
-      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.blue, rotation), title: 'Driver', zIndex: 3 });
+      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.sky, rotation), title: 'Driver', zIndex: 3 });
       carState.current = { position: target, rotation };
     } else {
       const moved = maps.geometry.spherical.computeDistanceBetween(from.position, target) > 3;

@@ -12,7 +12,7 @@ export const DriverMap = () => {
   return (
     <div className="flex min-h-[calc(100vh-140px)] items-center justify-center p-6">
       <Card className="w-full max-w-lg text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-[#3A77FF]">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand-deep">
           <Map size={32} />
         </div>
 

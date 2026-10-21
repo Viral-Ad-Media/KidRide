@@ -1,14 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KidRide brand tokens (same values as tailwind.config.js) for plain CSS. */
 :root {
-  --kidride-bg: #f4f7fb;
-  --kidride-ink: #0f172a;
-  --kidride-muted: #64748b;
-  --kidride-brand: #1d6fff;
-  --kidride-brand-deep: #123d9b;
-  --kidride-brand-soft: #dbeafe;
-  --kidride-warm: #ffb65c;
-  --kidride-success: #18b37e;
-  --kidride-border: rgba(148, 163, 184, 0.18);
-  --kidride-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+  --kidride-bg: #f6f9fc;
+  --kidride-ink: #14213d;
+  --kidride-muted: #5b6478;
+  --kidride-brand: #38bdf8;
+  --kidride-brand-deep: #0369a1;
+  --kidride-brand-soft: #eaf1f7;
+  --kidride-warm: #ffb703;
+  --kidride-success: #1b9e5a;
+  --kidride-border: #d5dfe9;
+  --kidride-shadow: 0 8px 24px rgba(20, 33, 61, 0.12);
 }
 
 *,
@@ -27,11 +32,10 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--kidride-ink);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(91, 163, 255, 0.2), transparent 24rem),
-    radial-gradient(circle at 85% 10%, rgba(255, 182, 92, 0.18), transparent 18rem),
-    linear-gradient(180deg, #eef5ff 0%, #f8fbff 36%, #f4f7fb 100%);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 1.45;
+  background: var(--kidride-bg);
 }
 
 h1,
@@ -41,8 +45,10 @@ h4,
 h5,
 h6 {
   margin: 0;
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
-  letter-spacing: -0.03em;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 a {
@@ -62,11 +68,17 @@ img {
 }
 
 ::selection {
-  background: rgba(29, 111, 255, 0.18);
+  background: rgba(56, 189, 248, 0.25);
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* ETA and price numbers line up. */
+.tabular-nums,
+.font-mono {
+  font-variant-numeric: tabular-nums;
 }
 
 .glass-panel {
@@ -131,4 +143,83 @@ img {
 
 .animation-delay-500 {
   animation-delay: 0.5s;
+}
+
+/* ---- KidRide mark animation (components/brand) ---- */
+.kr-mark .car,
+.kr-mark .wheel,
+.kr-mark .zap,
+.kr-mark .child {
+  transform-box: fill-box;
+}
+
+.kr-mark .wheel {
+  transform-origin: center;
+}
+
+.kr-mark .zap {
+  transform-origin: right center;
+}
+
+/* Drive in from the left, overshoot about 4%, settle. */
+.kr-mark--animate .car {
+  animation: kr-drive 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.kr-mark--animate .wheel {
+  animation: kr-spin 0.45s linear 3;
+}
+
+.kr-mark--animate .zap {
+  animation: kr-flicker 0.18s steps(2) 6;
+}
+
+.kr-mark--animate .child {
+  animation: kr-bob 0.5s ease-in-out 1.15s;
+}
+
+.kr-splash .kr-wordmark {
+  animation: kr-rise 0.5s ease-out 1.25s both;
+}
+
+.kr-loader .zap {
+  animation: kr-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes kr-drive {
+  0% { transform: translateX(-140%); }
+  78% { transform: translateX(4%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes kr-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes kr-flicker {
+  from { opacity: 1; transform: scaleX(1); }
+  to { opacity: 0.55; transform: scaleX(0.82); }
+}
+
+@keyframes kr-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes kr-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kr-pulse {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.8); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kr-mark *,
+  .kr-splash .kr-wordmark,
+  .kr-loader .zap {
+    animation: none !important;
+  }
 }

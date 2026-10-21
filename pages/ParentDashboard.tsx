@@ -73,7 +73,7 @@ export const ParentDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[34px] bg-[linear-gradient(135deg,#0f3ea8_0%,#1d6fff_58%,#8ecbff_100%)] p-6 text-white shadow-[0_28px_70px_rgba(29,111,255,0.25)] sm:p-8">
+      <section className="overflow-hidden rounded-[34px] bg-gradient-to-br from-brand-deep via-brand-deep to-brand p-6 text-white shadow-float sm:p-8">
         <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/88">Parent Workspace</p>
@@ -147,7 +147,7 @@ export const ParentDashboard = () => {
                           className="h-16 w-16 rounded-[22px] object-cover shadow-[0_10px_24px_rgba(15,23,42,0.12)]"
                         />
                       ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-lg font-semibold text-[#1d6fff] shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-brand/10 text-lg font-semibold text-brand-deep shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
                           {childInitials(child.name)}
                         </div>
                       )}
@@ -161,13 +161,13 @@ export const ParentDashboard = () => {
                         {child.notes}
                       </p>
                     )}
-                    <button type="button" onClick={() => navigate(`/edit-child/${child.id}`)} className="mt-3 w-full rounded-full border border-slate-200 bg-white py-2 text-sm font-semibold text-[#1d6fff] hover:bg-blue-50">Edit profile</button>
+                    <button type="button" onClick={() => navigate(`/edit-child/${child.id}`)} className="mt-3 w-full rounded-full border border-slate-200 bg-white py-2 text-sm font-semibold text-brand-deep hover:bg-brand/10">Edit profile</button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="mt-6 rounded-[26px] border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center">
-                <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-blue-50 text-[#1d6fff]">
+                <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-brand/10 text-brand-deep">
                   <Plus size={24} />
                 </div>
                 <h4 className="mt-4 text-xl font-bold text-slate-950">Create your first child profile</h4>
@@ -187,7 +187,7 @@ export const ParentDashboard = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Community</p>
                 <h3 className="mt-2 text-2xl font-bold text-slate-950">Carpools</h3>
               </div>
-              <button onClick={() => navigate('/carpools')} className="text-sm font-semibold text-[#1d6fff]">
+              <button onClick={() => navigate('/carpools')} className="text-sm font-semibold text-brand-deep">
                 Open Board
               </button>
             </div>
@@ -236,8 +236,8 @@ export const ParentDashboard = () => {
             )}
           </Card>
 
-          <Card className="overflow-hidden bg-[linear-gradient(145deg,#fff7ed_0%,#ffffff_58%,#eff6ff_100%)]">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-white text-[#1d6fff] shadow-[0_12px_24px_rgba(29,111,255,0.12)]">
+          <Card className="overflow-hidden bg-gradient-to-br from-accent/10 via-white to-surface-2">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-white text-brand-deep shadow-float">
               <ShieldCheck size={22} />
             </div>
             <h3 className="mt-5 text-2xl font-bold text-slate-950">Ready to verify as a parent driver?</h3>

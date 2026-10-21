@@ -176,7 +176,7 @@ export const DriverSignup = () => {
     <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-6 pt-4 text-xs text-gray-500">
       <span className="truncate">Signed in as <span className="font-semibold text-gray-700">{user.email}</span></span>
       <span className="flex shrink-0 gap-3">
-        <button type="button" onClick={() => { logout(); navigate('/login'); }} className="font-semibold text-[#3A77FF] hover:underline">Sign out</button>
+        <button type="button" onClick={() => { logout(); navigate('/login'); }} className="font-semibold text-brand-deep hover:underline">Sign out</button>
       </span>
     </div>
   );
@@ -254,7 +254,7 @@ export const DriverSignup = () => {
         {step === 1 && (
           <div className="animate-fade-in space-y-6">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-50 text-[#3A77FF] rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-brand/10 text-brand-deep rounded-full flex items-center justify-center mx-auto mb-4">
                 <ShieldCheck size={32} />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Let&apos;s get you verified</h2>
@@ -293,9 +293,9 @@ export const DriverSignup = () => {
                   />
                 </>
               ) : (
-                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                  <p className="text-sm font-semibold text-blue-950">{user?.name}</p>
-                  <p className="mt-1 text-sm text-blue-700">{user?.email}</p>
+                <div className="rounded-2xl border border-brand/30 bg-brand/10 p-4">
+                  <p className="text-sm font-semibold text-brand-deep">{user?.name}</p>
+                  <p className="mt-1 text-sm text-brand-deep">{user?.email}</p>
                 </div>
               )}
 
@@ -335,7 +335,7 @@ export const DriverSignup = () => {
         {step === 2 && (
           <div className="animate-fade-in space-y-6">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-50 text-[#3A77FF] rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-brand/10 text-brand-deep rounded-full flex items-center justify-center mx-auto mb-4">
                 <Car size={32} />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Your Vehicle</h2>

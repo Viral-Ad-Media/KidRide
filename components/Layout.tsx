@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { BrandLockup } from './brand/BrandLockup';
 import {
   Briefcase,
   ClipboardCheck,
@@ -261,7 +262,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const renderAvatar = () => (
-    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[18px] bg-[linear-gradient(135deg,#dbeafe_0%,#bfdbfe_100%)] text-sm font-bold text-[#1447b8] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[18px] bg-surface-2 text-sm font-bold text-brand-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
       {user?.photoUrl ? <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" /> : userInitials(user?.name)}
     </div>
   );
@@ -277,9 +278,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen text-slate-900">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-8rem] top-[-7rem] h-72 w-72 rounded-full bg-sky-300/30 blur-3xl" />
+        <div className="absolute left-[-8rem] top-[-7rem] h-72 w-72 rounded-full bg-brand/30 blur-3xl" />
         <div className="absolute right-[-6rem] top-24 h-64 w-64 rounded-full bg-amber-200/35 blur-3xl" />
-        <div className="absolute bottom-[-6rem] left-1/3 h-80 w-80 rounded-full bg-blue-200/25 blur-3xl" />
+        <div className="absolute bottom-[-6rem] left-1/3 h-80 w-80 rounded-full bg-brand/10 blur-3xl" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1600px] gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 xl:gap-6 xl:px-6">
@@ -290,12 +291,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               onClick={() => navigate(isAdmin ? '/admin' : user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}
               className="flex items-center gap-4 rounded-[24px] border border-white/60 bg-white/70 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-white/85"
             >
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#0f3ea8_0%,#1d6fff_58%,#7cc7ff_100%)] text-white shadow-[0_14px_28px_rgba(29,111,255,0.22)]">
-                <Car size={22} />
-              </div>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700/80">KidRide</p>
-                <p className="mt-1 text-sm font-semibold text-slate-950">Workspace</p>
+                <BrandLockup size={64} />
+                <p className="mt-1 text-xs font-semibold text-muted">Workspace</p>
               </div>
             </button>
 
@@ -303,7 +301,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               {renderAvatar()}
               <div className="min-w-0">
                 <p className="truncate text-base font-semibold text-slate-950">{user?.name || 'KidRide User'}</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700/85">{accountSummary.eyebrow}</p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-deep/85">{accountSummary.eyebrow}</p>
                 <p className="mt-2 text-xs text-slate-500">{accountSummary.label}</p>
               </div>
             </div>
@@ -324,7 +322,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     }`}
                   >
                     <div className={`inline-flex h-11 w-11 items-center justify-center rounded-[16px] ${
-                      isActive ? 'bg-white/12 text-white' : 'bg-slate-100 text-[#1d6fff]'
+                      isActive ? 'bg-white/12 text-white' : 'bg-slate-100 text-brand-deep'
                     }`}>
                       <item.icon size={20} />
                     </div>
@@ -339,7 +337,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             <div className="mt-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(239,246,255,0.92)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
               <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-[16px] bg-blue-50 text-[#1d6fff]">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-[16px] bg-brand/10 text-brand-deep">
                   <ActionIcon size={18} />
                 </div>
                 <div>
@@ -397,13 +395,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Menu size={20} />
                   </button>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700/80">{accountSummary.eyebrow}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-deep">{accountSummary.eyebrow}</p>
                     <h2 className="truncate text-2xl font-bold text-slate-950">{page.title}</h2>
                   </div>
                 </div>
 
                 <div className="hidden xl:block">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700/80">{accountSummary.eyebrow}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-deep">{accountSummary.eyebrow}</p>
                   <h2 className="mt-1 text-3xl font-bold text-slate-950">{page.title}</h2>
                 </div>
 
@@ -460,7 +458,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="glass-panel flex h-full flex-col rounded-[30px] p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700/80">{accountSummary.eyebrow}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-deep">{accountSummary.eyebrow}</p>
                     <h2 className="mt-2 text-2xl font-bold text-slate-950">Menu</h2>
                   </div>
                   <button
@@ -493,7 +491,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           isActive ? 'bg-slate-950 text-white' : 'bg-white/70 text-slate-700 hover:bg-white'
                         }`}
                       >
-                        <item.icon size={20} className={isActive ? 'text-white' : 'text-[#1d6fff]'} />
+                        <item.icon size={20} className={isActive ? 'text-white' : 'text-brand-deep'} />
                         <div>
                           <p className="font-semibold">{item.label}</p>
                           <p className={`mt-1 text-xs ${isActive ? 'text-white/68' : 'text-slate-400'}`}>{item.description}</p>
