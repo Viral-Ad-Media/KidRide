@@ -2,16 +2,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPinOff } from 'lucide-react';
 import { LatLng, computeRoute, useGoogleMaps } from '../services/googleMaps';
+import { BRAND, createDashedLine, createKidRideMap, createRouteLine } from '../services/mapStyle';
 import { DriverLocation } from '../types';
+import { HtmlMarker, carHtml, createHtmlMarker, stopPinHtml } from './mapMarkers';
+import { MapControls } from './MapControls';
 
-// Trip map: pickup (A) and drop-off (B) pins, the driving route, and the
-// driver's car marker. GPS updates arrive every few seconds; the marker glides
-// between them (linear interpolation over GLIDE_MS) and turns to face the
-// direction of travel, so it moves like the Bolt/Uber car instead of jumping.
+// Trip map in KidRide's own style: pickup and drop-off pins with label chips,
+// the driving route in the brand blue, a dashed line from the driver to the
+// pickup, and the driver's car. GPS updates arrive every few seconds; the car
+// glides between them (linear interpolation over GLIDE_MS) and turns to face
+// the direction of travel, so it moves like the Bolt/Uber car instead of jumping.
 
 export const GLIDE_MS = 2500;
 const STALE_MS = 30000;
 const DEFAULT_CENTER: LatLng = { lat: 51.5074, lng: -0.1278 };
+// Extra room at the bottom: the tracking sheet and status card overlap the map edge.
+const FIT_PADDING = { top: 72, right: 64, bottom: 110, left: 48 };
 
 export interface RouteInfo {
   /** Whole trip, pickup to drop-off. */
@@ -29,6 +35,9 @@ interface LiveMapProps {
   driverLocation?: DriverLocation | null;
   /** Where the driver is heading next; used for the driver ETA. */
   nextStop?: 'pickup' | 'dropoff';
+  /** Chip text on the pins, e.g. "Pickup · Mia". */
+  pickupLabel?: string;
+  dropoffLabel?: string;
   className?: string;
   onRoute?: (info: RouteInfo) => void;
 }
@@ -37,36 +46,16 @@ export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 // Turn the short way round (e.g. 350 deg -> 10 deg goes through 0, not back through 180).
 export const lerpAngle = (a: number, b: number, t: number) => a + ((((b - a) % 360) + 540) % 360 - 180) * t;
 
-const pin = (maps: typeof google.maps, color: string): google.maps.Symbol => ({
-  path: maps.SymbolPath.CIRCLE,
-  scale: 11,
-  fillColor: color,
-  fillOpacity: 1,
-  strokeColor: '#ffffff',
-  strokeWeight: 3,
-  labelOrigin: new maps.Point(0, 0)
-});
-
-export const carIcon = (maps: typeof google.maps, rotation: number, color = '#0f172a'): google.maps.Symbol => ({
-  // Arrow-shaped car marker pointing in the direction of travel.
-  path: 'M 0,-14 L 9,10 L 0,5 L -9,10 Z',
-  scale: 1.3,
-  fillColor: color,
-  fillOpacity: 1,
-  strokeColor: '#ffffff',
-  strokeWeight: 2,
-  rotation,
-  anchor: new maps.Point(0, 0)
-});
-
-export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, driverLocation, nextStop = 'pickup', className = 'h-full', onRoute }) => {
+export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, driverLocation, nextStop = 'pickup', pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', className = 'h-full', onRoute }) => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const carRef = useRef<google.maps.Marker | null>(null);
+  const carRef = useRef<HtmlMarker | null>(null);
   const carState = useRef<{ position: LatLng; rotation: number } | null>(null);
   const frameRef = useRef<number | null>(null);
+  const approachRef = useRef<google.maps.Polyline | null>(null);
   const stopsRef = useRef<{ pickup?: google.maps.LatLng; dropoff?: google.maps.LatLng }>({});
+  const boundsRef = useRef<google.maps.LatLngBounds | null>(null);
   const routeInfo = useRef<RouteInfo>({});
   const lastEtaAt = useRef(0);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -83,55 +72,59 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
   useEffect(() => {
     if (mapsState.status !== 'ready' || !containerRef.current) return;
     const maps = mapsState.maps;
-    const map = new maps.Map(containerRef.current, {
-      center: pickupCoords || DEFAULT_CENTER,
-      zoom: 13,
-      disableDefaultUI: true,
-      zoomControl: true,
-      clickableIcons: false
-    });
+    const map = createKidRideMap(maps, containerRef.current, { center: pickupCoords || DEFAULT_CENTER, zoom: 13 });
     mapRef.current = map;
-    const routeLine = new maps.Polyline({ map, strokeColor: '#1d6fff', strokeWeight: 5, strokeOpacity: 0.85 });
-    const markers: google.maps.Marker[] = [];
-    const addStop = (position: google.maps.LatLng | LatLng, label: string, color: string, title: string) => {
-      const icon = pin(maps, color);
-      markers.push(new maps.Marker({ map, position, icon, label: { text: label, color: '#ffffff', fontWeight: '700', fontSize: '12px' }, title, zIndex: 2 }));
+    const routeLine = createRouteLine(maps, map);
+    approachRef.current = createDashedLine(maps, map);
+    const markers: HtmlMarker[] = [];
+    const addStop = (position: LatLng, kind: 'pickup' | 'dropoff', title: string) => {
+      markers.push(createHtmlMarker(maps, {
+        map,
+        position,
+        anchor: 'bottom',
+        html: stopPinHtml(kind === 'pickup' ? pickupLabel : dropoffLabel, kind === 'pickup' ? BRAND.blue : BRAND.green, kind),
+        title,
+        zIndex: 2
+      }));
     };
+    const toLatLng = (point: google.maps.LatLng): LatLng => ({ lat: point.lat(), lng: point.lng() });
 
     computeRoute(maps, pickupCoords || pickup, dropoffCoords || dropoff).then((route) => {
       routeLine.setPath(route.path);
       const start = route.path[0];
       const end = route.path[route.path.length - 1];
       stopsRef.current = { pickup: start, dropoff: end };
-      addStop(start, 'A', '#1d6fff', `Pickup: ${pickup}`);
-      addStop(end, 'B', '#059669', `Drop-off: ${dropoff}`);
+      addStop(toLatLng(start), 'pickup', `Pickup: ${pickup}`);
+      addStop(toLatLng(end), 'dropoff', `Drop-off: ${dropoff}`);
       const bounds = new maps.LatLngBounds();
       route.path.forEach((point) => bounds.extend(point));
-      // Extra room at the bottom: the tracking sheet overlaps the map edge.
-      map.fitBounds(bounds, { top: 72, right: 48, bottom: 96, left: 48 });
+      boundsRef.current = bounds;
+      map.fitBounds(bounds, FIT_PADDING);
       publish({ tripDuration: route.duration, tripDistance: route.distance });
       setRouteError(null);
     }).catch(() => {
       // No drivable route (or the addresses could not be found): still show what we can.
       setRouteError('The route could not be drawn for these addresses.');
-      if (pickupCoords) addStop(pickupCoords, 'A', '#1d6fff', `Pickup: ${pickup}`);
-      if (dropoffCoords) addStop(dropoffCoords, 'B', '#059669', `Drop-off: ${dropoff}`);
+      if (pickupCoords) addStop(pickupCoords, 'pickup', `Pickup: ${pickup}`);
+      if (dropoffCoords) addStop(dropoffCoords, 'dropoff', `Drop-off: ${dropoff}`);
       if (pickupCoords) map.setCenter(pickupCoords);
     });
 
     return () => {
-      routeLine.setMap(null);
-      markers.forEach((marker) => marker.setMap(null));
-      carRef.current?.setMap(null);
+      routeLine.remove();
+      approachRef.current?.setMap(null);
+      approachRef.current = null;
+      markers.forEach((marker) => marker.remove());
+      carRef.current?.remove();
       carRef.current = null;
       carState.current = null;
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       mapRef.current = null;
     };
     // Rebuild only when the trip itself changes.
-  }, [mapsState.status, pickup, dropoff, pickupCoords?.lat, pickupCoords?.lng, dropoffCoords?.lat, dropoffCoords?.lng]);
+  }, [mapsState.status, pickup, dropoff, pickupCoords?.lat, pickupCoords?.lng, dropoffCoords?.lat, dropoffCoords?.lng, pickupLabel, dropoffLabel]);
 
-  // Driver marker: glide to each new GPS fix and face the direction of travel.
+  // Driver's car: glide to each new GPS fix and face the direction of travel.
   useEffect(() => {
     if (mapsState.status !== 'ready' || !mapRef.current || !driverLocation) return;
     const maps = mapsState.maps;
@@ -140,7 +133,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
 
     if (!carRef.current || !from) {
       const rotation = typeof driverLocation.heading === 'number' ? driverLocation.heading : 0;
-      carRef.current = new maps.Marker({ map: mapRef.current, position: target, icon: carIcon(maps, rotation), title: 'Driver', zIndex: 3 });
+      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.blue, rotation), title: 'Driver', zIndex: 3 });
       carState.current = { position: target, rotation };
     } else {
       const moved = maps.geometry.spherical.computeDistanceBetween(from.position, target) > 3;
@@ -155,23 +148,41 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
         const position = { lat: lerp(from.position.lat, target.lat, t), lng: lerp(from.position.lng, target.lng, t) };
         const rotation = lerpAngle(from.rotation, targetRotation, t);
         carRef.current?.setPosition(position);
-        carRef.current?.setIcon(carIcon(maps, rotation));
+        carRef.current?.setRotation(rotation);
         carState.current = { position, rotation };
         if (t < 1) frameRef.current = requestAnimationFrame(step);
       };
       frameRef.current = requestAnimationFrame(step);
     }
 
-    // Driver ETA to the next stop, at most once a minute.
+    // Driver ETA to the next stop (and the dashed approach line), at most once a minute.
     const stop = stopsRef.current[nextStop] || (nextStop === 'pickup' ? pickupCoords : dropoffCoords);
     if (stop && Date.now() - lastEtaAt.current > 60000) {
       lastEtaAt.current = Date.now();
       const stopPoint = stop instanceof maps.LatLng ? { lat: stop.lat(), lng: stop.lng() } : stop;
       computeRoute(maps, target, stopPoint)
-        .then((route) => publish({ driverEta: route.duration }))
+        .then((route) => {
+          publish({ driverEta: route.duration });
+          approachRef.current?.setPath(nextStop === 'pickup' ? route.path : []);
+        })
         .catch(() => undefined);
     }
   }, [mapsState.status, driverLocation?.latitude, driverLocation?.longitude, driverLocation?.heading, nextStop]);
+
+  // Once the child is picked up the approach line is no longer relevant.
+  useEffect(() => { if (nextStop !== 'pickup') approachRef.current?.setPath([]); }, [nextStop]);
+
+  const recenter = () => {
+    const map = mapRef.current;
+    if (!map || mapsState.status !== 'ready') return;
+    const bounds = boundsRef.current;
+    if (bounds) {
+      const framed = new mapsState.maps.LatLngBounds(bounds.getSouthWest(), bounds.getNorthEast());
+      const car = carState.current?.position;
+      if (car) framed.extend(car);
+      map.fitBounds(framed, FIT_PADDING);
+    } else if (pickupCoords) map.panTo(pickupCoords);
+  };
 
   if (mapsState.status === 'unavailable') {
     return (
@@ -191,8 +202,9 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     <div className={`relative overflow-hidden rounded-2xl bg-slate-100 ${className}`}>
       <div ref={containerRef} className="h-full w-full" aria-label="Trip map" />
       {mapsState.status === 'loading' && <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">Loading map...</div>}
+      {mapsState.status === 'ready' && <MapControls map={mapRef} onRecenter={recenter} recenterLabel="Show the whole trip" className="bottom-24 right-3" />}
       {(routeError || stale || !driverLocation) && mapsState.status === 'ready' && (
-        <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-white/95 p-3 text-xs text-slate-600 shadow">
+        <div className="absolute bottom-3 left-3 right-16 rounded-2xl bg-white/95 px-4 py-3 text-xs font-medium text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.12)] backdrop-blur">
           {routeError || (!driverLocation ? 'Waiting for the driver\'s live location.' : `Driver GPS is delayed. Last update ${new Date(recordedAt).toLocaleTimeString()}.`)}
         </div>
       )}

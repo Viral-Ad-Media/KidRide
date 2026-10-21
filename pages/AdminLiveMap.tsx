@@ -1,29 +1,23 @@
 /// <reference types="google.maps" />
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MapPinOff, RefreshCw } from 'lucide-react';
+import { MapPinOff, RefreshCw, X } from 'lucide-react';
 import { AdminTabs } from './Admin';
-import { carIcon } from '../components/LiveMap';
+import { HtmlMarker, carHtml, createHtmlMarker, dotHtml, waitingPinHtml } from '../components/mapMarkers';
+import { MapControls } from '../components/MapControls';
 import { useGoogleMaps } from '../services/googleMaps';
+import { BRAND, createKidRideMap } from '../services/mapStyle';
 import { LiveDriver, LiveMapSnapshot, errorMessage, fetchLiveMap } from '../services/adminApi';
 
-// Admin live map: every online driver (green = free, blue = on a ride) and
-// every ride in progress, refreshed every few seconds.
+// Admin live map in KidRide's own style: every online driver (green = free,
+// blue = on a ride) and every ride in progress, refreshed every few seconds.
+// Markers are kept between polls and only moved or recoloured when needed.
 
 const REFRESH_MS = 5000;
-const FREE_COLOR = '#059669';
-const BUSY_COLOR = '#1d6fff';
+const FREE_COLOR = BRAND.green;
+const BUSY_COLOR = BRAND.blue;
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
 
 type Filter = 'all' | 'free' | 'on_ride';
-
-const stopIcon = (maps: typeof google.maps, color: string): google.maps.Symbol => ({
-  path: maps.SymbolPath.CIRCLE,
-  scale: 8,
-  fillColor: color,
-  fillOpacity: 1,
-  strokeColor: '#ffffff',
-  strokeWeight: 2
-});
 
 const secondsAgo = (iso: string) => Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
 
@@ -31,9 +25,8 @@ export const AdminLiveMap = () => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const infoRef = useRef<google.maps.InfoWindow | null>(null);
-  const driverMarkers = useRef(new Map<string, google.maps.Marker>());
-  const rideMarkers = useRef<google.maps.Marker[]>([]);
+  const driverMarkers = useRef(new Map<string, { marker: HtmlMarker; status: LiveDriver['status'] }>());
+  const rideMarkers = useRef(new Map<string, { marker: HtmlMarker; kind: string }>());
   const fittedOnce = useRef(false);
   const [snapshot, setSnapshot] = useState<LiveMapSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,19 +47,11 @@ export const AdminLiveMap = () => {
 
   useEffect(() => {
     if (mapsState.status !== 'ready' || !containerRef.current || mapRef.current) return;
-    mapRef.current = new mapsState.maps.Map(containerRef.current, { center: DEFAULT_CENTER, zoom: 12, disableDefaultUI: true, zoomControl: true, clickableIcons: false });
-    infoRef.current = new mapsState.maps.InfoWindow();
+    mapRef.current = createKidRideMap(mapsState.maps, containerRef.current, { center: DEFAULT_CENTER, zoom: 12 });
+    mapRef.current.addListener('click', () => setSelected(null));
   }, [mapsState.status]);
 
-  const showDriver = (driver: LiveDriver) => {
-    const map = mapRef.current;
-    const marker = driverMarkers.current.get(driver.id);
-    if (!map || !marker || !infoRef.current) return;
-    infoRef.current.setContent(`<div style="font:13px sans-serif;min-width:160px"><strong>${driver.name.replace(/</g, '&lt;')}</strong><br/>${driver.status === 'on_ride' ? 'On a ride' : 'Free'}${driver.vehicle ? `<br/>${driver.vehicle.replace(/</g, '&lt;')}${driver.plate ? ` (${driver.plate.replace(/</g, '&lt;')})` : ''}` : ''}<br/><span style="color:#64748b">Updated ${secondsAgo(driver.updatedAt)}s ago</span></div>`);
-    infoRef.current.open({ map, anchor: marker });
-  };
-
-  // Draw drivers and ride stops from the latest snapshot.
+  // Draw drivers and ride stops from the latest snapshot, reusing markers.
   useEffect(() => {
     if (mapsState.status !== 'ready' || !mapRef.current || !snapshot) return;
     const maps = mapsState.maps;
@@ -74,34 +59,47 @@ export const AdminLiveMap = () => {
     const seen = new Set<string>();
     for (const driver of snapshot.drivers) {
       seen.add(driver.id);
-      const icon = carIcon(maps, driver.heading ?? 0, driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR);
+      const color = driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR;
       const existing = driverMarkers.current.get(driver.id);
       if (existing) {
-        existing.setPosition({ lat: driver.lat, lng: driver.lng });
-        existing.setIcon(icon);
+        existing.marker.setPosition({ lat: driver.lat, lng: driver.lng });
+        if (existing.status !== driver.status) { existing.marker.setHtml(carHtml(color, driver.heading ?? 0)); existing.status = driver.status; }
+        existing.marker.setRotation(driver.heading ?? 0);
       } else {
-        const marker = new maps.Marker({ map, position: { lat: driver.lat, lng: driver.lng }, icon, title: driver.name, zIndex: 3 });
-        marker.addListener('click', () => { setSelected(driver.id); });
-        driverMarkers.current.set(driver.id, marker);
+        const marker = createHtmlMarker(maps, { map, position: { lat: driver.lat, lng: driver.lng }, html: carHtml(color, driver.heading ?? 0), title: driver.name, zIndex: 3, onClick: () => setSelected(driver.id) });
+        driverMarkers.current.set(driver.id, { marker, status: driver.status });
       }
     }
-    for (const [id, marker] of driverMarkers.current) {
-      if (!seen.has(id)) { marker.setMap(null); driverMarkers.current.delete(id); }
+    for (const [id, entry] of driverMarkers.current) {
+      if (!seen.has(id)) { entry.marker.remove(); driverMarkers.current.delete(id); }
     }
 
-    rideMarkers.current.forEach((marker) => marker.setMap(null));
-    rideMarkers.current = [];
+    const seenStops = new Set<string>();
+    const placeStop = (key: string, position: { lat: number; lng: number }, kind: string, html: string, title: string, zIndex: number) => {
+      seenStops.add(key);
+      const existing = rideMarkers.current.get(key);
+      if (existing && existing.kind === kind) { existing.marker.setPosition(position); return; }
+      existing?.marker.remove();
+      rideMarkers.current.set(key, { marker: createHtmlMarker(maps, { map, position, html, title, zIndex }), kind });
+    };
     for (const ride of snapshot.rides) {
       const searching = !ride.driverId;
-      if (ride.pickupCoords) rideMarkers.current.push(new maps.Marker({ map, position: ride.pickupCoords, icon: stopIcon(maps, searching ? '#f59e0b' : BUSY_COLOR), label: { text: 'A', color: '#fff', fontSize: '10px', fontWeight: '700' }, title: `${searching ? 'Waiting for a driver' : `Pickup (${ride.driverName || 'driver'})`}: ${ride.pickup}`, zIndex: 2 }));
-      if (ride.dropoffCoords) rideMarkers.current.push(new maps.Marker({ map, position: ride.dropoffCoords, icon: stopIcon(maps, '#64748b'), label: { text: 'B', color: '#fff', fontSize: '10px', fontWeight: '700' }, title: `Drop-off: ${ride.dropoff}`, zIndex: 1 }));
+      if (ride.pickupCoords) {
+        placeStop(`${ride.id}:pickup`, ride.pickupCoords, searching ? 'waiting' : 'pickup',
+          searching ? waitingPinHtml() : dotHtml(BUSY_COLOR, 'A'),
+          `${searching ? 'Waiting for a driver' : `Pickup (${ride.driverName || 'driver'})`}: ${ride.pickup}`, 2);
+      }
+      if (ride.dropoffCoords) placeStop(`${ride.id}:dropoff`, ride.dropoffCoords, 'dropoff', dotHtml(BRAND.slate, 'B'), `Drop-off: ${ride.dropoff}`, 1);
+    }
+    for (const [key, entry] of rideMarkers.current) {
+      if (!seenStops.has(key)) { entry.marker.remove(); rideMarkers.current.delete(key); }
     }
 
     // Frame everything the first time there is something to show.
-    if (!fittedOnce.current && (snapshot.drivers.length || rideMarkers.current.length)) {
+    if (!fittedOnce.current && (snapshot.drivers.length || rideMarkers.current.size)) {
       const bounds = new maps.LatLngBounds();
       snapshot.drivers.forEach((driver) => bounds.extend({ lat: driver.lat, lng: driver.lng }));
-      rideMarkers.current.forEach((marker) => { const position = marker.getPosition(); if (position) bounds.extend(position); });
+      rideMarkers.current.forEach((entry) => bounds.extend(entry.marker.getPosition()));
       map.fitBounds(bounds, 64);
       fittedOnce.current = true;
     }
@@ -113,8 +111,18 @@ export const AdminLiveMap = () => {
     if (!driver || !mapRef.current) return;
     mapRef.current.panTo({ lat: driver.lat, lng: driver.lng });
     if ((mapRef.current.getZoom() || 0) < 14) mapRef.current.setZoom(15);
-    showDriver(driver);
   }, [selected]);
+
+  const selectedDriver = snapshot?.drivers.find((item) => item.id === selected) || null;
+  const frameAll = () => {
+    const map = mapRef.current;
+    if (!map || mapsState.status !== 'ready' || !snapshot) return;
+    const bounds = new mapsState.maps.LatLngBounds();
+    snapshot.drivers.forEach((driver) => bounds.extend({ lat: driver.lat, lng: driver.lng }));
+    rideMarkers.current.forEach((entry) => bounds.extend(entry.marker.getPosition()));
+    if (bounds.isEmpty()) map.panTo(DEFAULT_CENTER);
+    else map.fitBounds(bounds, 64);
+  };
 
   const visibleDrivers = useMemo(() => (snapshot?.drivers || [])
     .filter((driver) => filter === 'all' || driver.status === filter)
@@ -151,7 +159,22 @@ export const AdminLiveMap = () => {
           ) : (
             <div ref={containerRef} className="h-full w-full" aria-label="Live map of drivers and rides" />
           )}
-          <div className="absolute bottom-3 left-3 flex flex-wrap gap-3 rounded-xl bg-white/95 px-3 py-2 text-xs text-slate-600 shadow">
+          {mapsState.status === 'ready' && <MapControls map={mapRef} onRecenter={frameAll} recenterLabel="Show all drivers and rides" />}
+          {selectedDriver && (
+            <div className="absolute left-3 top-3 z-20 w-[260px] rounded-[22px] border border-slate-100 bg-white p-4 shadow-[0_20px_45px_rgba(15,23,42,0.2)]" role="dialog" aria-label="Driver details">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-bold text-slate-950">{selectedDriver.name}</p>
+                  <span className="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white" style={{ background: selectedDriver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{selectedDriver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>
+                </div>
+                <button type="button" onClick={() => setSelected(null)} aria-label="Close" className="rounded-full p-1 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+              </div>
+              <p className="mt-3 text-sm text-slate-600">{selectedDriver.vehicle || 'Vehicle not set'}{selectedDriver.plate ? ` · ${selectedDriver.plate}` : ''}</p>
+              {selectedDriver.phone && <p className="mt-1 text-sm text-slate-600">{selectedDriver.phone}</p>}
+              <p className="mt-2 text-xs text-slate-400">Updated {secondsAgo(selectedDriver.updatedAt)}s ago</p>
+            </div>
+          )}
+          <div className="absolute bottom-3 left-3 flex flex-wrap gap-3 rounded-full bg-white/95 px-4 py-2 text-xs font-medium text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur">
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: FREE_COLOR }} />Free driver</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: BUSY_COLOR }} />On a ride</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" />Waiting for a driver</span>

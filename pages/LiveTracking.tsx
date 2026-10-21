@@ -2,10 +2,47 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LiveMap, RouteInfo } from '../components/LiveMap';
 import { Card, Button, ConfirmModal, StatusChip, Badge } from '../components/UIComponents';
 import { RatingBadge, useDriverRating } from '../components/Ratings';
-import { ShieldAlert, X } from 'lucide-react';
+import { Car, MapPin, Search, ShieldAlert, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRide } from '../contexts/RideContext';
+import { useAuth } from '../contexts/AuthContext';
 import { RideStatus } from '../types';
+
+// Branded card over the map: what is happening now and how long it will take.
+const TripStatusCard: React.FC<{
+  searching: boolean;
+  childOnBoard: boolean;
+  arrived: boolean;
+  nearbyDrivers?: number | null;
+  driverEta?: string;
+  tripDuration?: string;
+  tripDistance?: string;
+}> = ({ searching, childOnBoard, arrived, nearbyDrivers, driverEta, tripDuration, tripDistance }) => {
+  const trip = tripDuration ? `${tripDuration}${tripDistance ? ` · ${tripDistance}` : ''} trip` : null;
+  const [Icon, title, detail] = searching
+    ? [Search, 'Finding a driver near you', typeof nearbyDrivers === 'number'
+      ? (nearbyDrivers === 0 ? 'No drivers nearby yet. Open to all drivers.' : `${nearbyDrivers} driver${nearbyDrivers === 1 ? '' : 's'} nearby`)
+      : trip]
+    : arrived
+      ? [MapPin, 'Your driver is at the pickup', trip]
+      : childOnBoard
+        ? [Car, driverEta ? `Drop-off in ${driverEta}` : 'On the way to drop-off', 'Child on board']
+        : [Car, driverEta ? `Driver arriving in ${driverEta}` : 'Driver on the way', trip];
+  return (
+    <div className="absolute left-16 right-4 top-4 z-10 sm:left-auto sm:w-[320px]" role="status" aria-live="polite">
+      <div className="flex items-center gap-3 rounded-[22px] border border-white/70 bg-white/95 p-3 pr-4 shadow-[0_16px_36px_rgba(15,23,42,0.18)] backdrop-blur">
+        <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${searching ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-[#1d6fff]'}`}>
+          {searching && <span className="absolute inset-0 animate-ping rounded-2xl bg-amber-200/60" />}
+          <Icon size={20} className="relative" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-slate-950">{title}</p>
+          {detail && <p className="truncate text-xs text-slate-500">{detail}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const driverInitials = (name: string) => (
   name
@@ -31,6 +68,7 @@ const formatVehicle = (vehicle?: { color?: string; make?: string; model?: string
 export const LiveTracking = () => {
   const navigate = useNavigate();
   const { activeRide, syncError, cancelRide, refreshActiveRide } = useRide();
+  const { user } = useAuth();
   const [route, setRoute] = useState<RouteInfo>({});
 
   // Poll faster while the parent is watching the map so the car keeps moving.
@@ -69,6 +107,7 @@ export const LiveTracking = () => {
   }
 
   const driver = activeRide.driver;
+  const childName = user?.children?.find((child) => child.id === activeRide.childId)?.name.split(' ')[0];
   const vehicle = formatVehicle(driver?.vehicle);
   const tripCode = activeRide.tripCode || 'Pending';
   const safeWord = activeRide.safeWord || 'Pending';
@@ -90,34 +129,19 @@ export const LiveTracking = () => {
           dropoffCoords={activeRide.dropoffCoords}
           driverLocation={activeRide.driverLocation}
           nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
+          pickupLabel={childName ? `Pickup · ${childName}` : 'Pickup'}
           onRoute={setRoute}
           className="h-full rounded-none"
         />
-        {[RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status) && (
-          <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 text-center shadow-md">
-            <p className="text-sm font-semibold text-slate-950">Finding a driver near you</p>
-            {typeof activeRide.nearbyDrivers === 'number' && (
-              <p className="text-xs text-slate-500">
-                {activeRide.nearbyDrivers === 0 ? 'No drivers nearby yet. Open to all drivers.' : `${activeRide.nearbyDrivers} driver${activeRide.nearbyDrivers === 1 ? '' : 's'} nearby`}
-              </p>
-            )}
-          </div>
-        )}
-        {(route.driverEta || route.tripDuration) && (
-          <div className="absolute right-4 top-4 z-10 rounded-2xl bg-white/95 px-4 py-2 text-right shadow-md">
-            {route.driverEta && activeRide.driverLocation ? (
-              <>
-                <p className="text-xs text-slate-500">{activeRide.status === RideStatus.IN_PROGRESS ? 'Arriving at drop-off in' : 'Driver arriving in'}</p>
-                <p className="text-lg font-bold text-slate-950">{route.driverEta}</p>
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-slate-500">Trip</p>
-                <p className="text-lg font-bold text-slate-950">{route.tripDuration}{route.tripDistance ? ` · ${route.tripDistance}` : ''}</p>
-              </>
-            )}
-          </div>
-        )}
+        <TripStatusCard
+          searching={[RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status)}
+          childOnBoard={activeRide.status === RideStatus.IN_PROGRESS}
+          arrived={activeRide.status === RideStatus.DRIVER_ARRIVED}
+          nearbyDrivers={activeRide.nearbyDrivers}
+          driverEta={activeRide.driverLocation ? route.driverEta : undefined}
+          tripDuration={route.tripDuration}
+          tripDistance={route.tripDistance}
+        />
       </div>
 
       <div className="relative z-10 -mt-6 rounded-t-3xl bg-white p-6 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] animate-slide-up">
