@@ -178,6 +178,13 @@ export const BookRide = () => {
         <div>
           <h2 className="mb-2 text-2xl font-bold text-gray-900">Finding your ride</h2>
           <p className="h-6 font-medium text-[#3A77FF]">{searchStatus}</p>
+          {activeRide && activeRide.nearbyDrivers !== null && activeRide.nearbyDrivers !== undefined && (
+            <p className="mt-3 text-sm text-slate-500">
+              {activeRide.nearbyDrivers === 0
+                ? 'No drivers near the pickup right now. Your request is open to all drivers.'
+                : `${activeRide.nearbyDrivers} driver${activeRide.nearbyDrivers === 1 ? '' : 's'} near the pickup. Offering to the nearest first.`}
+            </p>
+          )}
         </div>
 
         <div className="w-full max-w-xs space-y-3 rounded-xl bg-gray-100 p-4 text-left">

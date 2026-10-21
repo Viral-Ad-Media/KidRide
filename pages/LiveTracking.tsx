@@ -93,6 +93,16 @@ export const LiveTracking = () => {
           onRoute={setRoute}
           className="h-full rounded-none"
         />
+        {[RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status) && (
+          <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 text-center shadow-md">
+            <p className="text-sm font-semibold text-slate-950">Finding a driver near you</p>
+            {typeof activeRide.nearbyDrivers === 'number' && (
+              <p className="text-xs text-slate-500">
+                {activeRide.nearbyDrivers === 0 ? 'No drivers nearby yet. Open to all drivers.' : `${activeRide.nearbyDrivers} driver${activeRide.nearbyDrivers === 1 ? '' : 's'} nearby`}
+              </p>
+            )}
+          </div>
+        )}
         {(route.driverEta || route.tripDuration) && (
           <div className="absolute right-4 top-4 z-10 rounded-2xl bg-white/95 px-4 py-2 text-right shadow-md">
             {route.driverEta && activeRide.driverLocation ? (
