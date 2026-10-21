@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
+import { CheckCircle, TimerReset } from 'lucide-react';
 import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponents';
 import { StickyNote } from '../components/StickyNote';
 import { useRide } from '../contexts/RideContext';
@@ -121,8 +121,27 @@ export const DriverDashboard = () => {
     finally { setCancelling(false); setConfirmingCancel(false); }
   };
 
+  const childName = activeRide?.child?.name?.split(' ')[0] || 'the child';
+  const offerOpen = !!activeRide && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);
+  const tripHeadline = !activeRide ? ''
+    : activeRide.status === RideStatus.DRIVER_ASSIGNED ? 'Head to the pickup'
+    : activeRide.status === RideStatus.DRIVER_ARRIVED ? `Waiting for ${childName}`
+    : activeRide.status === RideStatus.IN_PROGRESS ? `Driving ${childName} to the drop-off`
+    : activeRide.status === RideStatus.COMPLETED ? 'Trip complete' : '';
+
+  // Pickup and drop-off as a two-stop line: Marigold ring for the pickup, navy dot for the drop-off.
+  const stops = (pickupDone = false) => (
+    <div className="grid grid-cols-[14px_1fr] gap-x-3 gap-y-1">
+      <span className="mt-1.5 h-3 w-3 rounded-full border-[3px] border-accent bg-white" />
+      <p className={`text-body font-semibold ${pickupDone ? 'text-muted line-through' : ''}`}>{activeRide?.pickupLocation}</p>
+      <span className="ml-[5px] h-5 w-0.5 bg-line" /><span />
+      <span className="mt-1.5 h-3 w-3 rounded-full bg-ink" />
+      <p className="text-body font-semibold">{activeRide?.dropoffLocation}</p>
+    </div>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-title font-extrabold tracking-tight sm:text-headline">{isOnline ? "You're online" : "You're offline"}</h2>
@@ -138,127 +157,63 @@ export const DriverDashboard = () => {
       <div className="grid grid-cols-3 divide-x divide-line rounded-card border border-line bg-white">
         <div className="px-4 py-4"><p className="text-xs text-muted">Earned</p><p className="mt-1 text-title font-extrabold tabular-nums">{isMetricsLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</p></div>
         <div className="px-4 py-4"><p className="text-xs text-muted">Trips</p><p className="mt-1 text-title font-extrabold tabular-nums">{isMetricsLoading ? '--' : completedCount}</p></div>
-        <div className="px-4 py-4"><p className="text-xs text-muted">Rating</p><p className="mt-1 text-title font-extrabold tabular-nums">{rating?.count && rating.average !== null ? `★ ${rating.average.toFixed(1)}` : '–'}</p></div>
+        <div className="px-4 py-4"><p className="text-xs text-muted">Rating</p><p className="mt-1 text-title font-extrabold tabular-nums">{rating?.count && rating.average !== null ? `\u2605 ${rating.average.toFixed(1)}` : '\u2013'}</p></div>
       </div>
 
-      <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
+      {(syncError || locationError) && <p className="text-label text-warning">{syncError || locationError}</p>}
+      {error && <p className="text-label text-danger">{error}</p>}
 
-      {(syncError || locationError) && <div className="rounded-xl bg-amber-50 p-4 text-amber-900">{syncError || locationError}</div>}
-      {error && (
-        <div className="rounded-[24px] border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-600 shadow-[0_14px_30px_rgba(239,68,68,0.08)]">
-          {error}
-        </div>
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_340px]">
-        <div>
-          {!isOnline && (!activeRide || [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status)) ? (
-            <Card className="text-center">
-              <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-slate-100 text-slate-500">
-                <TimerReset size={28} />
-              </div>
-              <h3 className="mt-5 text-2xl font-bold text-slate-950">Go online to receive trip requests</h3>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">
-                New ride requests only appear while you are online.
-              </p>
-            </Card>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="space-y-6">
+          {!isOnline && (!activeRide || offerOpen) ? (
+            <div className="rounded-card border border-dashed border-line bg-white px-6 py-12 text-center">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-muted"><TimerReset size={26} /></span>
+              <h3 className="mt-4 text-lead font-bold">You're off the road</h3>
+              <p className="mt-1 text-label text-muted">Switch to Online to start receiving requests.</p>
+            </div>
           ) : !activeRide ? (
-            <Card className="text-center">
-              <div className="relative mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-brand/10 text-brand-deep">
-                <span className="absolute inset-0 animate-ping rounded-[22px] bg-brand/15" aria-hidden="true" />
-                <MapPin size={28} className="relative" />
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-deep" /></span>
+                <h3 className="text-lead font-bold">Looking for rides near you</h3>
               </div>
-              <h3 className="mt-5 text-2xl font-bold text-slate-950">Scanning the area</h3>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">
-                When a new request matches your area, it will appear here with pickup details, service type, and quick accept or decline actions. Amber pins on the map are rides waiting nearby; tap one to see the trip.
-              </p>
+              <p className="text-label text-muted">Marigold pins are families waiting nearby. Tap one to see the trip and accept it.</p>
               <DriverIdleMap onAccept={acceptRide} />
-            </Card>
-          ) : activeRide.status === RideStatus.SEARCHING_DRIVER || activeRide.status === RideStatus.REQUESTED ? (
-            <Card className="overflow-hidden border-brand/40 bg-white">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="max-w-xl">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-deep">
-                    <ShieldCheck size={14} />
-                    New Request
-                  </div>
-                  {activeRide.isScheduled && <div className="mt-3"><ScheduleChip state="scheduled" /> <span className="ml-1 text-xs font-semibold text-slate-500">Booked ahead for {formatPickupTime(activeRide.pickupTime)}</span></div>}
-                  {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
-                  <h3 className="mt-4 text-3xl font-bold text-slate-950">{formatRidePrice(activeRide.price)}</h3>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {activeRide.price > 0 ? 'Estimated earnings for this ride' : 'Pricing has not been published for this ride yet.'}
-                  </p>
-                  <div className="mt-5 inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
-                    {humanizeStatus(activeRide.serviceType)}
-                  </div>
-                </div>
-
-                <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                  <p className="mt-3 text-lg font-bold text-slate-950">{formatPickupTime(activeRide.pickupTime)}</p>
-                </div>
-              </div>
-
-              <div className="mt-8 grid gap-4 rounded-[28px] bg-slate-50/90 p-5 lg:grid-cols-[auto,1fr]">
-                <div className="flex flex-col items-center gap-2 pt-1">
-                  <div className="h-3 w-3 rounded-full bg-slate-300" />
-                  <div className="h-12 w-0.5 bg-slate-200" />
-                  <div className="h-3 w-3 rounded-full bg-brand" />
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">{activeRide.pickupLocation}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Drop-off</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">{activeRide.dropoffLocation}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <Button variant="secondary" onClick={() => void handleDecline()} disabled={isDeclining}>
-                  {isDeclining ? 'Declining...' : 'Decline'}
-                </Button>
-                <Button onClick={() => handleStatusUpdate(RideStatus.DRIVER_ASSIGNED)} disabled={isDeclining}>
-                  Accept Ride
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <Card className="overflow-hidden bg-white">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            </div>
+          ) : offerOpen ? (
+            <div className="overflow-hidden rounded-card border-2 border-brand bg-white">
+              <div className="flex items-start justify-between gap-4 px-5 pt-5">
                 <div>
-                  <StatusChip status={activeRide.status} />
-                  <h3 className="mt-4 text-3xl font-bold text-slate-950">{activeRide.status === RideStatus.COMPLETED ? 'Trip completed' : 'Active trip in progress'}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-500">
-                    Move the ride through each status as the pickup and drop-off happen.
-                  </p>
+                  <p className="text-label font-semibold text-brand-deep">New request{activeRide.isScheduled ? ' (booked ahead)' : ''}</p>
+                  <p className="mt-1 text-display font-extrabold tabular-nums tracking-tight">{formatRidePrice(activeRide.price)}</p>
+                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} \u00b7 Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
                 </div>
-
-                <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                  <p className="mt-3 text-lg font-bold text-slate-950">{formatPickupTime(activeRide.pickupTime)}</p>
-                </div>
+                {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
               </div>
-
-              <div className="mt-8 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[26px] bg-slate-950 p-5 text-white">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Trip Code</p>
-                  <p className="mt-3 text-3xl font-bold">{activeRide.tripCode || 'Pending'}</p>
-                  <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Safe Word</p>
-                  <p className="mt-3 text-2xl font-bold text-sky-200">"{activeRide.safeWord || 'Pending'}"</p>
-                </div>
-
-                <div className="rounded-[26px] bg-slate-50/90 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Trip Route</p>
-                  <p className="mt-3 text-lg font-semibold text-slate-950">{activeRide.pickupLocation}</p>
-                  <div className="my-4 h-px bg-slate-200" />
-                  <p className="text-lg font-semibold text-slate-950">{activeRide.dropoffLocation}</p>
-                </div>
+              <div className="mx-5 mt-4 border-t border-line pt-4">{stops()}</div>
+              <div className="mt-5 grid grid-cols-[1fr_2fr] gap-3 px-5 pb-5">
+                <Button variant="secondary" onClick={() => void handleDecline()} disabled={isDeclining}>{isDeclining ? '...' : 'Decline'}</Button>
+                <Button onClick={() => handleStatusUpdate(RideStatus.DRIVER_ASSIGNED)} disabled={isDeclining}>Accept</Button>
               </div>
-
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-card border border-line bg-white">
+              <div className="px-5 pt-5">
+                <StatusChip status={activeRide.status} />
+                <h3 className="mt-3 text-title font-extrabold tracking-tight">{tripHeadline}</h3>
+                <p className="mt-1 text-label text-muted">Pickup {formatPickupTime(activeRide.pickupTime, 'now')} \u00b7 {formatRidePrice(activeRide.price)}</p>
+              </div>
+              <div className="mx-5 mt-4 flex items-center justify-between rounded-card bg-accent/15 px-4 py-3">
+                <span>
+                  <span className="block text-caption font-semibold text-muted">Trip code</span>
+                  <span className="block text-caption text-muted">Say the safe word to the parent</span>
+                </span>
+                <span className="text-right">
+                  <span className="block text-title font-extrabold tabular-nums tracking-wider">{activeRide.tripCode || '\u00b7\u00b7\u00b7\u00b7'}</span>
+                  <span className="block text-caption font-semibold">{activeRide.safeWord || 'Pending'}</span>
+                </span>
+              </div>
+              <div className="mx-5 mt-4">{stops(activeRide.status === RideStatus.IN_PROGRESS)}</div>
               <LiveMap
                 pickup={activeRide.pickupLocation}
                 dropoff={activeRide.dropoffLocation}
@@ -266,46 +221,29 @@ export const DriverDashboard = () => {
                 dropoffCoords={activeRide.dropoffCoords}
                 driverLocation={activeRide.driverLocation}
                 nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
-                className="mt-6 h-64"
+                className="mt-4 h-64 rounded-none"
               />
-
-              <div className="mt-8 space-y-3">
-                {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <Button variant="secondary" onClick={() => setConfirmingCancel(true)}>Cancel Ride</Button>}
-                <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for both the parent and the driver." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
-                {activeRide.status === RideStatus.DRIVER_ASSIGNED && (
-                  <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>
-                    Arrived at Pickup
-                  </Button>
+              <div className="space-y-3 p-5">
+                {activeRide.status === RideStatus.DRIVER_ASSIGNED && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>I've arrived at the pickup</Button>}
+                {activeRide.status === RideStatus.DRIVER_ARRIVED && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.IN_PROGRESS)}>{childName} is in the car</Button>}
+                {activeRide.status === RideStatus.IN_PROGRESS && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.COMPLETED)} className="bg-success text-white hover:brightness-95">Dropped off</Button>}
+                {activeRide.status === RideStatus.COMPLETED && <p className="flex items-center justify-center gap-2 text-label font-semibold text-success"><CheckCircle size={18} /> Ride completed</p>}
+                {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && (
+                  <button type="button" onClick={() => setConfirmingCancel(true)} className="w-full text-center text-label font-semibold text-danger">Cancel ride</button>
                 )}
-                {activeRide.status === RideStatus.DRIVER_ARRIVED && (
-                  <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.IN_PROGRESS)}>
-                    Confirm Child Picked Up
-                  </Button>
-                )}
-                {activeRide.status === RideStatus.IN_PROGRESS && (
-                  <Button
-                    fullWidth
-                    onClick={() => handleStatusUpdate(RideStatus.COMPLETED)}
-                    className="bg-success text-white hover:brightness-95"
-                  >
-                    Complete Ride
-                  </Button>
-                )}
-                {activeRide.status === RideStatus.COMPLETED && (
-                  <div className="flex items-center justify-center gap-2 rounded-[20px] bg-green-50 px-4 py-4 font-semibold text-green-700">
-                    <CheckCircle size={18} /> Ride Completed
-                  </div>
-                )}
+                <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for you and the parent." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
               </div>
-            </Card>
+            </div>
           )}
+
+          <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
         </div>
 
-        <div className="flex justify-end pt-3">
+        <div className="hidden justify-end pt-3 xl:flex">
           <StickyNote
             id="driver-before-pickup"
             title="Before every pickup"
-            lines={['Check the trip code and safe word before the child gets in.', 'Tap the status buttons in order so the parent’s tracking stays right.']}
+            lines={['Check the trip code and safe word before the child gets in.', 'Tap the status buttons in order so the parent\u2019s tracking stays right.']}
           />
         </div>
       </div>

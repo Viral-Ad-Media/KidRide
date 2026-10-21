@@ -1,60 +1,44 @@
 import React from 'react';
-import { Map, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card } from '../components/UIComponents';
+import { ArrowRight } from 'lucide-react';
+import { DriverIdleMap } from '../components/DriverIdleMap';
+import { LiveMap } from '../components/LiveMap';
+import { StatusChip } from '../components/UIComponents';
 import { useRide } from '../contexts/RideContext';
-import { formatPickupTime } from '../utils/rideData';
+import { RideStatus } from '../types';
+
+// The driver's Map tab: the current trip's route and car when there is one,
+// otherwise their own position with the rides waiting nearby.
 
 export const DriverMap = () => {
   const navigate = useNavigate();
-  const { activeRide } = useRide();
+  const { activeRide, acceptRide } = useRide();
+  const onTrip = !!activeRide && ![RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status);
 
   return (
-    <div className="flex min-h-[calc(100vh-140px)] items-center justify-center p-6">
-      <Card className="w-full max-w-lg text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand-deep">
-          <Map size={32} />
-        </div>
-
-        {activeRide ? (
-          <>
-            <h2 className="mt-5 text-2xl font-bold text-gray-900">Current Trip Overview</h2>
-            <p className="mt-3 text-sm leading-7 text-gray-500">
-              Live map tiles are not connected in this build, but your current trip route is available below.
-            </p>
-
-            <div className="mt-6 space-y-4 rounded-2xl bg-slate-50 p-5 text-left">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">{activeRide.pickupLocation}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Drop-off</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">{activeRide.dropoffLocation}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pickup Time</p>
-                <p className="mt-2 text-sm text-slate-600">{formatPickupTime(activeRide.pickupTime)}</p>
-              </div>
-            </div>
-
-            <Button onClick={() => navigate('/driver-dashboard')} className="mt-6">
-              <Navigation size={18} />
-              Return to Driver Dashboard
-            </Button>
-          </>
-        ) : (
-          <>
-            <h2 className="mt-5 text-2xl font-bold text-gray-900">No active trip to map</h2>
-            <p className="mt-3 text-sm leading-7 text-gray-500">
-              When you accept a ride, the current trip route will appear here.
-            </p>
-            <Button variant="secondary" onClick={() => navigate('/driver-dashboard')} className="mt-6">
-              Back to Driver Dashboard
-            </Button>
-          </>
-        )}
-      </Card>
+    <div className="relative h-[calc(100dvh-56px-64px-1.25rem)] overflow-hidden rounded-card border border-line lg:h-[calc(100dvh-7.5rem)]">
+      {onTrip && activeRide ? (
+        <>
+          <LiveMap
+            pickup={activeRide.pickupLocation}
+            dropoff={activeRide.dropoffLocation}
+            pickupCoords={activeRide.pickupCoords}
+            dropoffCoords={activeRide.dropoffCoords}
+            driverLocation={activeRide.driverLocation}
+            nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
+            className="h-full rounded-none"
+            controlsClassName="right-3 top-3"
+            noticeClassName="left-3 right-16 top-3"
+          />
+          <button type="button" onClick={() => navigate('/driver-dashboard')} className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-card bg-white px-4 py-3 text-left shadow-float sm:left-auto sm:w-[360px]">
+            <StatusChip status={activeRide.status} />
+            <span className="min-w-0 flex-1 truncate text-label font-semibold">{activeRide.status === RideStatus.IN_PROGRESS ? activeRide.dropoffLocation : activeRide.pickupLocation}</span>
+            <ArrowRight size={18} className="text-muted" />
+          </button>
+        </>
+      ) : (
+        <DriverIdleMap onAccept={acceptRide} fill />
+      )}
     </div>
   );
 };

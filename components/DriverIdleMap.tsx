@@ -30,9 +30,11 @@ const formatDistance = (meters: number) => (meters < 1000 ? `${meters} m away` :
 
 interface DriverIdleMapProps {
   onAccept: (rideId: string) => Promise<void>;
+  /** Fill the parent (the Map tab) instead of a fixed-height card. */
+  fill?: boolean;
 }
 
-export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
+export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept, fill = false }) => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -201,8 +203,8 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
   }
 
   return (
-    <div className="mt-6 text-left">
-      <div className="relative h-[46vh] min-h-[320px] overflow-hidden rounded-2xl bg-slate-100 md:h-[420px]">
+    <div className={`text-left ${fill ? 'h-full' : 'mt-4'}`}>
+      <div className={`relative overflow-hidden bg-surface-2 ${fill ? 'h-full' : 'h-[46vh] min-h-[320px] rounded-card md:h-[420px]'}`}>
         <div ref={containerRef} className="h-full w-full" aria-label="Map of rides near you" />
         {(mapsState.status === 'loading' || !position) && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">{position ? 'Loading map...' : 'Finding your location...'}</div>
@@ -223,7 +225,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
           <div className="absolute bottom-3 left-3 right-3 z-20 rounded-[24px] border border-slate-100 bg-white p-4 shadow-[0_20px_45px_rgba(15,23,42,0.22)] sm:left-auto sm:w-[360px]" role="dialog" aria-label="Waiting ride">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
+                <p className="text-caption font-semibold text-brand-deep">
                   {selected.declined ? 'You declined this ride' : 'Waiting for a driver'} · {formatDistance(selected.distanceMeters)}
                 </p>
                 <p className="mt-2 truncate text-sm font-semibold text-slate-950">{selected.ride.pickupLocation}</p>
