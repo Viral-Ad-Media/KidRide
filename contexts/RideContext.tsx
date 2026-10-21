@@ -9,6 +9,8 @@ interface RideContextType {
   requestRide: (ride: Ride) => Promise<void>;
   updateRideStatus: (status: RideStatus) => Promise<void>;
   declineRideRequest: () => Promise<void>;
+  /** Driver accepts a specific waiting ride (e.g. one picked on the map). */
+  acceptRide: (rideId: string) => Promise<void>;
   cancelRide: () => Promise<void>;
   refreshActiveRide: () => Promise<void>;
   /** Driver availability; offers are only fetched while online. Remembered per browser. */
@@ -126,13 +128,14 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const accepting = status === RideStatus.DRIVER_ASSIGNED && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);
     await mutate(`/rides/${activeRide.id}/${accepting ? 'accept' : 'status'}`, accepting ? undefined : { status });
   };
+  const acceptRide = (rideId: string) => mutate(`/rides/${rideId}/accept`);
   const cancelRide = async () => { if (!activeRide) throw new Error('No active trip.'); await mutate(`/rides/${activeRide.id}/cancel`, undefined, true); };
   const declineRideRequest = async () => {
     if (!activeRide) throw new Error('No open trip.');
     await mutate(`/rides/${activeRide.id}/decline`, undefined, true);
     await refreshActiveRide();
   };
-  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
+  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
 };
 export const useRide = () => {
   const context = useContext(RideContext);
