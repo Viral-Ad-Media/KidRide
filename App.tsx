@@ -27,6 +27,7 @@ import {
   SafetyInfoPage
 } from './pages/Marketing';
 import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
+import { AdminLiveMap } from './pages/AdminLiveMap';
 import { UserRole } from './types';
 
 const defaultRouteFor = getDefaultRouteForUser;
@@ -104,6 +105,7 @@ const AppRoutes = () => (
       />
       <Route path="/admin/drivers" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminDrivers /></ProtectedRoute>} />
       <Route path="/admin/parents" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminParents /></ProtectedRoute>} />
+      <Route path="/admin/live-map" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminLiveMap /></ProtectedRoute>} />
       <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
       <Route
         path="/driver-dashboard"

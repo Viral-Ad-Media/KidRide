@@ -47,11 +47,11 @@ const pin = (maps: typeof google.maps, color: string): google.maps.Symbol => ({
   labelOrigin: new maps.Point(0, 0)
 });
 
-const carIcon = (maps: typeof google.maps, rotation: number): google.maps.Symbol => ({
+export const carIcon = (maps: typeof google.maps, rotation: number, color = '#0f172a'): google.maps.Symbol => ({
   // Arrow-shaped car marker pointing in the direction of travel.
   path: 'M 0,-14 L 9,10 L 0,5 L -9,10 Z',
   scale: 1.3,
-  fillColor: '#0f172a',
+  fillColor: color,
   fillOpacity: 1,
   strokeColor: '#ffffff',
   strokeWeight: 2,

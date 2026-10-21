@@ -111,6 +111,44 @@ export const reviewDriverApplication = async (
   body: { status, submittedAt, reason }
 });
 
+// --- Live map ---
+
+export interface LiveDriver {
+  id: string;
+  name: string;
+  phone: string | null;
+  vehicle: string | null;
+  plate: string | null;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  updatedAt: string;
+  status: 'free' | 'on_ride';
+  rideId: string | null;
+}
+
+export interface LiveRide {
+  id: string;
+  status: string;
+  dispatchState: 'targeted' | 'open';
+  pickup: string;
+  dropoff: string;
+  pickupCoords: { lat: number; lng: number } | null;
+  dropoffCoords: { lat: number; lng: number } | null;
+  driverId: string | null;
+  driverName: string | null;
+  createdAt: string;
+}
+
+export interface LiveMapSnapshot {
+  generatedAt: string;
+  counts: { online: number; onRide: number; ridesInProgress: number; searching: number };
+  drivers: LiveDriver[];
+  rides: LiveRide[];
+}
+
+export const fetchLiveMap = () => apiRequest<LiveMapSnapshot>('/admin/live-map', { token: requireToken(), timeoutMs: 20000 });
+
 // --- Admin user management ---
 
 export interface RatingSummary {
