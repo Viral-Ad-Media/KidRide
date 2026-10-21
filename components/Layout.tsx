@@ -99,6 +99,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [railOpen, setRailOpen] = useState(readRailPreference);
+  // Hovering the collapsed rail opens it as a flyout until the pointer leaves.
+  const [railHover, setRailHover] = useState(false);
+  const expanded = railOpen || railHover;
 
   useEffect(() => {
     try { window.localStorage.setItem(RAIL_KEY, railOpen ? 'open' : 'closed'); } catch { /* not remembered */ }
@@ -132,14 +135,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         key={item.path}
         type="button"
         onClick={() => go(item.path)}
-        title={railOpen ? undefined : item.label}
+        title={expanded ? undefined : item.label}
         aria-current={active ? 'page' : undefined}
-        className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors ${railOpen ? 'gap-3 px-3' : 'justify-center'} ${
+        className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors ${expanded ? 'gap-3 px-3' : 'justify-center'} ${
           active ? 'bg-brand/15 font-semibold text-ink' : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
         }`}
       >
         <item.icon size={22} strokeWidth={active ? 2.25 : 1.75} className={active ? 'text-brand-deep' : ''} />
-        {railOpen && <span className="truncate">{item.label}</span>}
+        {expanded && <span className="truncate">{item.label}</span>}
       </button>
     );
   };
@@ -148,37 +151,39 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-surface text-ink">
       <div className="flex min-h-screen">
         {/* Icon rail / sidebar */}
-        <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-white transition-[width] duration-200 lg:flex ${railOpen ? 'w-60' : 'w-[72px]'}`}>
-          <div className={`flex h-16 items-center ${railOpen ? 'justify-between pl-4 pr-2' : 'justify-center'}`}>
+        <aside className={`sticky top-0 hidden h-screen shrink-0 lg:block ${railOpen ? 'w-60' : 'w-[72px]'}`} onMouseEnter={() => setRailHover(true)} onMouseLeave={() => setRailHover(false)}>
+         <div className={`absolute inset-y-0 left-0 z-50 flex flex-col border-r border-line bg-white transition-[width] duration-200 ${expanded ? 'w-60' : 'w-[72px]'} ${expanded && !railOpen ? 'shadow-float' : ''}`}>
+          <div className={`flex h-16 items-center ${expanded ? 'justify-between pl-4 pr-2' : 'justify-center'}`}>
             <button type="button" onClick={() => go(homePath)} className="flex items-center" aria-label="KidRide home">
-              {railOpen ? <BrandLockup size={52} /> : <BrandMark size={40} title="KidRide" />}
+              {expanded ? <BrandLockup size={52} /> : <BrandMark size={40} title="KidRide" />}
             </button>
-            {railOpen && (
-              <button type="button" onClick={() => setRailOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-ink" aria-label="Collapse menu">
-                <ChevronsLeft size={18} />
+            {expanded && (
+              <button
+                type="button"
+                onClick={() => setRailOpen(!railOpen)}
+                className="flex h-9 w-9 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-ink"
+                aria-label={railOpen ? 'Collapse menu' : 'Keep menu open'}
+                title={railOpen ? 'Collapse' : 'Keep open'}
+              >
+                {railOpen ? <ChevronsLeft size={18} /> : <ChevronsRight size={18} />}
               </button>
             )}
           </div>
 
-          <nav className={`mt-4 flex flex-col gap-1 ${railOpen ? 'px-3' : 'px-3'}`}>{navItems.map(railItem)}</nav>
+          <nav className="mt-4 flex flex-col gap-1 px-3">{navItems.map(railItem)}</nav>
 
-          <div className={`mt-auto flex flex-col gap-1 px-3 pb-4 ${railOpen ? '' : 'items-center'}`}>
-            {!railOpen && (
-              <button type="button" onClick={() => setRailOpen(true)} className="flex h-11 w-full items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-ink" aria-label="Expand menu" title="Expand menu">
-                <ChevronsRight size={20} />
-              </button>
-            )}
-            <button type="button" onClick={() => go('/help')} title={railOpen ? undefined : 'Help'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-ink ${railOpen ? 'gap-3 px-3' : 'justify-center'}`}>
+          <div className={`mt-auto flex flex-col gap-1 px-3 pb-4 ${expanded ? '' : 'items-center'}`}>
+            <button type="button" onClick={() => go('/help')} title={expanded ? undefined : 'Help'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-ink ${expanded ? 'gap-3 px-3' : 'justify-center'}`}>
               <HelpCircle size={22} strokeWidth={1.75} />
-              {railOpen && <span>Help</span>}
+              {expanded && <span>Help</span>}
             </button>
-            <button type="button" onClick={handleLogout} title={railOpen ? undefined : 'Log out'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-danger ${railOpen ? 'gap-3 px-3' : 'justify-center'}`}>
+            <button type="button" onClick={handleLogout} title={expanded ? undefined : 'Log out'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-danger ${expanded ? 'gap-3 px-3' : 'justify-center'}`}>
               <LogOut size={22} strokeWidth={1.75} />
-              {railOpen && <span>Log out</span>}
+              {expanded && <span>Log out</span>}
             </button>
-            <button type="button" onClick={() => go('/profile')} title={railOpen ? undefined : user?.name} className={`mt-2 flex w-full items-center rounded-control border-t border-line pt-3 text-left ${railOpen ? 'gap-3 px-2' : 'justify-center'}`}>
+            <button type="button" onClick={() => go('/profile')} title={expanded ? undefined : user?.name} className={`mt-2 flex w-full items-center rounded-control border-t border-line pt-3 text-left ${expanded ? 'gap-3 px-2' : 'justify-center'}`}>
               <Avatar />
-              {railOpen && (
+              {expanded && (
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold text-ink">{user?.name || 'KidRide'}</span>
                   <span className="block text-xs text-muted">{roleLabel}</span>
@@ -186,6 +191,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               )}
             </button>
           </div>
+         </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
