@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BrandLockup } from './BrandLockup';
 import { BrandMark } from './BrandMark';
 
@@ -15,18 +15,35 @@ const prefersReducedMotion = () => { try { return window.matchMedia('(prefers-re
 
 export const SplashLoader: React.FC = () => {
   const [phase, setPhase] = useState<'show' | 'leaving' | 'done'>('show');
+  const [go, setGo] = useState(false);
+  const sceneRef = useRef<HTMLDivElement>(null);
+
+  // Start the clock (and the CSS animations) only once the stylesheet has
+  // reached the scene, so a slow dev server cannot eat the animation.
+  useEffect(() => {
+    let frame = 0;
+    const waitForStyles = () => {
+      const el = sceneRef.current;
+      if (el && getComputedStyle(el).position === 'fixed') setGo(true);
+      else frame = requestAnimationFrame(waitForStyles);
+    };
+    waitForStyles();
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
+    if (!go) return;
     const showFor = prefersReducedMotion() ? 600 : SHOW_MS;
     const leave = setTimeout(() => setPhase('leaving'), showFor);
     const done = setTimeout(() => setPhase('done'), showFor + FADE_MS);
     return () => { clearTimeout(leave); clearTimeout(done); };
-  }, []);
+  }, [go]);
 
   if (phase === 'done') return null;
   return (
     <div
-      className={`kr-scene fixed inset-0 z-[200] overflow-hidden transition-opacity duration-300 ${phase === 'leaving' ? 'opacity-0' : 'opacity-100'}`}
+      ref={sceneRef}
+      className={`kr-scene ${go ? 'kr-go' : ''} fixed inset-0 z-[200] overflow-hidden transition-opacity duration-300 ${phase === 'leaving' ? 'opacity-0' : 'opacity-100'}`}
       role="status"
       aria-label="Loading KidRide"
     >
