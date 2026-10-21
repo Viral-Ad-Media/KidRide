@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { Ride, RideStatus, UserRole } from '../types';
 import { useAuth } from './AuthContext';
 import { apiRequest, getStoredToken, mapRide } from '../services/api';
+import { watchSharedPosition } from '../services/sharedPosition';
 
 interface RideContextType {
   activeRide: Ride | null;
@@ -95,7 +96,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!approved || !isOnline) return;
     let position: GeolocationPosition | null = null;
-    const watch = navigator.geolocation?.watchPosition((latest) => { position = latest; }, () => undefined, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+    const unwatch = watchSharedPosition((latest) => { position = latest; });
     const beat = () => {
       const token = getStoredToken();
       if (!token) return;
@@ -107,7 +108,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     beat();
     const interval = setInterval(beat, PRESENCE_INTERVAL_MS);
-    return () => { clearInterval(interval); if (watch !== undefined) navigator.geolocation.clearWatch(watch); };
+    return () => { clearInterval(interval); unwatch(); };
   }, [approved, isOnline, user?.id]);
 
   const setIsOnline = (next: boolean) => {

@@ -5,6 +5,7 @@ import { Button } from './UIComponents';
 import { GLIDE_MS, carIcon, lerp, lerpAngle } from './LiveMap';
 import { LatLng, useGoogleMaps } from '../services/googleMaps';
 import { apiRequest, getStoredToken, mapRide } from '../services/api';
+import { getLastPosition, isLocationSupported, watchSharedPosition } from '../services/sharedPosition';
 import { Ride } from '../types';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
 
@@ -17,7 +18,10 @@ const POLL_MS = 10000;
 interface NearbyRide { ride: Ride; distanceMeters: number; declined: boolean }
 interface Fix { point: LatLng; heading: number | null }
 
-let lastFix: Fix | null = null;
+const toFix = (fix: GeolocationPosition): Fix => {
+  const heading = fix.coords.heading;
+  return { point: { lat: fix.coords.latitude, lng: fix.coords.longitude }, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null };
+};
 
 const amberPin = (maps: typeof google.maps, selected: boolean): google.maps.Symbol => ({
   path: maps.SymbolPath.CIRCLE,
@@ -44,8 +48,8 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
   const frameRef = useRef<number | null>(null);
   const pinsRef = useRef<Map<string, google.maps.Marker>>(new Map());
   const following = useRef(true);
-  const [position, setPosition] = useState<Fix | null>(lastFix);
-  const [locationState, setLocationState] = useState<'waiting' | 'ok' | 'denied' | 'unsupported'>(lastFix ? 'ok' : 'waiting');
+  const [position, setPosition] = useState<Fix | null>(() => { const last = getLastPosition(); return last ? toFix(last) : null; });
+  const [locationState, setLocationState] = useState<'waiting' | 'ok' | 'denied' | 'unsupported'>(() => (getLastPosition() ? 'ok' : 'waiting'));
   const [rides, setRides] = useState<NearbyRide[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -53,22 +57,14 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
   const [loadError, setLoadError] = useState(false);
   const selected = rides.find((item) => item.ride.id === selectedId) || null;
 
-  // The driver's own position, straight from the device.
-  // A new watch can take a while to report, so the map reopens at the last fix
-  // (e.g. after declining an offer) and also asks for the current position once.
+  // The driver's own position, from the watch shared with the presence
+  // heartbeat; it hands over the last fix at once (e.g. after declining an offer).
   useEffect(() => {
-    if (!navigator.geolocation) { setLocationState('unsupported'); return; }
-    const onFix = (fix: GeolocationPosition) => {
-      const heading = fix.coords.heading;
-      lastFix = { point: { lat: fix.coords.latitude, lng: fix.coords.longitude }, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null };
-      setPosition(lastFix);
-      setLocationState('ok');
-    };
-    const onError = (error: GeolocationPositionError) => { if (error.code === error.PERMISSION_DENIED) setLocationState('denied'); };
-    const options = { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 };
-    navigator.geolocation.getCurrentPosition(onFix, onError, options);
-    const watch = navigator.geolocation.watchPosition(onFix, onError, options);
-    return () => navigator.geolocation.clearWatch(watch);
+    if (!isLocationSupported()) { setLocationState('unsupported'); return; }
+    return watchSharedPosition(
+      (fix) => { setPosition(toFix(fix)); setLocationState('ok'); },
+      (error) => { if (error.code === error.PERMISSION_DENIED) setLocationState('denied'); }
+    );
   }, []);
 
   // Waiting rides around the driver, refreshed every 10 seconds.
