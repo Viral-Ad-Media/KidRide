@@ -5,6 +5,7 @@ import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDriverRating } from '../components/Ratings';
 import { LiveMap } from '../components/LiveMap';
+import { DriverIdleMap } from '../components/DriverIdleMap';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { formatPickupTime, formatRidePrice } from '../utils/rideData';
@@ -33,7 +34,7 @@ const OfferCountdown: React.FC<{ expiresAt: string }> = ({ expiresAt }) => {
 };
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, isOnline, setIsOnline } = useRide();
+  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline } = useRide();
   const { user } = useAuth();
   const rating = useDriverRating(user?.id);
   const locationError = useDriverLocation();
@@ -176,13 +177,15 @@ export const DriverDashboard = () => {
             </Card>
           ) : !activeRide ? (
             <Card className="text-center">
-              <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-[#1d6fff]">
-                <MapPin size={28} />
+              <div className="relative mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-blue-50 text-[#1d6fff]">
+                <span className="absolute inset-0 animate-ping rounded-[22px] bg-blue-200/60" aria-hidden="true" />
+                <MapPin size={28} className="relative" />
               </div>
               <h3 className="mt-5 text-2xl font-bold text-slate-950">Scanning the area</h3>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">
-                When a new request matches your area, it will appear here with pickup details, service type, and quick accept or decline actions.
+                When a new request matches your area, it will appear here with pickup details, service type, and quick accept or decline actions. Amber pins on the map are rides waiting nearby; tap one to see the trip.
               </p>
+              <DriverIdleMap onAccept={acceptRide} />
             </Card>
           ) : activeRide.status === RideStatus.SEARCHING_DRIVER || activeRide.status === RideStatus.REQUESTED ? (
             <Card className="overflow-hidden border-[#bfdbfe] bg-[linear-gradient(145deg,#f8fbff_0%,#ffffff_54%,#eff6ff_100%)]">

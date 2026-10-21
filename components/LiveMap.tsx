@@ -9,7 +9,7 @@ import { DriverLocation } from '../types';
 // between them (linear interpolation over GLIDE_MS) and turns to face the
 // direction of travel, so it moves like the Bolt/Uber car instead of jumping.
 
-const GLIDE_MS = 2500;
+export const GLIDE_MS = 2500;
 const STALE_MS = 30000;
 const DEFAULT_CENTER: LatLng = { lat: 51.5074, lng: -0.1278 };
 
@@ -33,9 +33,9 @@ interface LiveMapProps {
   onRoute?: (info: RouteInfo) => void;
 }
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 // Turn the short way round (e.g. 350 deg -> 10 deg goes through 0, not back through 180).
-const lerpAngle = (a: number, b: number, t: number) => a + ((((b - a) % 360) + 540) % 360 - 180) * t;
+export const lerpAngle = (a: number, b: number, t: number) => a + ((((b - a) % 360) + 540) % 360 - 180) * t;
 
 const pin = (maps: typeof google.maps, color: string): google.maps.Symbol => ({
   path: maps.SymbolPath.CIRCLE,
