@@ -264,7 +264,8 @@ export const BookRide = () => {
       )}
 
       {step === 2 && (
-        <div className="space-y-6 fade-in">
+        // Raised so the address suggestion lists open above the Next button bar.
+        <div className="relative z-20 space-y-6 fade-in">
           <h3 className="text-lg font-semibold">Where and when?</h3>
           <PlacesInput
             label="Pickup Location"
