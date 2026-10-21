@@ -1,9 +1,12 @@
 /// <reference types="google.maps" />
 import React, { useEffect, useRef, useState } from 'react';
-import { Crosshair, LocateOff, MapPinOff, X } from 'lucide-react';
+import { LocateOff, MapPinOff, X } from 'lucide-react';
 import { Button } from './UIComponents';
-import { GLIDE_MS, carIcon, lerp, lerpAngle } from './LiveMap';
+import { GLIDE_MS, lerp, lerpAngle } from './LiveMap';
+import { HtmlMarker, carHtml, createHtmlMarker, waitingPinHtml } from './mapMarkers';
+import { MapControls } from './MapControls';
 import { LatLng, useGoogleMaps } from '../services/googleMaps';
+import { BRAND, createKidRideMap } from '../services/mapStyle';
 import { apiRequest, getStoredToken, mapRide } from '../services/api';
 import { getLastPosition, isLocationSupported, watchSharedPosition } from '../services/sharedPosition';
 import { Ride } from '../types';
@@ -23,15 +26,6 @@ const toFix = (fix: GeolocationPosition): Fix => {
   return { point: { lat: fix.coords.latitude, lng: fix.coords.longitude }, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null };
 };
 
-const amberPin = (maps: typeof google.maps, selected: boolean): google.maps.Symbol => ({
-  path: maps.SymbolPath.CIRCLE,
-  scale: selected ? 13 : 10,
-  fillColor: '#f59e0b',
-  fillOpacity: 1,
-  strokeColor: selected ? '#0f172a' : '#ffffff',
-  strokeWeight: 3
-});
-
 const formatDistance = (meters: number) => (meters < 1000 ? `${meters} m away` : `${(meters / 1000).toFixed(1)} km away`);
 
 interface DriverIdleMapProps {
@@ -43,10 +37,10 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const radiusRef = useRef<google.maps.Circle | null>(null);
-  const carRef = useRef<google.maps.Marker | null>(null);
+  const carRef = useRef<HtmlMarker | null>(null);
   const carState = useRef<{ position: LatLng; rotation: number } | null>(null);
   const frameRef = useRef<number | null>(null);
-  const pinsRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const pinsRef = useRef<Map<string, { marker: HtmlMarker; selected: boolean }>>(new Map());
   const following = useRef(true);
   const [position, setPosition] = useState<Fix | null>(() => { const last = getLastPosition(); return last ? toFix(last) : null; });
   const [locationState, setLocationState] = useState<'waiting' | 'ok' | 'denied' | 'unsupported'>(() => (getLastPosition() ? 'ok' : 'waiting'));
@@ -102,18 +96,18 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
     if (mapsState.status !== 'ready' || !containerRef.current || !hasPosition || mapRef.current) return;
     const maps = mapsState.maps;
     const start = latestPosition.current!.point;
-    const map = new maps.Map(containerRef.current, { center: start, zoom: 14, disableDefaultUI: true, zoomControl: true, clickableIcons: false });
+    const map = createKidRideMap(maps, containerRef.current, { center: start, zoom: 14 });
     mapRef.current = map;
-    radiusRef.current = new maps.Circle({ map, center: start, radius: 5000, strokeColor: '#1d6fff', strokeOpacity: 0.25, strokeWeight: 1, fillColor: '#1d6fff', fillOpacity: 0.04, clickable: false });
+    radiusRef.current = new maps.Circle({ map, center: start, radius: 5000, strokeColor: BRAND.blue, strokeOpacity: 0.3, strokeWeight: 1.5, fillColor: BRAND.sky, fillOpacity: 0.05, clickable: false });
     // Once the driver pans away, stop re-centring until they tap the recenter button.
     map.addListener('dragstart', () => { following.current = false; });
     map.addListener('click', () => setSelectedId(null));
     const pins = pinsRef.current;
     return () => {
-      pins.forEach((marker) => marker.setMap(null));
+      pins.forEach((pin) => pin.marker.remove());
       pins.clear();
       radiusRef.current?.setMap(null);
-      carRef.current?.setMap(null);
+      carRef.current?.remove();
       carRef.current = null;
       carState.current = null;
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -132,7 +126,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
 
     if (!carRef.current || !from) {
       const rotation = position.heading ?? 0;
-      carRef.current = new maps.Marker({ map: mapRef.current, position: target, icon: carIcon(maps, rotation, '#1d6fff'), title: 'You', zIndex: 3 });
+      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.blue, rotation), title: 'You', zIndex: 3 });
       carState.current = { position: target, rotation };
       return;
     }
@@ -145,7 +139,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
       const point = { lat: lerp(from.position.lat, target.lat, t), lng: lerp(from.position.lng, target.lng, t) };
       const rotation = lerpAngle(from.rotation, targetRotation, t);
       carRef.current?.setPosition(point);
-      carRef.current?.setIcon(carIcon(maps, rotation, '#1d6fff'));
+      carRef.current?.setRotation(rotation);
       carState.current = { position: point, rotation };
       if (t < 1) frameRef.current = requestAnimationFrame(step);
     };
@@ -162,16 +156,19 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
       if (!ride.pickupCoords) return;
       keep.add(ride.id);
       const isSelected = ride.id === selectedId;
-      let marker = pins.get(ride.id);
-      if (!marker) {
-        marker = new maps.Marker({ map: mapRef.current!, position: ride.pickupCoords, title: `Pickup: ${ride.pickupLocation}`, zIndex: 2 });
-        marker.addListener('click', () => { setAcceptError(null); setSelectedId(ride.id); });
-        pins.set(ride.id, marker);
+      let pin = pins.get(ride.id);
+      if (!pin) {
+        const marker = createHtmlMarker(maps, { map: mapRef.current!, position: ride.pickupCoords, html: waitingPinHtml(isSelected), title: `Pickup: ${ride.pickupLocation}`, zIndex: 2, onClick: () => { setAcceptError(null); setSelectedId(ride.id); } });
+        pin = { marker, selected: isSelected };
+        pins.set(ride.id, pin);
+      } else if (pin.selected !== isSelected) {
+        // Only redraw a pin when its selection changes, not on every poll.
+        pin.marker.setHtml(waitingPinHtml(isSelected));
+        pin.selected = isSelected;
       }
-      marker.setIcon(amberPin(maps, isSelected));
-      marker.setZIndex(isSelected ? 4 : 2);
+      pin.marker.setZIndex(isSelected ? 4 : 2);
     });
-    pins.forEach((marker, id) => { if (!keep.has(id)) { marker.setMap(null); pins.delete(id); } });
+    pins.forEach((pin, id) => { if (!keep.has(id)) { pin.marker.remove(); pins.delete(id); } });
   }, [mapsState.status, rides, selectedId, hasPosition]);
 
   const recenter = () => {
@@ -229,17 +226,18 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
         )}
         {position && mapsState.status === 'ready' && (
           <>
-            <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow">
-              <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-500" />
+            <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.15)] backdrop-blur">
+              <span className="relative inline-flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+              </span>
               {rides.length ? `${rides.length} waiting within 5 km` : 'No rides waiting within 5 km'}
             </div>
-            <button type="button" onClick={recenter} aria-label="Recenter on my location" className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow hover:bg-slate-50">
-              <Crosshair size={18} />
-            </button>
+            <MapControls map={mapRef} onRecenter={recenter} recenterLabel="Recenter on my location" />
           </>
         )}
         {selected && (
-          <div className="absolute bottom-3 left-3 right-3 rounded-[20px] bg-white p-4 shadow-xl" role="dialog" aria-label="Waiting ride">
+          <div className="absolute bottom-3 left-3 right-3 z-20 rounded-[24px] border border-slate-100 bg-white p-4 shadow-[0_20px_45px_rgba(15,23,42,0.22)] sm:left-auto sm:w-[360px]" role="dialog" aria-label="Waiting ride">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
