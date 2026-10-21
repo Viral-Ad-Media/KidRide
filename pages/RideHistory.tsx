@@ -68,10 +68,10 @@ export const RideHistory = () => {
   const TabButton = ({ id, label }: { id: typeof activeTab; label: string }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+      className={`-mb-px px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
         activeTab === id
-          ? 'border-brand text-brand-deep'
-          : 'border-transparent text-gray-500 hover:text-gray-700'
+          ? 'border-brand-deep text-ink'
+          : 'border-transparent text-muted hover:text-ink'
       }`}
     >
       {label}
@@ -80,17 +80,13 @@ export const RideHistory = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">My Rides</h2>
-        <Button variant="ghost" className="text-brand-deep font-semibold" onClick={() => navigate('/book')}>
-          + Book Ride
-        </Button>
-      </div>
-
-      <div className="flex border-b border-gray-200 mb-6">
-        <TabButton id="active" label="Active" />
-        <TabButton id="upcoming" label="Upcoming" />
-        <TabButton id="past" label="Past" />
+      <div className="mb-6 flex items-center justify-between border-b border-line">
+        <div className="flex">
+          <TabButton id="active" label="Active" />
+          <TabButton id="upcoming" label="Upcoming" />
+          <TabButton id="past" label="Past" />
+        </div>
+        <button type="button" onClick={() => navigate('/book')} className="mb-2 hidden text-sm font-semibold text-brand-deep sm:block">+ Book a ride</button>
       </div>
 
       <div className="space-y-4 animate-fade-in">
@@ -103,7 +99,7 @@ export const RideHistory = () => {
                 </div>
                 <h3 className="font-bold text-gray-900">No active rides</h3>
                 <p className="text-sm text-gray-500 mb-4">You don't have any trips in progress.</p>
-                <Button onClick={() => navigate('/book')}>Book a Ride</Button>
+                <Button onClick={() => navigate('/book')} className="mx-auto">Book a ride</Button>
               </div>
             ) : (
               <Card onClick={() => navigate(`/tracking/${activeRide.id}`)} className="border-l-4 border-l-green-500">

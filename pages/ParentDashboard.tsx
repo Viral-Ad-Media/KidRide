@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
-import { ArrowRight, Car, Plus, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Car, Plus, ShieldCheck } from 'lucide-react';
 import { Button, Card, StatusChip } from '../components/UIComponents';
 import { useAuth } from '../contexts/AuthContext';
 import { useRide } from '../contexts/RideContext';
@@ -32,6 +32,8 @@ export const ParentDashboard = () => {
   const primaryActionPath = hasChildren ? '/book' : '/add-child';
   const hasRecordedActivity = activityData.some((entry) => entry.rides > 0);
   const firstName = user?.name.split(' ')[0] || 'Parent';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   useEffect(() => {
     const token = getStoredToken();
@@ -73,48 +75,34 @@ export const ParentDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[34px] bg-gradient-to-br from-brand-deep via-brand-deep to-brand p-6 text-white shadow-float sm:p-8">
-        <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/88">Parent Workspace</p>
-            <h2 className="mt-3 text-4xl font-bold text-balance sm:text-5xl">
-              Good morning, {firstName}.
-            </h2>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-white/78 sm:text-base">
-              Keep child profiles, ride activity, and quick actions in one place with a layout that works just as well on a laptop as it does on your phone.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-            <Button onClick={() => navigate(primaryActionPath)} className="bg-white text-slate-950 hover:bg-slate-100">
-              {hasChildren ? 'Book a Ride' : 'Add a Child'}
-            </Button>
-            <Button variant="secondary" onClick={() => navigate('/profile')} className="border-white/30 bg-white/10 text-white hover:bg-white/16">
-              Open Profile
-            </Button>
-          </div>
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-title font-extrabold tracking-tight sm:text-headline">{greeting}, {firstName}.</h2>
+          <p className="mt-1 text-sm text-muted">{hasChildren ? 'Where is the next ride going?' : 'Add a child to book your first ride.'}</p>
         </div>
+        <Button onClick={() => navigate(primaryActionPath)} className="sm:w-auto sm:px-8">
+          {hasChildren ? <Car size={18} /> : <Plus size={18} />}
+          {hasChildren ? 'Book a ride' : 'Add a child'}
+        </Button>
+      </section>
 
-        {activeRide && (
-          <div className="mt-8 grid gap-4 rounded-[28px] border border-white/15 bg-white/10 p-5 backdrop-blur-xl lg:grid-cols-[1fr,auto] lg:items-center">
-            <div>
+      {activeRide && (
+        <Card onClick={() => navigate(`/tracking/${activeRide.id}`)} className="border-brand/40">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 <StatusChip status={activeRide.status} />
-                {activeRide.tripCode && (
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65">Trip Code {activeRide.tripCode}</span>
-                )}
+                {activeRide.tripCode && <span className="text-xs font-semibold text-muted">Trip code {activeRide.tripCode}</span>}
               </div>
-              <p className="mt-4 text-xl font-bold text-white">Live ride in progress</p>
-              <p className="mt-2 text-sm text-white/75">
+              <p className="mt-3 text-lead font-bold">Ride in progress</p>
+              <p className="mt-1 truncate text-sm text-muted">
                 {activeRide.pickupLocation} <ArrowRight size={14} className="mx-1 inline" /> {activeRide.dropoffLocation}
               </p>
             </div>
-            <Button onClick={() => navigate(`/tracking/${activeRide.id}`)} className="bg-slate-950 text-white hover:bg-slate-900">
-              Track Live Ride
-            </Button>
+            <Button className="sm:w-auto">Track live</Button>
           </div>
-        )}
-      </section>
+        </Card>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)]">
         <div className="space-y-6">
@@ -122,13 +110,7 @@ export const ParentDashboard = () => {
 
           <Card>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Child Profiles</p>
-                <h3 className="mt-2 text-2xl font-bold text-slate-950">Who needs a ride today?</h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  Every ride now starts from a real child profile saved to your account.
-                </p>
-              </div>
+              <h3 className="text-lead font-bold">Your children</h3>
               <Button variant="secondary" onClick={() => navigate('/add-child')} className="sm:w-auto">
                 <Plus size={16} />
                 Add Child
@@ -181,33 +163,11 @@ export const ParentDashboard = () => {
             )}
           </Card>
 
-          <Card>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Community</p>
-                <h3 className="mt-2 text-2xl font-bold text-slate-950">Carpools</h3>
-              </div>
-              <button onClick={() => navigate('/carpools')} className="text-sm font-semibold text-brand-deep">
-                Open Board
-              </button>
-            </div>
-
-            <div className="mt-6 rounded-[26px] border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center">
-              <h4 className="text-xl font-bold text-slate-950">No live carpool offers yet</h4>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-500">
-                Community carpools will appear here once verified families publish real ride offers.
-              </p>
-              <Button variant="secondary" onClick={() => navigate('/carpools')} className="mt-5 sm:w-auto">
-                View Carpools
-              </Button>
-            </div>
-          </Card>
         </div>
 
         <div className="space-y-6">
           <Card>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Activity</p>
-            <h3 className="mt-2 text-2xl font-bold text-slate-950">Ride activity this week</h3>
+            <h3 className="text-lead font-bold">This week</h3>
 
             {isActivityLoading ? (
               <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-12 text-center text-sm text-slate-500">
@@ -236,39 +196,13 @@ export const ParentDashboard = () => {
             )}
           </Card>
 
-          <Card className="overflow-hidden bg-gradient-to-br from-accent/10 via-white to-surface-2">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-white text-brand-deep shadow-float">
-              <ShieldCheck size={22} />
+          <Card>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lead font-bold">Safety</h3>
+              <ShieldCheck size={20} className="text-brand-deep" />
             </div>
-            <h3 className="mt-5 text-2xl font-bold text-slate-950">Ready to verify as a parent driver?</h3>
-            <p className="mt-3 text-sm leading-7 text-slate-500">
-              Complete verification once and unlock a stronger trust signal for families who know you personally.
-            </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[22px] bg-white px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Perk</p>
-                <p className="mt-2 font-semibold text-slate-950">Visible trust badge</p>
-              </div>
-              <div className="rounded-[22px] bg-white px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Flow</p>
-                <p className="mt-2 font-semibold text-slate-950">Application + review</p>
-              </div>
-            </div>
-            <Button onClick={() => navigate('/profile')} className="mt-6">
-              <Sparkles size={16} />
-              Open Verification
-            </Button>
-          </Card>
-
-          <Card className="bg-slate-950 text-white">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/88">Planning</p>
-            <h3 className="mt-2 text-2xl font-bold">Keep the next ride one tap away.</h3>
-            <p className="mt-3 text-sm leading-7 text-white/68">
-              Use saved child profiles and live ride history to move faster during school pickups, activities, and last-minute schedule changes.
-            </p>
-            <Button onClick={() => navigate(primaryActionPath)} className="mt-6 bg-white text-slate-950 hover:bg-slate-100">
-              {hasChildren ? 'Book the Next Ride' : 'Create First Child'}
-            </Button>
+            <p className="mt-2 text-sm text-muted">Every driver is identity-checked and reviewed before their first ride. Trip codes confirm the right child meets the right driver.</p>
+            <button type="button" onClick={() => navigate('/safety')} className="mt-3 text-sm font-semibold text-brand-deep">Safety tools</button>
           </Card>
         </div>
       </div>

@@ -276,7 +276,7 @@ export const BookRide = () => {
         <button onClick={() => (step > 1 ? setStep(step - 1) : navigate(-1))} className="rounded-full p-2 hover:bg-gray-100">
           <ArrowLeft size={24} />
         </button>
-        <h2 className="text-xl font-bold">Book a Ride</h2>
+        <span className="text-sm font-semibold text-muted">Step {step} of 3</span>
       </div>
 
       {quoteError && <p className="mb-4 text-red-600">{quoteError}</p>}
@@ -440,7 +440,8 @@ export const BookRide = () => {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white p-6 md:relative md:mt-8 md:border-none md:bg-transparent md:p-0">
+      {/* Sits above the phone tab bar; inline on larger screens. */}
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 border-t border-line bg-white px-4 py-3 lg:relative lg:bottom-auto lg:mt-8 lg:border-none lg:bg-transparent lg:p-0">
         <div className="mx-auto w-full max-w-4xl">
           <Button onClick={handleNext} fullWidth disabled={isSearching || isScheduling || (step === 3 && quote === null) || (hasChildren && !canProceed)}>
             {!hasChildren ? 'Add a Child First' : step === 3 ? (when === 'later' ? (isScheduling ? 'Scheduling...' : 'Confirm & Schedule') : 'Confirm & Book') : 'Next'}

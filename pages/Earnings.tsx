@@ -54,7 +54,6 @@ export const Earnings = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h2 className="text-2xl font-bold text-gray-900">Earnings</h2>
 
       <div className="rounded-2xl bg-brand-deep p-6 text-white shadow-lg shadow-brand-deep/20">
         <p className="mb-1 font-medium text-blue-100">Completed Ride Earnings</p>

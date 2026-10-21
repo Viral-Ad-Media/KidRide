@@ -186,8 +186,6 @@ export const Profile = () => {
 
     return (
     <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-        
         {/* User Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="w-16 h-16 bg-brand/15 rounded-full flex items-center justify-center overflow-hidden">
@@ -260,24 +258,23 @@ export const Profile = () => {
         </div>
 
         {/* Refer a Driver Section */}
-        <div className="bg-gradient-to-r from-purple-500 to-[#6C63FF] p-6 rounded-2xl shadow-sm text-white relative overflow-hidden">
-             <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-2">
-                    <UserPlus size={24} />
-                    <h3 className="font-bold text-lg">Refer a Driver</h3>
+        <div className="rounded-card border border-line bg-white p-5">
+             <div>
+                <div className="flex items-center gap-2">
+                    <UserPlus size={20} className="text-brand-deep" />
+                    <h3 className="text-lead font-bold">Refer a driver</h3>
                 </div>
-                <p className="text-white/90 text-sm mb-4">
-                    Know someone trustworthy? Invite a spouse, nanny, or friend to create a driver profile.
+                <p className="mt-2 text-sm text-muted">
+                    Know someone trustworthy? Invite a spouse, nanny or friend to create a driver profile.
                 </p>
-                <button 
+                <button
                     onClick={handleShare}
-                    className="bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-opacity-90 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-deep"
                 >
-                    <Share2 size={16} /> Share Invite Link
+                    <Share2 size={16} /> Share invite link
                 </button>
-                {shareNote && <p className="mt-3 text-sm text-white/90">{shareNote}</p>}
+                {shareNote && <p className="mt-3 text-sm text-muted">{shareNote}</p>}
              </div>
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full transform translate-x-10 -translate-y-10"></div>
         </div>
 
         {/* Settings Links */}

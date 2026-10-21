@@ -96,8 +96,8 @@ export const ParentUpcomingRides: React.FC = () => {
 
   return (
     <Card>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Upcoming</p>
-      <h3 className="mt-2 text-2xl font-bold text-slate-950">Rides booked for later</h3>
+
+      <h3 className="text-lead font-bold">Upcoming rides</h3>
       {error && <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">{error}</p>}
       {rides.length === 0 ? (
         <p className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
@@ -177,8 +177,8 @@ export const DriverUpcomingRides: React.FC<{ refreshKey?: string }> = ({ refresh
       )}
       {rides.length > 0 && (
         <Card>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Upcoming</p>
-          <h3 className="mt-2 text-xl font-bold text-slate-950">Scheduled rides you accepted</h3>
+
+          <h3 className="text-lead font-bold">Upcoming rides</h3>
           <ul className="mt-4 space-y-3" aria-label="Your upcoming rides">
             {rides.map((ride) => (
               <li key={ride.id} className="rounded-[20px] bg-slate-50 p-4">

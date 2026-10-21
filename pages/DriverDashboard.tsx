@@ -121,41 +121,23 @@ export const DriverDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[34px] bg-gradient-to-br from-ink via-ink to-brand-deep p-6 text-white shadow-[0_28px_70px_rgba(15,23,42,0.25)] sm:p-8">
-        <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200/88">Driver Workspace</p>
-            <h2 className="mt-3 text-4xl font-bold text-balance sm:text-5xl">Stay ready for the next family pickup.</h2>
-            <p className="mt-4 max-w-xl text-sm leading-7 text-white/72 sm:text-base">
-              Review open jobs, manage live ride status, and keep your driver state clear across mobile and desktop.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/10 p-5 backdrop-blur-xl sm:min-w-[320px]">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-white">Availability</p>
-                <p className="mt-1 text-xs text-white/60">{isOnline ? 'You are visible to nearby ride requests.' : 'Go online to receive new requests.'}</p>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" checked={isOnline} onChange={() => setIsOnline(!isOnline)} className="peer sr-only" />
-                <div className="after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all h-7 w-12 rounded-full bg-white/25 transition peer-checked:bg-brand peer-checked:after:translate-x-5" />
-              </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[22px] bg-white/10 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Completed Earnings</p>
-                <p className="mt-3 text-2xl font-bold text-white">{isMetricsLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</p>
-              </div>
-              <div className="rounded-[22px] bg-white/10 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Completed Trips</p>
-                <p className="mt-3 text-2xl font-bold text-white">{isMetricsLoading ? '--' : completedCount}</p>
-                <p className="mt-2 text-xs text-white/70">{rating?.count && rating.average !== null ? `★ ${rating.average.toFixed(1)} from ${rating.count} ${rating.count === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}</p>
-              </div>
-            </div>
-          </div>
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-title font-extrabold tracking-tight sm:text-headline">{isOnline ? "You're online" : "You're offline"}</h2>
+          <p className="mt-1 text-sm text-muted">{isOnline ? 'Nearby ride requests will appear here.' : 'Go online to receive ride requests.'}</p>
         </div>
+        <label className="inline-flex cursor-pointer items-center gap-3 self-start rounded-full border border-line bg-white py-2 pl-4 pr-2 sm:self-auto">
+          <span className="text-sm font-semibold">{isOnline ? 'Online' : 'Offline'}</span>
+          <input type="checkbox" checked={isOnline} onChange={() => setIsOnline(!isOnline)} className="peer sr-only" />
+          <span className="relative h-7 w-12 rounded-full bg-line transition after:absolute after:left-[3px] after:top-[3px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-success peer-checked:after:translate-x-5" />
+        </label>
       </section>
+
+      <div className="grid grid-cols-3 divide-x divide-line rounded-card border border-line bg-white">
+        <div className="px-4 py-4"><p className="text-xs text-muted">Earned</p><p className="mt-1 text-title font-extrabold tabular-nums">{isMetricsLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</p></div>
+        <div className="px-4 py-4"><p className="text-xs text-muted">Trips</p><p className="mt-1 text-title font-extrabold tabular-nums">{isMetricsLoading ? '--' : completedCount}</p></div>
+        <div className="px-4 py-4"><p className="text-xs text-muted">Rating</p><p className="mt-1 text-title font-extrabold tabular-nums">{rating?.count && rating.average !== null ? `★ ${rating.average.toFixed(1)}` : '–'}</p></div>
+      </div>
 
       <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
 
@@ -175,7 +157,7 @@ export const DriverDashboard = () => {
               </div>
               <h3 className="mt-5 text-2xl font-bold text-slate-950">Go online to receive trip requests</h3>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">
-                Your workspace stays available on desktop, but new ride offers only appear when you set yourself to online.
+                New ride requests only appear while you are online.
               </p>
             </Card>
           ) : !activeRide ? (
@@ -319,29 +301,11 @@ export const DriverDashboard = () => {
 
         <div className="space-y-6">
           <Card>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-[24px] bg-brand/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Availability</p>
-                <p className="mt-2 text-3xl font-bold text-slate-950">{isOnline ? 'Online' : 'Offline'}</p>
-              </div>
-
-              <div className="rounded-[24px] bg-amber-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Current Ride</p>
-                <p className="mt-2 text-2xl font-bold text-slate-950">
-                  {activeRide ? humanizeStatus(activeRide.status) : 'No active ride'}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-slate-950 text-white">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/88">Driver Notes</p>
-            <h3 className="mt-3 text-2xl font-bold">Quick rules for smoother handoffs.</h3>
-            <div className="mt-5 space-y-4 text-sm leading-7 text-white/68">
-              <p>Confirm the trip code and safe word before loading the child.</p>
-              <p>Use the driver status actions in order so parent tracking stays accurate.</p>
-              <p>Declined rides stay dismissed for your account until another request appears.</p>
-            </div>
+            <h3 className="text-lead font-bold">Before every pickup</h3>
+            <ul className="mt-3 space-y-2 text-sm text-muted">
+              <li>Confirm the trip code and safe word before the child gets in.</li>
+              <li>Tap the status buttons in order so the parent's tracking stays accurate.</li>
+            </ul>
           </Card>
         </div>
       </div>
