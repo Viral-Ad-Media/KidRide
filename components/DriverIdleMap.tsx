@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LocateOff, MapPinOff, X } from 'lucide-react';
 import { Button } from './UIComponents';
-import { GLIDE_MS, lerp, lerpAngle } from './LiveMap';
+import { CarMotion } from '../services/carMotion';
 import { HtmlMarker, carHtml, createHtmlMarker, waitingPinHtml } from './mapMarkers';
 import { MapControls } from './MapControls';
 import { LatLng, useGoogleMaps } from '../services/googleMaps';
@@ -19,11 +19,11 @@ import { formatPickupTime, formatRidePrice } from '../utils/rideData';
 const POLL_MS = 10000;
 
 interface NearbyRide { ride: Ride; distanceMeters: number; declined: boolean }
-interface Fix { point: LatLng; heading: number | null }
+interface Fix { point: LatLng; heading: number | null; recordedAt: number }
 
 const toFix = (fix: GeolocationPosition): Fix => {
   const heading = fix.coords.heading;
-  return { point: { lat: fix.coords.latitude, lng: fix.coords.longitude }, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null };
+  return { point: { lat: fix.coords.latitude, lng: fix.coords.longitude }, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null, recordedAt: fix.timestamp };
 };
 
 const formatDistance = (meters: number) => (meters < 1000 ? `${meters} m away` : `${(meters / 1000).toFixed(1)} km away`);
@@ -38,8 +38,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const radiusRef = useRef<google.maps.Circle | null>(null);
   const carRef = useRef<HtmlMarker | null>(null);
-  const carState = useRef<{ position: LatLng; rotation: number } | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const motionRef = useRef<CarMotion | null>(null);
   const pinsRef = useRef<Map<string, { marker: HtmlMarker; selected: boolean }>>(new Map());
   const following = useRef(true);
   const [position, setPosition] = useState<Fix | null>(() => { const last = getLastPosition(); return last ? toFix(last) : null; });
@@ -107,10 +106,10 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
       pins.forEach((pin) => pin.marker.remove());
       pins.clear();
       radiusRef.current?.setMap(null);
+      motionRef.current?.stop();
+      motionRef.current = null;
       carRef.current?.remove();
       carRef.current = null;
-      carState.current = null;
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
       mapRef.current = null;
     };
   }, [mapsState.status, hasPosition]);
@@ -120,30 +119,14 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept }) => {
     if (mapsState.status !== 'ready' || !mapRef.current || !position) return;
     const maps = mapsState.maps;
     const target = position.point;
-    const from = carState.current;
     radiusRef.current?.setCenter(target);
     if (following.current) mapRef.current.panTo(target);
 
-    if (!carRef.current || !from) {
-      const rotation = position.heading ?? 0;
-      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.sky, rotation), title: 'You', zIndex: 3 });
-      carState.current = { position: target, rotation };
-      return;
+    if (!carRef.current || !motionRef.current) {
+      carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.sky, position.heading ?? 0), title: 'You', zIndex: 3 });
+      motionRef.current = new CarMotion(carRef.current);
     }
-    const moved = maps.geometry.spherical.computeDistanceBetween(from.position, target) > 3;
-    const targetRotation = position.heading ?? (moved ? maps.geometry.spherical.computeHeading(from.position, target) : from.rotation);
-    if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    const begin = performance.now();
-    const step = (time: number) => {
-      const t = Math.min(1, (time - begin) / GLIDE_MS);
-      const point = { lat: lerp(from.position.lat, target.lat, t), lng: lerp(from.position.lng, target.lng, t) };
-      const rotation = lerpAngle(from.rotation, targetRotation, t);
-      carRef.current?.setPosition(point);
-      carRef.current?.setRotation(rotation);
-      carState.current = { position: point, rotation };
-      if (t < 1) frameRef.current = requestAnimationFrame(step);
-    };
-    frameRef.current = requestAnimationFrame(step);
+    motionRef.current.update({ position: target, heading: position.heading, recordedAt: position.recordedAt });
   }, [mapsState.status, position?.point.lat, position?.point.lng, position?.heading]);
 
   // Amber pins for the waiting rides.

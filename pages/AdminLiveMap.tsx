@@ -6,6 +6,7 @@ import { HtmlMarker, carHtml, createHtmlMarker, dotHtml, waitingPinHtml } from '
 import { MapControls } from '../components/MapControls';
 import { useGoogleMaps } from '../services/googleMaps';
 import { BRAND, createKidRideMap } from '../services/mapStyle';
+import { CarMotion } from '../services/carMotion';
 import { LiveDriver, LiveMapSnapshot, errorMessage, fetchLiveMap } from '../services/adminApi';
 
 // Admin live map in KidRide's own style: every online driver (green = free,
@@ -25,7 +26,7 @@ export const AdminLiveMap = () => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const driverMarkers = useRef(new Map<string, { marker: HtmlMarker; status: LiveDriver['status'] }>());
+  const driverMarkers = useRef(new Map<string, { marker: HtmlMarker; motion: CarMotion; status: LiveDriver['status'] }>());
   const rideMarkers = useRef(new Map<string, { marker: HtmlMarker; kind: string }>());
   const fittedOnce = useRef(false);
   const [snapshot, setSnapshot] = useState<LiveMapSnapshot | null>(null);
@@ -61,17 +62,19 @@ export const AdminLiveMap = () => {
       seen.add(driver.id);
       const color = driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR;
       const existing = driverMarkers.current.get(driver.id);
+      const fix = { position: { lat: driver.lat, lng: driver.lng }, heading: driver.heading, recordedAt: Date.parse(driver.updatedAt) || undefined };
       if (existing) {
-        existing.marker.setPosition({ lat: driver.lat, lng: driver.lng });
-        if (existing.status !== driver.status) { existing.marker.setHtml(carHtml(color, driver.heading ?? 0)); existing.status = driver.status; }
-        existing.marker.setRotation(driver.heading ?? 0);
+        if (existing.status !== driver.status) { existing.marker.setHtml(carHtml(color, existing.motion.getRotation())); existing.status = driver.status; }
+        existing.motion.update(fix);
       } else {
-        const marker = createHtmlMarker(maps, { map, position: { lat: driver.lat, lng: driver.lng }, html: carHtml(color, driver.heading ?? 0), title: driver.name, zIndex: 3, onClick: () => setSelected(driver.id) });
-        driverMarkers.current.set(driver.id, { marker, status: driver.status });
+        const marker = createHtmlMarker(maps, { map, position: fix.position, html: carHtml(color, driver.heading ?? 0), title: driver.name, zIndex: 3, onClick: () => setSelected(driver.id) });
+        const motion = new CarMotion(marker);
+        motion.update(fix);
+        driverMarkers.current.set(driver.id, { marker, motion, status: driver.status });
       }
     }
     for (const [id, entry] of driverMarkers.current) {
-      if (!seen.has(id)) { entry.marker.remove(); driverMarkers.current.delete(id); }
+      if (!seen.has(id)) { entry.motion.stop(); entry.marker.remove(); driverMarkers.current.delete(id); }
     }
 
     const seenStops = new Set<string>();
