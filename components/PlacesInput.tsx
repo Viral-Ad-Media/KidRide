@@ -84,7 +84,7 @@ export const PlacesInput: React.FC<PlacesInputProps> = ({ label, placeholder, va
         onFocus={() => suggestions.length && setOpen(true)}
       />
       {open && suggestions.length > 0 && (
-        <ul role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-30 -mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <ul role="listbox" aria-label={`${label} suggestions`} className="absolute left-0 right-0 z-30 -mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
           {suggestions.map((suggestion) => (
             <li key={suggestion.id}>
               <button type="button" role="option" aria-selected="false" onMouseDown={(event) => event.preventDefault()} onClick={() => void choose(suggestion)} className="flex w-full items-start gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-blue-50">
