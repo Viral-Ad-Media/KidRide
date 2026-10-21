@@ -5,15 +5,14 @@ import { LatLng, computeRoute, useGoogleMaps } from '../services/googleMaps';
 import { BRAND, createDashedLine, createKidRideMap, createRouteLine } from '../services/mapStyle';
 import { DriverLocation } from '../types';
 import { HtmlMarker, carHtml, createHtmlMarker, stopPinHtml } from './mapMarkers';
+import { CarMotion } from '../services/carMotion';
 import { MapControls } from './MapControls';
 
 // Trip map in KidRide's own style: pickup and drop-off pins with label chips,
 // the driving route in the brand blue, a dashed line from the driver to the
-// pickup, and the driver's car. GPS updates arrive every few seconds; the car
-// glides between them (linear interpolation over GLIDE_MS) and turns to face
-// the direction of travel, so it moves like the Bolt/Uber car instead of jumping.
+// pickup, and the driver's car. GPS updates arrive every few seconds; CarMotion
+// keeps the car rolling between them along the road, facing the way it drives.
 
-export const GLIDE_MS = 2500;
 const STALE_MS = 30000;
 const DEFAULT_CENTER: LatLng = { lat: 51.5074, lng: -0.1278 };
 // Extra room at the bottom: the tracking sheet and status card overlap the map edge.
@@ -42,17 +41,13 @@ interface LiveMapProps {
   onRoute?: (info: RouteInfo) => void;
 }
 
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-// Turn the short way round (e.g. 350 deg -> 10 deg goes through 0, not back through 180).
-export const lerpAngle = (a: number, b: number, t: number) => a + ((((b - a) % 360) + 540) % 360 - 180) * t;
-
 export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, driverLocation, nextStop = 'pickup', pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', className = 'h-full', onRoute }) => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const carRef = useRef<HtmlMarker | null>(null);
-  const carState = useRef<{ position: LatLng; rotation: number } | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const motionRef = useRef<CarMotion | null>(null);
+  const pathsRef = useRef<{ trip: LatLng[]; approach: LatLng[] }>({ trip: [], approach: [] });
   const approachRef = useRef<google.maps.Polyline | null>(null);
   const stopsRef = useRef<{ pickup?: google.maps.LatLng; dropoff?: google.maps.LatLng }>({});
   const boundsRef = useRef<google.maps.LatLngBounds | null>(null);
@@ -62,6 +57,9 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 5000); return () => clearInterval(timer); }, []);
+
+  // The car snaps to the roads it is expected to drive: to the pickup, then the trip.
+  const syncRoutes = () => motionRef.current?.setRoutes([pathsRef.current.approach, pathsRef.current.trip]);
 
   const publish = (patch: RouteInfo) => {
     routeInfo.current = { ...routeInfo.current, ...patch };
@@ -88,9 +86,12 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
       }));
     };
     const toLatLng = (point: google.maps.LatLng): LatLng => ({ lat: point.lat(), lng: point.lng() });
+    pathsRef.current = { trip: [], approach: [] };
 
     computeRoute(maps, pickupCoords || pickup, dropoffCoords || dropoff).then((route) => {
       routeLine.setPath(route.path);
+      pathsRef.current.trip = route.path.map(toLatLng);
+      syncRoutes();
       const start = route.path[0];
       const end = route.path[route.path.length - 1];
       stopsRef.current = { pickup: start, dropoff: end };
@@ -115,10 +116,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
       approachRef.current?.setMap(null);
       approachRef.current = null;
       markers.forEach((marker) => marker.remove());
+      motionRef.current?.stop();
+      motionRef.current = null;
       carRef.current?.remove();
       carRef.current = null;
-      carState.current = null;
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
       mapRef.current = null;
     };
     // Rebuild only when the trip itself changes.
@@ -129,31 +130,14 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     if (mapsState.status !== 'ready' || !mapRef.current || !driverLocation) return;
     const maps = mapsState.maps;
     const target: LatLng = { lat: driverLocation.latitude, lng: driverLocation.longitude };
-    const from = carState.current;
-
-    if (!carRef.current || !from) {
+    if (!carRef.current || !motionRef.current) {
       const rotation = typeof driverLocation.heading === 'number' ? driverLocation.heading : 0;
       carRef.current = createHtmlMarker(maps, { map: mapRef.current, position: target, html: carHtml(BRAND.sky, rotation), title: 'Driver', zIndex: 3 });
-      carState.current = { position: target, rotation };
-    } else {
-      const moved = maps.geometry.spherical.computeDistanceBetween(from.position, target) > 3;
-      // Prefer the phone's compass heading; otherwise work it out from the movement.
-      const targetRotation = typeof driverLocation.heading === 'number'
-        ? driverLocation.heading
-        : moved ? maps.geometry.spherical.computeHeading(from.position, target) : from.rotation;
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-      const start = performance.now();
-      const step = (time: number) => {
-        const t = Math.min(1, (time - start) / GLIDE_MS);
-        const position = { lat: lerp(from.position.lat, target.lat, t), lng: lerp(from.position.lng, target.lng, t) };
-        const rotation = lerpAngle(from.rotation, targetRotation, t);
-        carRef.current?.setPosition(position);
-        carRef.current?.setRotation(rotation);
-        carState.current = { position, rotation };
-        if (t < 1) frameRef.current = requestAnimationFrame(step);
-      };
-      frameRef.current = requestAnimationFrame(step);
+      motionRef.current = new CarMotion(carRef.current);
+      syncRoutes();
     }
+    const recordedAt = Date.parse(driverLocation.recordedAt);
+    motionRef.current.update({ position: target, heading: driverLocation.heading, recordedAt: Number.isFinite(recordedAt) ? recordedAt : undefined });
 
     // Driver ETA to the next stop (and the dashed approach line), at most once a minute.
     const stop = stopsRef.current[nextStop] || (nextStop === 'pickup' ? pickupCoords : dropoffCoords);
@@ -164,13 +148,20 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
         .then((route) => {
           publish({ driverEta: route.duration });
           approachRef.current?.setPath(nextStop === 'pickup' ? route.path : []);
+          pathsRef.current.approach = nextStop === 'pickup' ? route.path.map((point) => ({ lat: point.lat(), lng: point.lng() })) : [];
+          syncRoutes();
         })
         .catch(() => undefined);
     }
   }, [mapsState.status, driverLocation?.latitude, driverLocation?.longitude, driverLocation?.heading, nextStop]);
 
   // Once the child is picked up the approach line is no longer relevant.
-  useEffect(() => { if (nextStop !== 'pickup') approachRef.current?.setPath([]); }, [nextStop]);
+  useEffect(() => {
+    if (nextStop === 'pickup') return;
+    approachRef.current?.setPath([]);
+    pathsRef.current.approach = [];
+    syncRoutes();
+  }, [nextStop]);
 
   const recenter = () => {
     const map = mapRef.current;
@@ -178,7 +169,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     const bounds = boundsRef.current;
     if (bounds) {
       const framed = new mapsState.maps.LatLngBounds(bounds.getSouthWest(), bounds.getNorthEast());
-      const car = carState.current?.position;
+      const car = motionRef.current?.getPosition();
       if (car) framed.extend(car);
       map.fitBounds(framed, FIT_PADDING);
     } else if (pickupCoords) map.panTo(pickupCoords);
