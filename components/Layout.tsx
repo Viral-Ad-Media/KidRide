@@ -4,8 +4,6 @@ import { BrandMark } from './brand/BrandMark';
 import {
   Bell,
   Briefcase,
-  ChevronsLeft,
-  ChevronsRight,
   ClipboardCheck,
   Car,
   DollarSign,
@@ -89,29 +87,15 @@ const resolveRouteKey = (pathname: string) => (pathname.startsWith('/tracking/')
 const userInitials = (name: string | undefined) =>
   (name || '').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'KR';
 
-const RAIL_KEY = 'kidride.rail';
-const readRailPreference = () => {
-  try {
-    const saved = window.localStorage.getItem(RAIL_KEY);
-    if (saved === 'open' || saved === 'closed') return saved === 'open';
-  } catch { /* not remembered */ }
-  return window.innerWidth >= 1280;
-};
-
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [railOpen, setRailOpen] = useState(readRailPreference);
-  // Hovering the collapsed rail opens it as a flyout until the pointer leaves.
-  const [railHover, setRailHover] = useState(false);
-  const expanded = railOpen || railHover;
-
-  useEffect(() => {
-    try { window.localStorage.setItem(RAIL_KEY, railOpen ? 'open' : 'closed'); } catch { /* not remembered */ }
-  }, [railOpen]);
+  // The rail shows icons only; pointing at it (or tapping the logo) opens it
+  // with labels and the page shifts over. It closes when the pointer leaves.
+  const [expanded, setExpanded] = useState(false);
 
   // Must come after every hook so public and app pages call the same hooks.
   if (publicPagePaths.has(location.pathname)) {
@@ -147,12 +131,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         onClick={() => go(item.path)}
         title={expanded ? undefined : item.label}
         aria-current={active ? 'page' : undefined}
-        className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors ${expanded ? 'gap-3 px-3' : 'justify-center'} ${
+        className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors gap-3 px-3 ${
           active ? 'bg-brand/15 font-semibold text-ink' : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
         }`}
       >
         <item.icon size={22} strokeWidth={active ? 2.25 : 1.75} className={active ? 'text-brand-deep' : ''} />
-        {expanded && <span className="truncate">{item.label}</span>}
+        <span className={`truncate transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
       </button>
     );
   };
@@ -161,23 +145,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-surface text-ink">
       <div className="flex min-h-screen">
         {/* Icon rail / sidebar */}
-        <aside className={`sticky top-0 hidden h-screen shrink-0 lg:block ${railOpen ? 'w-60' : 'w-[72px]'}`} onMouseEnter={() => setRailHover(true)} onMouseLeave={() => setRailHover(false)}>
-         <div className={`absolute inset-y-0 left-0 z-50 flex flex-col border-r border-line bg-white transition-[width] duration-200 ${expanded ? 'w-60' : 'w-[72px]'} ${expanded && !railOpen ? 'shadow-float' : ''}`}>
-          <div className={`flex h-16 items-center ${expanded ? 'justify-between pl-4 pr-2' : 'justify-center'}`}>
-            <button type="button" onClick={() => go(homePath)} className="flex items-center" aria-label="KidRide home">
-              {expanded ? <BrandLockup size={52} /> : <BrandMark size={40} title="KidRide" />}
+        <aside
+          className={`sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-[width] duration-200 ease-out lg:block ${expanded ? 'w-60' : 'w-[72px]'}`}
+          onMouseEnter={() => setExpanded(true)}
+          onMouseLeave={() => setExpanded(false)}
+          onFocus={() => setExpanded(true)}
+          onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setExpanded(false); }}
+        >
+         <div className="flex h-full w-60 flex-col border-r border-line bg-white">
+          <div className="flex h-16 items-center pl-4">
+            <button type="button" onClick={() => (expanded ? go(homePath) : setExpanded(true))} className="flex items-center" aria-label="KidRide home">
+              <BrandMark size={40} title="KidRide" />
+              <span className={`kr-wordmark ml-2.5 text-[22px] font-extrabold tracking-[-0.02em] text-ink transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">KidRide</span>
             </button>
-            {expanded && (
-              <button
-                type="button"
-                onClick={() => setRailOpen(!railOpen)}
-                className="flex h-9 w-9 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-ink"
-                aria-label={railOpen ? 'Collapse menu' : 'Keep menu open'}
-                title={railOpen ? 'Collapse' : 'Keep open'}
-              >
-                {railOpen ? <ChevronsLeft size={18} /> : <ChevronsRight size={18} />}
-              </button>
-            )}
           </div>
 
           <nav className="mt-4 flex flex-col gap-1 px-3">
@@ -187,28 +167,28 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               onClick={() => go('/notifications')}
               title={expanded ? undefined : 'Inbox'}
               aria-current={location.pathname === '/notifications' ? 'page' : undefined}
-              className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors ${expanded ? 'gap-3 px-3' : 'justify-center'} ${
+              className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors gap-3 px-3 ${
                 location.pathname === '/notifications' ? 'bg-brand/15 font-semibold text-ink' : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
               }`}
             >
               <span className="relative"><Bell size={22} strokeWidth={location.pathname === '/notifications' ? 2.25 : 1.75} className={location.pathname === '/notifications' ? 'text-brand-deep' : ''} />{badge}</span>
-              {expanded && <span className="truncate">Inbox</span>}
+              <span className={`truncate transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>Inbox</span>
             </button>
           </nav>
 
-          <div className={`mt-auto flex flex-col gap-1 px-3 pb-4 ${expanded ? '' : 'items-center'}`}>
-            <button type="button" onClick={() => go('/help')} title={expanded ? undefined : 'Help'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-ink ${expanded ? 'gap-3 px-3' : 'justify-center'}`}>
+          <div className={`mt-auto flex flex-col gap-1 px-3 pb-4 `}>
+            <button type="button" onClick={() => go('/help')} title={expanded ? undefined : 'Help'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-ink gap-3 px-3`}>
               <HelpCircle size={22} strokeWidth={1.75} />
-              {expanded && <span>Help</span>}
+              <span className={`transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>Help</span>
             </button>
-            <button type="button" onClick={handleLogout} title={expanded ? undefined : 'Log out'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-danger ${expanded ? 'gap-3 px-3' : 'justify-center'}`}>
+            <button type="button" onClick={handleLogout} title={expanded ? undefined : 'Log out'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-danger gap-3 px-3`}>
               <LogOut size={22} strokeWidth={1.75} />
-              {expanded && <span>Log out</span>}
+              <span className={`transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>Log out</span>
             </button>
-            <button type="button" onClick={() => go('/profile')} title={expanded ? undefined : user?.name} className={`mt-2 flex w-full items-center rounded-control border-t border-line pt-3 text-left ${expanded ? 'gap-3 px-2' : 'justify-center'}`}>
+            <button type="button" onClick={() => go('/profile')} title={expanded ? undefined : user?.name} className={`mt-2 flex w-full items-center rounded-control border-t border-line pt-3 text-left gap-3 px-2`}>
               <Avatar />
-              {expanded && (
-                <span className="min-w-0">
+              {(
+                <span className={`min-w-0 transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
                   <span className="block truncate text-sm font-semibold text-ink">{user?.name || 'KidRide'}</span>
                   <span className="block text-xs text-muted">{roleLabel}</span>
                 </span>

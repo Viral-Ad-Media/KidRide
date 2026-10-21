@@ -68,20 +68,20 @@ export const Notifications = () => {
   return (
     // A plain list, the way Uber and Bolt do it: day headings, hairlines between
     // rows, an unread dot, no boxes around boxes.
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-2xl">
       {groups.map((group) => (
         <section key={group.label} className="mb-6">
           <h3 className="mb-1 text-sm font-semibold text-muted">{group.label}</h3>
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-line rounded-card bg-white px-2 shadow-[0_1px_2px_rgba(20,33,61,0.06)]">
             {group.items.map((item) => {
               const Icon = ICONS[item.kind] || Bell;
               const unread = !item.readAt;
               return (
                 <li key={item.id}>
-                  <button type="button" onClick={() => open(item)} disabled={!item.rideId} className="-mx-2 flex w-[calc(100%+1rem)] items-start gap-4 rounded-control px-2 py-4 text-left transition-colors hover:bg-surface-2/60 disabled:cursor-default disabled:hover:bg-transparent">
+                  <button type="button" onClick={() => open(item)} disabled={!item.rideId} className="flex w-full items-start gap-4 px-2 py-4 text-left transition-colors hover:bg-surface/80 disabled:cursor-default disabled:hover:bg-transparent">
                     <span className={`relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.kind === 'cancelled' ? 'bg-danger/10 text-danger' : item.kind === 'completed' ? 'bg-success/10 text-success' : 'bg-brand/15 text-brand-deep'}`}>
                       <Icon size={22} strokeWidth={1.75} />
-                      {unread && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-surface bg-brand" aria-label="Unread" />}
+                      {unread && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-brand" aria-label="Unread" />}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-3">

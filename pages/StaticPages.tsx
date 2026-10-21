@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { PublicSiteLayout } from '../components/PublicSite';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeft,
@@ -137,29 +138,60 @@ export const AboutPage = () => (
   </PublicPageShell>
 );
 
+// Help: plain questions and answers grouped by who is asking, the way a
+// support page reads, with contact at the bottom.
+const HELP_TOPICS: { heading: string; items: { q: string; a: string }[] }[] = [
+  { heading: 'Parents', items: [
+    { q: 'How do I book a ride?', a: 'On Home, tap the child who is riding, then Where to? Pick the pickup and drop-off, choose Now or Later, pick the kind of ride, and confirm. You can follow the car live once a driver accepts.' },
+    { q: 'How do I know it is the right driver?', a: 'Every ride has a trip code and a safe word, shown on the tracking page. Check the plate matches the driver card, and the driver must say the safe word before your child gets in.' },
+    { q: 'Can I book ahead?', a: 'Yes. Choose Later when booking, from 30 minutes to 30 days ahead. The ride goes to nearby drivers 30 minutes before pickup. Until then you can change the time or cancel from Rides.' },
+    { q: 'How do I cancel?', a: 'Open the ride from Home or Rides and tap Cancel ride. A ride cannot be cancelled once your child is in the car; contact the driver or use the Safety tools instead.' }
+  ] },
+  { heading: 'Drivers', items: [
+    { q: 'How do I start driving?', a: 'Create a driver account, then finish verification: phone, vehicle details and documents. Our team reviews it and you are told in the app when you are approved.' },
+    { q: 'How do I get rides?', a: 'Go online from Jobs. Requests near you appear with the pickup, drop-off and fare, and you have a short time to accept. Rides booked ahead show under Upcoming once you take them.' },
+    { q: 'What are the status buttons for?', a: 'Tap them in order as the trip happens: arrived at pickup, child picked up, dropped off. The parent sees each step live, so the order matters.' }
+  ] },
+  { heading: 'Account', items: [
+    { q: 'I cannot sign in.', a: 'Use the same email you signed up with, in lower case. If you created the account as a driver, pick Driver on the sign-in screen.' },
+    { q: 'How do I change my details?', a: 'Profile, then Edit under Account details. Drivers update their vehicle from the same page.' },
+    { q: 'Where do I turn emails on or off?', a: 'Profile, Notification settings. Ride updates always appear in your inbox in the app.' }
+  ] }
+];
+
 export const HelpPage = () => (
-  <PublicPageShell
-    icon={HelpCircle}
-    eyebrow="Help Center"
-    title="Answers for common account, ride, and safety questions."
-    description="This page is the public support entry point for people who need guidance before or after signing in."
-  >
-    <Section title="Account help">
-      <p>Use the home screen to create a parent or driver account with your own email and password.</p>
-      <p>If you lose access, try signing in again with the same email address in lowercase and confirm the backend API is reachable from your frontend environment.</p>
-    </Section>
+  <PublicSiteLayout>
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-deep"><ArrowLeft size={16} /> Back</Link>
+      <h1 className="mt-6 text-display font-extrabold tracking-tight">Help</h1>
+      <p className="mt-2 text-lead text-muted">Quick answers for parents and drivers.</p>
 
-    <Section title="Driver application help">
-      <p>New drivers start by creating a driver account, then continue directly into the verification flow to submit vehicle details and supporting documents.</p>
-      <p>Signed-in parents can also use the driver application flow if they are applying to drive under their existing account.</p>
-    </Section>
+      <div className="mt-10 space-y-10">
+        {HELP_TOPICS.map((topic) => (
+          <section key={topic.heading}>
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-muted">{topic.heading}</h2>
+            <div className="mt-2 divide-y divide-line border-y border-line">
+              {topic.items.map((item) => (
+                <details key={item.q} className="group py-4">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-body font-semibold [&::-webkit-details-marker]:hidden">
+                    {item.q}
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                  </summary>
+                  <p className="mt-2 max-w-2xl text-label leading-relaxed text-muted">{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
 
-    <Section title="Ride and safety help">
-      <p>Parents can add children, request rides, and follow ride status from the parent dashboard once logged in.</p>
-      <p>Drivers can accept new requests from the driver dashboard and progress rides through the status flow shown in the app.</p>
-      <p>For in-app assistance after login, the Safety screen remains available from the authenticated navigation.</p>
-    </Section>
-  </PublicPageShell>
+      <section className="mt-12 rounded-card bg-surface-2 p-6">
+        <h2 className="text-lead font-bold">Still stuck?</h2>
+        <p className="mt-1 text-label text-muted">Signed-in parents and drivers can message us from the Safety tab. In an emergency, call your local emergency services first.</p>
+        <Link to="/contact" className="mt-4 inline-flex h-11 items-center rounded-full bg-brand px-6 text-label font-semibold text-ink">Contact us</Link>
+      </section>
+    </div>
+  </PublicSiteLayout>
 );
 
 export const ContactPage = () => (

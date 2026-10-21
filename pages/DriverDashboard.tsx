@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, MapPin, ShieldCheck, TimerReset } from 'lucide-react';
 import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponents';
+import { StickyNote } from '../components/StickyNote';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDriverRating } from '../components/Ratings';
@@ -300,14 +301,12 @@ export const DriverDashboard = () => {
           )}
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <h3 className="text-lead font-bold">Before every pickup</h3>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>Confirm the trip code and safe word before the child gets in.</li>
-              <li>Tap the status buttons in order so the parent's tracking stays accurate.</li>
-            </ul>
-          </Card>
+        <div className="flex justify-end pt-3">
+          <StickyNote
+            id="driver-before-pickup"
+            title="Before every pickup"
+            lines={['Check the trip code and safe word before the child gets in.', 'Tap the status buttons in order so the parent’s tracking stays right.']}
+          />
         </div>
       </div>
     </div>
