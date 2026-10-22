@@ -2,20 +2,23 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BrandLockup } from './BrandLockup';
 import { BrandMark } from './BrandMark';
 
-// Shown on every full page load: a bright day scene (sky, sun, soft clouds,
-// a road across the bottom) with the car racing in from the left trailing
-// smoke, pausing in the middle while the wordmark rises, then zooming off to
-// the right (timings in index.css under "KidRide splash"). With reduced
-// motion the static scene shows briefly instead.
+// Shown on every full page load, over a soft Sky gradient: the car races in
+// from the left trailing smoke, pauses in the middle while the wordmark
+// rises, then zooms off to the right (timings in index.css under "KidRide
+// splash"). With reduced motion the static lockup shows briefly instead.
 
 const SHOW_MS = 2400;
 const FADE_MS = 250;
 
 const prefersReducedMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
 
+// The lockup is about 2.5x the mark's width; keep it within 80% of the screen.
+const markSize = () => Math.max(96, Math.min(260, Math.round((window.innerWidth * 0.8) / 2.5)));
+
 export const SplashLoader: React.FC = () => {
   const [phase, setPhase] = useState<'show' | 'leaving' | 'done'>('show');
   const [go, setGo] = useState(false);
+  const [size] = useState(markSize);
   const sceneRef = useRef<HTMLDivElement>(null);
 
   // Start the clock (and the CSS animations) only once the stylesheet has
@@ -47,18 +50,12 @@ export const SplashLoader: React.FC = () => {
       role="status"
       aria-label="Loading KidRide"
     >
-      <span className="kr-sun" aria-hidden="true" />
-      <span className="kr-cloud kr-cloud-1" aria-hidden="true" />
-      <span className="kr-cloud kr-cloud-2" aria-hidden="true" />
-      <span className="kr-cloud kr-cloud-3" aria-hidden="true" />
-      <span className="kr-hills" aria-hidden="true" />
-      <span className="kr-road" aria-hidden="true"><span className="kr-lane" /></span>
       <div className="kr-splash-stage">
         <div className="kr-splash">
           <div className="kr-splash-smoke" aria-hidden="true">
             {Array.from({ length: 7 }, (_, i) => <span key={i} style={{ animationDelay: `${i * 0.11}s` }} />)}
           </div>
-          <BrandLockup size={120} />
+          <BrandLockup size={size} />
         </div>
       </div>
     </div>

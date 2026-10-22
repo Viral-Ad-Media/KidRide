@@ -163,8 +163,7 @@ export const DriverDashboard = () => {
       {(syncError || locationError) && <p className="text-label text-warning">{syncError || locationError}</p>}
       {error && <p className="text-label text-danger">{error}</p>}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="space-y-6">
+      <div className="space-y-6">
           {!isOnline && (!activeRide || offerOpen) ? (
             <div className="rounded-card border border-dashed border-line bg-white px-6 py-12 text-center">
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-muted"><TimerReset size={26} /></span>
@@ -237,16 +236,13 @@ export const DriverDashboard = () => {
           )}
 
           <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
-        </div>
-
-        <div className="hidden justify-end pt-3 xl:flex">
-          <StickyNote
-            id="driver-before-pickup"
-            title="Before every pickup"
-            lines={['Check the trip code and safe word before the child gets in.', 'Tap the status buttons in order so the parent\u2019s tracking stays right.']}
-          />
-        </div>
       </div>
+
+      <StickyNote
+        id="driver-before-pickup"
+        title="Before every pickup"
+        lines={['Check the trip code and safe word before the child gets in.', 'Tap the status buttons in order so the parent\u2019s tracking stays right.']}
+      />
     </div>
   );
 };
