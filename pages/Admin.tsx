@@ -28,6 +28,8 @@ import {
   reviewDriverApplication
 } from '../services/adminApi';
 import { RideStatus } from '../types';
+import { FareBreakdown } from '../components/FareBreakdown';
+import { formatRidePrice, rideEarnings } from '../utils/rideData';
 
 const formatDate = (value?: string | null) => {
   if (!value) return 'Unknown';
@@ -45,6 +47,7 @@ export const AdminTabs = () => {
       <NavLink to="/admin/parents" className={cls}>Parents</NavLink>
       <NavLink to="/admin/rides" className={cls}>Rides</NavLink>
       <NavLink to="/admin/live-map" className={cls}>Live map</NavLink>
+      <NavLink to="/admin/pricing" className={cls}>Pricing</NavLink>
     </div>
   );
 };
@@ -505,6 +508,18 @@ export const AdminRides = () => {
                       {` - Driver: ${ride.driver?.name || (ride.driverId ? ride.driverId : 'unassigned')}`}
                     </p>
                     <p className="mt-1 text-xs text-muted">ID {ride.id}{ride.tripCode ? ` - Trip code ${ride.tripCode}` : ''}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      <span className="font-semibold text-ink">Fare {formatRidePrice(ride.price, 'not set', ride.currency)}</span>
+                      {` - Driver ${formatRidePrice(rideEarnings(ride), '-', ride.currency)}`}
+                      {ride.fare ? (ride.fare.distanceSource === 'none' ? ' - distance unknown' : ` - ${ride.fare.miles.toFixed(1)} mi, ${ride.fare.minutes} min${ride.fare.distanceSource === 'estimate' ? ' (estimated)' : ''}`) : ' - flat price'}
+                      {ride.cancellationFee ? ` - Cancellation fee ${formatRidePrice(ride.cancellationFee, '', ride.currency)}` : ''}
+                    </p>
+                    {ride.fare && (
+                      <details className="mt-1 max-w-sm text-xs">
+                        <summary className="cursor-pointer font-semibold text-brand-deep">Fare breakdown</summary>
+                        <FareBreakdown fare={ride.fare} currency={ride.currency} className="mt-1" />
+                      </details>
+                    )}
                   </div>
                   {!terminal && (
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">

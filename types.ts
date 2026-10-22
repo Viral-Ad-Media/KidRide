@@ -107,7 +107,28 @@ export interface RideRating {
 export type ScheduleState = 'scheduled' | 'dispatching' | 'assigned' | 'needs_attention';
 export const SCHEDULE_STATES: ScheduleState[] = ['scheduled', 'dispatching', 'assigned', 'needs_attention'];
 
+export interface FareLine { key: string; label: string; amount: number }
+/** The fare quoted at booking: distance and time from the route, plus each charge. */
+export interface FareBreakdown {
+  total: number;
+  lines: FareLine[];
+  miles: number;
+  minutes: number;
+  stayMinutes?: number;
+  /** 'routes' from Google driving directions; 'estimate' from straight-line distance. */
+  distanceSource: 'routes' | 'estimate' | 'none';
+}
+
 export interface Ride {
+  currency?: string;
+  /** Null for rides booked before distance pricing. */
+  fare?: FareBreakdown | null;
+  /** The driver's share of the fare. */
+  driverEarnings?: number;
+  cancellationFee?: number;
+  /** Booking only: the signed quote the server issued for this trip. */
+  quoteToken?: string;
+  stayMinutes?: number;
   driverLocation?: DriverLocation;
   /** 'targeted' while offered to the nearest drivers one at a time; 'open' when any driver may take it. */
   dispatchState?: 'targeted' | 'open';

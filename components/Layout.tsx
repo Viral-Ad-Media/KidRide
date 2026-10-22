@@ -15,7 +15,8 @@ import {
   Navigation,
   User,
   Users,
-  X
+  X,
+  Tag,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,6 +53,7 @@ const pageTitles: Record<string, string> = {
   '/admin/parents': 'Parents',
   '/admin/live-map': 'Live map',
   '/admin/rides': 'Rides',
+  '/admin/pricing': 'Pricing',
   '/earnings': 'Earnings'
 };
 
@@ -79,6 +81,7 @@ const adminNavItems: NavItem[] = [
   { icon: Users, label: 'Parents', path: '/admin/parents' },
   { icon: Map, label: 'Rides', path: '/admin/rides' },
   { icon: Navigation, label: 'Live map', path: '/admin/live-map' },
+  { icon: Tag, label: 'Pricing', path: '/admin/pricing' },
   { icon: User, label: 'Profile', path: '/profile' }
 ];
 

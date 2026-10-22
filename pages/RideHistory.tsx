@@ -6,7 +6,15 @@ import { fetchUserRides, getStoredToken } from '../services/api';
 import { Ride, RideStatus } from '../types';
 import { RateRideModal, Stars } from '../components/Ratings';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin } from 'lucide-react';
-import { formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { formatMoney, formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { FareBreakdown } from '../components/FareBreakdown';
+
+const FareDetails: React.FC<{ ride: Ride }> = ({ ride }) => (
+  <details className="mt-2 text-xs text-gray-600">
+    <summary className="cursor-pointer font-semibold text-brand-deep">Fare details</summary>
+    <FareBreakdown fare={ride.fare!} currency={ride.currency} className="mt-2" />
+  </details>
+);
 
 export const RideHistory = () => {
   const navigate = useNavigate();
@@ -156,8 +164,9 @@ export const RideHistory = () => {
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                     <StatusChip status={ride.status} />
-                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
+                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
+                  {ride.fare && <FareDetails ride={ride} />}
                 </Card>
               ))
             )}
@@ -196,8 +205,9 @@ export const RideHistory = () => {
                   </div>
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-xs text-gray-600">{ride.serviceType.replace(/_/g, ' ')}</span>
-                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
+                    <span className="font-bold text-gray-900">{ride.status === RideStatus.CANCELLED ? (ride.cancellationFee ? `${formatMoney(ride.cancellationFee, ride.currency)} fee` : 'No charge') : formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
+                  {ride.fare && ride.status !== RideStatus.CANCELLED && <FareDetails ride={ride} />}
                   {ride.status === RideStatus.COMPLETED && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                       {ride.rating ? (

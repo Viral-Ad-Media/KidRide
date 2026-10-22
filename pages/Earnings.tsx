@@ -3,7 +3,7 @@ import { DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../components/UIComponents';
 import { fetchDriverSummary, fetchUserRides, getStoredToken } from '../services/api';
 import { Ride } from '../types';
-import { formatPickupTime, formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice, getCompletedRideSummary, rideEarnings } from '../utils/rideData';
 
 export const Earnings = () => {
   const [completedRides, setCompletedRides] = useState<Ride[]>([]);
@@ -87,7 +87,10 @@ export const Earnings = () => {
                 <p className="truncate text-label font-semibold">{ride.pickupLocation} to {ride.dropoffLocation}</p>
                 <p className="mt-0.5 flex items-center gap-1 text-caption text-muted"><Calendar size={12} />{formatPickupTime(ride.pickupTime)}</p>
               </div>
-              <span className="shrink-0 text-body font-bold tabular-nums">{formatRidePrice(ride.price)}</span>
+              <span className="shrink-0 text-right">
+                <span className="block text-body font-bold tabular-nums">{formatRidePrice(rideEarnings(ride), undefined, ride.currency)}</span>
+                {ride.fare && <span className="block text-caption text-muted tabular-nums">of {formatRidePrice(ride.price, undefined, ride.currency)} fare</span>}
+              </span>
             </li>
           ))}
         </ul>

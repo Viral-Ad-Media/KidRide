@@ -9,7 +9,9 @@ import { ChildChip } from './ParentDashboard';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
-import { PlaceCoords, Ride, RideStatus, ServiceType } from '../types';
+import { FareBreakdown as Fare, PlaceCoords, Ride, RideStatus, ServiceType } from '../types';
+import { FareBreakdown } from '../components/FareBreakdown';
+import { formatMoney } from '../utils/rideData';
 import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalInputValue, validateScheduleInput } from '../services/scheduledRides';
 
 // Booking as one sheet per question over the map, the way Uber and Bolt do
@@ -26,7 +28,8 @@ const SERVICES: { type: ServiceType; label: string; note: string }[] = [
   { type: ServiceType.STAY, label: 'Stay, then drop-off', note: 'Driver waits at the activity' }
 ];
 const serviceLabel = (type: string) => SERVICES.find((service) => service.type === type)?.label || type;
-const formatPrice = (price?: number | null) => (typeof price === 'number' ? `$${price.toFixed(2)}` : '');
+const STAY_OPTIONS = [30, 45, 60, 90, 120, 180];
+type Quote = Fare & { quoteToken: string; currency: string };
 
 export const BookRide = () => {
   const navigate = useNavigate();
@@ -45,18 +48,31 @@ export const BookRide = () => {
   const [when, setWhen] = useState<'now' | 'later'>(params.get('when') === 'later' ? 'later' : 'now');
   const [scheduleValue, setScheduleValue] = useState(() => toLocalInputValue(firstSlot()));
   const [serviceType, setServiceType] = useState<ServiceType>(ServiceType.PICKUP);
-  const [prices, setPrices] = useState<Record<string, number>>({});
-  const [quote, setQuote] = useState<number | null>(null);
+  const [stayMinutes, setStayMinutes] = useState(60);
+  const [quotes, setQuotes] = useState<Record<string, Quote> | null>(null);
+  const [pricing, setPricing] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ duration: string; distance: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [scheduledRide, setScheduledRide] = useState<Ride | null>(null);
 
+  const pickupIso = when === 'later' && !validateScheduleInput(scheduleValue) ? new Date(scheduleValue).toISOString() : null;
+  // Server-side fares for every service over this route, priced as the parent reaches the service step.
   useEffect(() => {
-    apiRequest<{ prices: Record<string, number> }>('/rides/prices', { token: getStoredToken() })
-      .then((result) => setPrices(result.prices || {})).catch(() => setPrices({}));
-  }, []);
+    if (step !== 'service') return;
+    let live = true;
+    setQuotes(null); setPricing(true); setError(null);
+    apiRequest<{ quotes: Record<string, Quote> }>('/rides/quotes', {
+      method: 'POST', token: getStoredToken(),
+      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when === 'later', pickupTime: pickupIso, stayMinutes }
+    })
+      .then((result) => { if (live) setQuotes(result.quotes); })
+      .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price this trip.'); })
+      .finally(() => { if (live) setPricing(false); });
+    return () => { live = false; };
+  }, [step, pickup, dropoff, pickupCoords, dropoffCoords, when, pickupIso, stayMinutes]);
+  const quote = quotes?.[serviceType] || null;
 
   // Follow the ride once a driver takes it.
   useEffect(() => {
@@ -72,7 +88,6 @@ export const BookRide = () => {
       case 'child': return !!childId;
       case 'where': return !!pickup.trim() && !!dropoff.trim();
       case 'when': return !scheduleProblem;
-      case 'service': return !!serviceType;
       default: return quote !== null;
     }
   }, [step, childId, pickup, dropoff, scheduleProblem, serviceType, quote]);
@@ -81,20 +96,12 @@ export const BookRide = () => {
 
   const next = async () => {
     setError(null);
-    if (step === 'service') {
-      try {
-        const result = await apiRequest<{ price: number }>('/rides/quote', { method: 'POST', token: getStoredToken(), body: { serviceType } });
-        setQuote(result.price);
-        setStep('confirm');
-      } catch (err) { setError(err instanceof Error ? err.message : 'Could not get a price.'); }
-      return;
-    }
     if (step !== 'confirm') { setStep(ORDER[stepIndex + 1]); return; }
     if (quote === null) return;
     const ride: Ride = {
       id: '', childId, pickupLocation: pickup.trim(), dropoffLocation: dropoff.trim(), pickupCoords, dropoffCoords,
-      pickupTime: when === 'later' ? new Date(scheduleValue).toISOString() : new Date().toISOString(),
-      status: RideStatus.SEARCHING_DRIVER, price: quote, tripCode: '', safeWord: '', serviceType
+      pickupTime: pickupIso || new Date().toISOString(),
+      status: RideStatus.SEARCHING_DRIVER, price: quote.total, quoteToken: quote.quoteToken, stayMinutes, tripCode: '', safeWord: '', serviceType
     };
     setBusy(true);
     try {
@@ -218,13 +225,22 @@ export const BookRide = () => {
                         <span className="block text-body font-bold">{service.label}</span>
                         <span className="block text-caption text-muted">{service.note}</span>
                       </span>
-                      <span className="text-body font-bold tabular-nums">{formatPrice(prices[service.type])}</span>
+                      <span className="text-body font-bold tabular-nums">{quotes?.[service.type] ? formatMoney(quotes[service.type].total, quotes[service.type].currency) : pricing ? '...' : ''}</span>
                       <span className={`flex h-6 w-6 items-center justify-center rounded-full border ${selected ? 'border-brand-deep bg-brand-deep text-white' : 'border-line'}`}>{selected && <Check size={14} />}</span>
                     </button>
                   </li>
                 );
               })}
             </ul>
+            {serviceType === ServiceType.STAY && (
+              <label className="mt-3 flex items-center justify-between gap-3 text-label">
+                <span className="text-muted">How long should the driver stay?</span>
+                <select value={stayMinutes} onChange={(event) => setStayMinutes(Number(event.target.value))} className="rounded-full border border-line bg-white px-3 py-2 font-semibold">
+                  {STAY_OPTIONS.map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h${minutes % 60 ? ' 30' : ''}`}</option>)}
+                </select>
+              </label>
+            )}
+            {quote && quote.distanceSource !== 'none' && <p className="mt-3 text-caption text-muted">Priced for {quote.miles.toFixed(1)} mi, about {quote.minutes} min. The price is fixed when you book.</p>}
           </>
         )}
         {step === 'confirm' && (
@@ -245,15 +261,15 @@ export const BookRide = () => {
               ))}
               <div className="flex items-center justify-between px-4 py-3">
                 <dt className="text-label text-muted">Fare</dt>
-                <dd className="text-title font-extrabold tabular-nums">{formatPrice(quote)}</dd>
+                <dd className="text-title font-extrabold tabular-nums">{quote ? formatMoney(quote.total, quote.currency) : ''}</dd>
               </div>
             </dl>
-            {routeInfo && <p className="mt-2 text-caption text-muted">About {routeInfo.duration}, {routeInfo.distance}.</p>}
+            {quote && <FareBreakdown fare={quote} currency={quote.currency} showTotal={false} className="mt-3 px-1" />}
           </>
         )}
         {error && <p className="mt-3 text-label text-danger">{error}</p>}
         <Button fullWidth className="mt-5" onClick={() => void next()} disabled={!canContinue || busy}>
-          {step === 'confirm' ? (busy ? 'Booking...' : when === 'later' ? 'Book for later' : 'Book now') : step === 'service' ? 'See price' : 'Next'}
+          {step === 'confirm' ? (busy ? 'Booking...' : when === 'later' ? 'Book for later' : 'Book now') : step === 'service' ? (pricing ? 'Pricing...' : 'Continue') : 'Next'}
         </Button>
       </div>
     );

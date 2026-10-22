@@ -10,7 +10,7 @@ import { BRAND, createKidRideMap } from '../services/mapStyle';
 import { apiRequest, getStoredToken, mapRide } from '../services/api';
 import { getLastPosition, isLocationSupported, watchSharedPosition } from '../services/sharedPosition';
 import { Ride } from '../types';
-import { formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice, rideEarnings } from '../utils/rideData';
 
 // Map for an online driver with no trip: their own car (gliding and facing the
 // direction of travel, as on the trip map) and amber pins for rides waiting
@@ -234,7 +234,7 @@ export const DriverIdleMap: React.FC<DriverIdleMapProps> = ({ onAccept, fill = f
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2">
                 <button type="button" onClick={() => setSelectedId(null)} aria-label="Close" className="rounded-full p-1 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
-                <p className="text-xl font-bold text-slate-950">{formatRidePrice(selected.ride.price)}</p>
+                <p className="text-xl font-bold text-slate-950">{formatRidePrice(rideEarnings(selected.ride), undefined, selected.ride.currency)}</p>
               </div>
             </div>
             {acceptError && <p className="mt-2 text-xs text-red-600">{acceptError}</p>}

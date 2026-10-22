@@ -10,7 +10,7 @@ import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
 import { DriverIdleMap } from '../components/DriverIdleMap';
 import { fetchDriverSummary, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
-import { formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice, rideEarnings } from '../utils/rideData';
 
 import { useDriverLocation } from '../services/driverLocation';
 
@@ -184,8 +184,9 @@ export const DriverDashboard = () => {
               <div className="flex items-start justify-between gap-4 px-5 pt-5">
                 <div>
                   <p className="text-label font-semibold text-brand-deep">New request{activeRide.isScheduled ? ' (booked ahead)' : ''}</p>
-                  <p className="mt-1 text-display font-extrabold tabular-nums tracking-tight">{formatRidePrice(activeRide.price)}</p>
-                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} \u00b7 Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
+                  <p className="mt-1 text-display font-extrabold tabular-nums tracking-tight">{formatRidePrice(rideEarnings(activeRide), undefined, activeRide.currency)}</p>
+                  <p className="text-caption text-muted">You earn{activeRide.fare ? ` · ${activeRide.fare.miles.toFixed(1)} mi, about ${activeRide.fare.minutes} min` : ''}</p>
+                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} · Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
                 </div>
                 {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
               </div>
@@ -200,7 +201,7 @@ export const DriverDashboard = () => {
               <div className="px-5 pt-5">
                 <StatusChip status={activeRide.status} />
                 <h3 className="mt-3 text-title font-extrabold tracking-tight">{tripHeadline}</h3>
-                <p className="mt-1 text-label text-muted">Pickup {formatPickupTime(activeRide.pickupTime, 'now')} \u00b7 {formatRidePrice(activeRide.price)}</p>
+                <p className="mt-1 text-label text-muted">Pickup {formatPickupTime(activeRide.pickupTime, 'now')} · You earn {formatRidePrice(rideEarnings(activeRide), undefined, activeRide.currency)}</p>
               </div>
               <div className="mx-5 mt-4 flex items-center justify-between rounded-card bg-accent/15 px-4 py-3">
                 <span>

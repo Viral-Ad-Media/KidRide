@@ -1,9 +1,10 @@
 import { Ride, RideStatus } from '../types';
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD'
-});
+const formatters = new Map<string, Intl.NumberFormat>();
+export const formatMoney = (amount: number, currency = 'USD'): string => {
+  if (!formatters.has(currency)) formatters.set(currency, new Intl.NumberFormat('en-US', { style: 'currency', currency }));
+  return formatters.get(currency)!.format(amount);
+};
 
 const toDayKey = (date: Date): string => {
   const year = date.getFullYear();
@@ -14,9 +15,12 @@ const toDayKey = (date: Date): string => {
 
 export const hasRidePrice = (price: number): boolean => Number.isFinite(price) && price > 0;
 
-export const formatRidePrice = (price: number, fallback = 'Pricing pending'): string => (
-  hasRidePrice(price) ? currencyFormatter.format(price) : fallback
+export const formatRidePrice = (price: number, fallback = 'Pricing pending', currency = 'USD'): string => (
+  hasRidePrice(price) ? formatMoney(price, currency) : fallback
 );
+
+/** What the driver earns from a ride: their share when known, else (older rides) the whole fare. */
+export const rideEarnings = (ride: Ride): number => (typeof ride.driverEarnings === 'number' ? ride.driverEarnings : ride.price);
 
 // Pickup times arrive as ISO strings; show them as e.g. "Tue, Oct 20, 3:55 PM".
 export const formatPickupTime = (value?: string | null, fallback = 'Not scheduled'): string => {
@@ -30,7 +34,7 @@ export const formatPickupTime = (value?: string | null, fallback = 'Not schedule
 export const getCompletedRideSummary = (rides: Ride[]) => {
   const completedRides = rides.filter((ride) => ride.status === RideStatus.COMPLETED);
   const completedCount = completedRides.length;
-  const totalEarnings = completedRides.reduce((sum, ride) => sum + (hasRidePrice(ride.price) ? ride.price : 0), 0);
+  const totalEarnings = completedRides.reduce((sum, ride) => sum + (hasRidePrice(rideEarnings(ride)) ? rideEarnings(ride) : 0), 0);
 
   return {
     completedRides,

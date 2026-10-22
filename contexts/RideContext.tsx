@@ -123,7 +123,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Going offline drops an unaccepted offer; an accepted trip stays.
     else setActiveRide((ride) => ride && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(ride.status) ? null : ride);
   };
-  const requestRide = (ride: Ride) => mutate('/rides/request', { childId: ride.childId, pickup: ride.pickupLocation, dropoff: ride.dropoffLocation, pickupTime: ride.pickupTime, serviceType: ride.serviceType, quotedPrice: ride.price, pickupCoords: ride.pickupCoords, dropoffCoords: ride.dropoffCoords });
+  const requestRide = (ride: Ride) => mutate('/rides/request', { childId: ride.childId, pickup: ride.pickupLocation, dropoff: ride.dropoffLocation, pickupTime: ride.pickupTime, serviceType: ride.serviceType, quoteToken: ride.quoteToken, stayMinutes: ride.stayMinutes, pickupCoords: ride.pickupCoords, dropoffCoords: ride.dropoffCoords });
   const updateRideStatus = async (status: RideStatus) => {
     if (!activeRide) throw new Error('No active trip.');
     const accepting = status === RideStatus.DRIVER_ASSIGNED && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);

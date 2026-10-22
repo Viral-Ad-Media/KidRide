@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useCancellationFeeNote } from '../utils/useCancellationFee';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, MessageCircle, Phone, Share2, Shield, ShieldCheck, X } from 'lucide-react';
 import { LiveMap, RouteInfo } from '../components/LiveMap';
@@ -45,6 +46,7 @@ export const LiveTracking = () => {
   const [contacts, setContacts] = useState<TrustedContact[]>([]);
   const [shareNote, setShareNote] = useState<string | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const feeNote = useCancellationFeeNote(activeRide?.id, confirmingCancel);
   const [cancelling, setCancelling] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const driverRating = useDriverRating(activeRide?.driver?.id || activeRide?.driverId);
@@ -180,7 +182,7 @@ export const LiveTracking = () => {
       )}
       {finished && <Button fullWidth onClick={() => navigate(status === RideStatus.COMPLETED ? '/rides' : '/dashboard')}>{status === RideStatus.COMPLETED ? 'Rate the ride' : 'Back to home'}</Button>}
 
-      <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for you and the driver." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
+      <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body={`The trip will be cancelled for you and the driver. ${feeNote}`} confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
     </div>
   );
 
