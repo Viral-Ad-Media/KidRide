@@ -154,10 +154,21 @@ export interface Ride {
   pickupTime: string;
   status: RideStatus;
   price: number;
+  /** Empty for the assigned driver: they ask for it at the pickup and enter it. */
   tripCode: string;
   safeWord: string;
   serviceType: ServiceType;
+  /** When the driver marked arrival at the pickup (starts the no-show wait). */
+  arrivedAt?: string | null;
+  tripCodeVerified?: boolean;
+  tripCodeAttempts?: number;
+  /** The most serious open safety incident on the ride. */
+  safetyAlert?: SafetyAlert | null;
+  safetyAlertAt?: string | null;
+  cancelReason?: 'no_show' | null;
 }
+
+export type SafetyAlert = 'sos' | 'trip_code' | 'off_route' | 'stalled';
 
 export interface CarpoolOffer {
   id: string;

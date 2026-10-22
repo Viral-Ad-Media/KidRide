@@ -1,6 +1,8 @@
 /// <reference types="google.maps" />
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MapPinOff, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, MapPinOff, RefreshCw, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { SAFETY_ALERT_LABELS } from '../components/SafetyActions';
 import { AdminTabs } from './Admin';
 import { HtmlMarker, carHtml, createHtmlMarker, dotHtml, waitingPinHtml } from '../components/mapMarkers';
 import { MapControls } from '../components/MapControls';
@@ -132,6 +134,8 @@ export const AdminLiveMap = () => {
     .filter((driver) => !search.trim() || `${driver.name} ${driver.vehicle || ''} ${driver.plate || ''}`.toLowerCase().includes(search.trim().toLowerCase())), [snapshot, filter, search]);
 
   const counts = snapshot?.counts;
+  const alertRides = (snapshot?.rides || []).filter((ride) => ride.safetyAlert);
+  const alertDrivers = new Set(alertRides.map((ride) => ride.driverId).filter(Boolean));
 
   return (
     <div>
@@ -150,6 +154,18 @@ export const AdminLiveMap = () => {
         ))}
       </div>
       {error && <p className="mb-3 text-label font-semibold text-warning">{error}</p>}
+      {alertRides.length > 0 && (
+        <ul role="alert" className="mb-4 space-y-2">
+          {alertRides.map((ride) => (
+            <li key={ride.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border-2 border-danger bg-danger/5 px-4 py-3 text-sm">
+              <span className="flex items-center gap-1.5 font-bold text-danger"><AlertTriangle size={16} />{SAFETY_ALERT_LABELS[ride.safetyAlert!]}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{ride.pickup} &rarr; {ride.dropoff}{ride.driverName ? ` · ${ride.driverName}` : ''}</span>
+              {ride.safetyAlertAt && <span className="text-xs text-muted">{new Date(ride.safetyAlertAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>}
+              <Link to="/admin/rides" className="text-xs font-semibold text-brand-deep underline">Open in Rides</Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="relative h-[560px] overflow-hidden rounded-card bg-surface-2">
@@ -197,7 +213,9 @@ export const AdminLiveMap = () => {
                 <button type="button" onClick={() => setSelected(driver.id === selected ? null : driver.id)} className={`w-full rounded-card border px-3 py-2.5 text-left ${driver.id === selected ? 'border-brand bg-brand/10' : 'border-line hover:bg-surface-2'}`}>
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-semibold text-ink">{driver.name}</span>
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ background: driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{driver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>
+                    {alertDrivers.has(driver.id)
+                      ? <span className="shrink-0 rounded-full bg-danger px-2 py-0.5 text-[11px] font-semibold text-white">Alert</span>
+                      : <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ background: driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{driver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>}
                   </span>
                   <span className="mt-1 block truncate text-xs text-muted">{driver.vehicle || 'Vehicle not set'}{driver.plate ? ` · ${driver.plate}` : ''} · {secondsAgo(driver.updatedAt)}s ago</span>
                 </button>

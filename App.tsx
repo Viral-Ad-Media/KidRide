@@ -30,6 +30,7 @@ import {
 } from './pages/Marketing';
 import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
 import { AdminPricing } from './pages/AdminPricing';
+import { AdminSafety } from './pages/AdminSafety';
 import { AdminLiveMap } from './pages/AdminLiveMap';
 import { UserRole } from './types';
 import { SplashLoader } from './components/brand/SplashLoader';
@@ -111,6 +112,7 @@ const AppRoutes = () => (
       <Route path="/admin/parents" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminParents /></ProtectedRoute>} />
       <Route path="/admin/live-map" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminLiveMap /></ProtectedRoute>} />
       <Route path="/admin/pricing" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminPricing /></ProtectedRoute>} />
+      <Route path="/admin/safety" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminSafety /></ProtectedRoute>} />
       <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
       <Route
         path="/driver-dashboard"

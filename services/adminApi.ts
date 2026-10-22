@@ -1,4 +1,4 @@
-import { Ride, RideStatus } from '../types';
+import { Ride, RideStatus, SafetyAlert } from '../types';
 import { ApiError, RideScope, apiRequest as baseRequest, getStoredToken, mapRide } from './api';
 
 // Admin screens load larger lists and documents; allow more time than the default.
@@ -137,12 +137,14 @@ export interface LiveRide {
   dropoffCoords: { lat: number; lng: number } | null;
   driverId: string | null;
   driverName: string | null;
+  safetyAlert: SafetyAlert | null;
+  safetyAlertAt: string | null;
   createdAt: string;
 }
 
 export interface LiveMapSnapshot {
   generatedAt: string;
-  counts: { online: number; onRide: number; ridesInProgress: number; searching: number };
+  counts: { online: number; onRide: number; ridesInProgress: number; searching: number; alerts: number };
   drivers: LiveDriver[];
   rides: LiveRide[];
 }
@@ -219,6 +221,19 @@ export const fetchAdminRides = async (scope: RideScope, limit = 100): Promise<Ad
   const response = await apiRequest<unknown>(`/rides?scope=${scope}&limit=${safeLimit}`, { token: requireToken() });
   return unwrapArray(response, 'rides').map(mapAdminRide);
 };
+
+export const resolveRideIncidents = (id: string) => apiRequest(`/rides/${encodeURIComponent(id)}/incidents/resolve`, { method: 'PUT', token: requireToken() });
+
+export interface RideIncident {
+  id: string;
+  kind: SafetyAlert;
+  reporterRole: 'parent' | 'driver' | 'admin' | 'system' | null;
+  location: { latitude: number; longitude: number } | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+export const fetchRideIncidents = async (id: string) => (await apiRequest<{ incidents: RideIncident[] }>(`/rides/${encodeURIComponent(id)}/incidents`, { token: requireToken() })).incidents;
 
 export const adminCancelRide = async (id: string): Promise<unknown> => apiRequest(`/rides/${encodeURIComponent(id)}/cancel`, {
   method: 'PUT',

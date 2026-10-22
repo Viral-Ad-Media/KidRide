@@ -8,7 +8,10 @@ interface RideContextType {
   activeRide: Ride | null;
   syncError: string | null;
   requestRide: (ride: Ride) => Promise<void>;
-  updateRideStatus: (status: RideStatus) => Promise<void>;
+  /** Moving to IN_PROGRESS (child in the car) needs the trip code the parent gives the driver. */
+  updateRideStatus: (status: RideStatus, tripCode?: string) => Promise<void>;
+  /** Driver: the child did not come out after the wait window. */
+  markNoShow: () => Promise<void>;
   declineRideRequest: () => Promise<void>;
   /** Driver accepts a specific waiting ride (e.g. one picked on the map). */
   acceptRide: (rideId: string) => Promise<void>;
@@ -124,11 +127,12 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     else setActiveRide((ride) => ride && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(ride.status) ? null : ride);
   };
   const requestRide = (ride: Ride) => mutate('/rides/request', { childId: ride.childId, pickup: ride.pickupLocation, dropoff: ride.dropoffLocation, pickupTime: ride.pickupTime, serviceType: ride.serviceType, quoteToken: ride.quoteToken, stayMinutes: ride.stayMinutes, pickupCoords: ride.pickupCoords, dropoffCoords: ride.dropoffCoords });
-  const updateRideStatus = async (status: RideStatus) => {
+  const updateRideStatus = async (status: RideStatus, tripCode?: string) => {
     if (!activeRide) throw new Error('No active trip.');
     const accepting = status === RideStatus.DRIVER_ASSIGNED && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);
-    await mutate(`/rides/${activeRide.id}/${accepting ? 'accept' : 'status'}`, accepting ? undefined : { status });
+    await mutate(`/rides/${activeRide.id}/${accepting ? 'accept' : 'status'}`, accepting ? undefined : { status, ...(tripCode ? { tripCode } : {}) });
   };
+  const markNoShow = async () => { if (!activeRide) throw new Error('No active trip.'); await mutate(`/rides/${activeRide.id}/no-show`, undefined, true); };
   const acceptRide = (rideId: string) => mutate(`/rides/${rideId}/accept`);
   const cancelRide = async () => { if (!activeRide) throw new Error('No active trip.'); await mutate(`/rides/${activeRide.id}/cancel`, undefined, true); };
   const declineRideRequest = async () => {
@@ -136,7 +140,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await mutate(`/rides/${activeRide.id}/decline`, undefined, true);
     await refreshActiveRide();
   };
-  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
+  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, markNoShow, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
 };
 export const useRide = () => {
   const context = useContext(RideContext);

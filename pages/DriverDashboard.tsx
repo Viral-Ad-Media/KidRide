@@ -8,7 +8,8 @@ import { useDriverRating } from '../components/Ratings';
 import { LiveMap } from '../components/LiveMap';
 import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
 import { DriverIdleMap } from '../components/DriverIdleMap';
-import { fetchDriverSummary, getStoredToken } from '../services/api';
+import { apiRequest, fetchDriverSummary, getStoredToken } from '../services/api';
+import { SosButton } from '../components/SafetyActions';
 import { RideStatus } from '../types';
 import { formatPickupTime, formatRidePrice, rideEarnings } from '../utils/rideData';
 
@@ -35,8 +36,88 @@ const OfferCountdown: React.FC<{ expiresAt: string }> = ({ expiresAt }) => {
   );
 };
 
+// At the pickup: the parent (or child) gives the 4-digit trip code and the
+// driver enters it; the server checks it and limits wrong tries.
+const TripCodeEntry: React.FC<{ childName: string; onSubmit: (code: string) => Promise<void> }> = ({ childName, onSubmit }) => {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try { await onSubmit(code); }
+    catch (err) { setError(err instanceof Error && err.message ? err.message : 'Could not check the code. Try again.'); setCode(''); }
+    finally { setBusy(false); }
+  };
+  return (
+    <form onSubmit={(event) => void submit(event)} className="rounded-card border border-line p-4">
+      <label htmlFor="trip-code" className="block text-label font-semibold">Trip code from the parent</label>
+      <p className="text-caption text-muted">Ask for it before {childName} gets in. You cannot start the trip without it.</p>
+      <div className="mt-3 flex gap-2">
+        <input
+          id="trip-code"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={4}
+          value={code}
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))}
+          placeholder="0000"
+          className="h-button w-32 rounded-control border border-line bg-white px-4 text-center font-mono text-title font-bold tracking-[0.3em] focus:border-brand-deep focus:outline-none"
+        />
+        <Button type="submit" className="flex-1" disabled={busy || code.length !== 4}>{busy ? 'Checking...' : `${childName} is in the car`}</Button>
+      </div>
+      {error && <p role="alert" className="mt-2 text-label text-danger">{error}</p>}
+    </form>
+  );
+};
+
+// After the wait window at the pickup the driver can record that the child did
+// not come; the parent pays the no-show fee from the pricing settings.
+const NoShowAction: React.FC<{ rideId: string; childName: string; onConfirm: () => Promise<void> }> = ({ rideId, childName, onConfirm }) => {
+  const [terms, setTerms] = useState<{ availableAt: string | null; fee: number; currency: string; waitMinutes: number } | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    apiRequest<{ availableAt: string | null; fee: number; currency: string; waitMinutes: number }>(`/rides/${rideId}/no-show`, { token: getStoredToken() })
+      .then(setTerms).catch(() => setTerms(null));
+  }, [rideId]);
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(timer); }, []);
+  if (!terms?.availableAt) return null;
+  const opensAt = new Date(terms.availableAt);
+  const open = now >= opensAt.getTime();
+  const fee = formatRidePrice(terms.fee, '', terms.currency);
+  const confirm = async () => {
+    setBusy(true);
+    setError(null);
+    try { await onConfirm(); setConfirming(false); }
+    catch (err) { setError(err instanceof Error && err.message ? err.message : 'Could not record the no-show.'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <>
+      {open
+        ? <button type="button" onClick={() => setConfirming(true)} className="w-full rounded-full border border-line py-3 text-label font-semibold text-ink hover:bg-surface-2">{childName} is not here: record a no-show</button>
+        : <p className="text-center text-caption text-muted">{childName} not out yet? You can record a no-show from {opensAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} ({terms.waitMinutes} min wait).</p>}
+      <ConfirmModal
+        open={confirming}
+        title="Record a no-show?"
+        body={`The ride is cancelled and the parent is told ${childName} did not come out.${fee ? ` They are charged the ${fee} no-show fee.` : ''}`}
+        confirmLabel="Record no-show"
+        tone="danger"
+        busy={busy}
+        error={error}
+        onConfirm={() => void confirm()}
+        onClose={() => setConfirming(false)}
+      />
+    </>
+  );
+};
+
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline } = useRide();
+  const { activeRide, updateRideStatus, markNoShow, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline, refreshActiveRide } = useRide();
   const { user } = useAuth();
   const rating = useDriverRating(user?.id);
   const locationError = useDriverLocation();
@@ -205,13 +286,10 @@ export const DriverDashboard = () => {
               </div>
               <div className="mx-5 mt-4 flex items-center justify-between rounded-card bg-accent/15 px-4 py-3">
                 <span>
-                  <span className="block text-caption font-semibold text-muted">Trip code</span>
-                  <span className="block text-caption text-muted">Say the safe word to the parent</span>
+                  <span className="block text-caption font-semibold text-muted">Safe word</span>
+                  <span className="block text-caption text-muted">{activeRide.tripCodeVerified ? 'Trip code checked' : 'Say it to the parent, then ask for the trip code'}</span>
                 </span>
-                <span className="text-right">
-                  <span className="block text-title font-extrabold tabular-nums tracking-wider">{activeRide.tripCode || '\u00b7\u00b7\u00b7\u00b7'}</span>
-                  <span className="block text-caption font-semibold">{activeRide.safeWord || 'Pending'}</span>
-                </span>
+                <span className="text-right text-lead font-extrabold">{activeRide.safeWord || 'Pending'}</span>
               </div>
               <div className="mx-5 mt-4">{stops(activeRide.status === RideStatus.IN_PROGRESS)}</div>
               <LiveMap
@@ -225,12 +303,14 @@ export const DriverDashboard = () => {
               />
               <div className="space-y-3 p-5">
                 {activeRide.status === RideStatus.DRIVER_ASSIGNED && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>I've arrived at the pickup</Button>}
-                {activeRide.status === RideStatus.DRIVER_ARRIVED && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.IN_PROGRESS)}>{childName} is in the car</Button>}
+                {activeRide.status === RideStatus.DRIVER_ARRIVED && <TripCodeEntry childName={childName} onSubmit={(code) => updateRideStatus(RideStatus.IN_PROGRESS, code)} />}
+                {activeRide.status === RideStatus.DRIVER_ARRIVED && <NoShowAction key={activeRide.arrivedAt || activeRide.id} rideId={activeRide.id} childName={childName} onConfirm={markNoShow} />}
                 {activeRide.status === RideStatus.IN_PROGRESS && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.COMPLETED)} className="bg-success text-white hover:brightness-95">Dropped off</Button>}
                 {activeRide.status === RideStatus.COMPLETED && <p className="flex items-center justify-center gap-2 text-label font-semibold text-success"><CheckCircle size={18} /> Ride completed</p>}
                 {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && (
                   <button type="button" onClick={() => setConfirmingCancel(true)} className="w-full text-center text-label font-semibold text-danger">Cancel ride</button>
                 )}
+                {![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && <SosButton rideId={activeRide.id} who="driver" onSent={() => void refreshActiveRide()} />}
                 <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body="The trip will be cancelled for you and the parent." confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
               </div>
             </div>

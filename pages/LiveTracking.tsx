@@ -6,6 +6,7 @@ import { LiveMap, RouteInfo } from '../components/LiveMap';
 import { MapScreen } from '../components/MapScreen';
 import { Button, ConfirmModal } from '../components/UIComponents';
 import { RatingBadge, useDriverRating } from '../components/Ratings';
+import { SafetyAlertNote, SosButton } from '../components/SafetyActions';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
@@ -134,6 +135,7 @@ export const LiveTracking = () => {
         {subline && <p className="mt-1 text-label text-muted">{subline}</p>}
         {(syncError || actionError) && <p className="mt-2 text-label text-warning">{actionError || syncError}</p>}
       </div>
+      {!finished && <SafetyAlertNote alert={activeRide.safetyAlert} driverName={driverFirst} />}
 
       {driver ? (
         <div className="rounded-card border border-line bg-white p-4">
@@ -168,8 +170,8 @@ export const LiveTracking = () => {
 
       <div className="flex items-center justify-between rounded-card bg-accent/15 px-4 py-3">
         <span>
-          <span className="block text-caption font-semibold text-muted">Trip code</span>
-          <span className="block text-caption text-muted">The driver must say the safe word</span>
+          <span className="block text-caption font-semibold text-muted">Trip code{activeRide.tripCodeVerified ? ' · checked' : ''}</span>
+          <span className="block text-caption text-muted">{activeRide.tripCodeVerified ? `${driverFirst} entered the right code` : `Give it to ${driverFirst} at pickup; they say the safe word`}</span>
         </span>
         <span className="text-right">
           <span className="block text-title font-extrabold tabular-nums tracking-wider">{activeRide.tripCode || '····'}</span>
@@ -196,6 +198,7 @@ export const LiveTracking = () => {
           <button type="button" onClick={() => setSafetyOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-2" aria-label="Close"><X size={20} /></button>
         </div>
         <a href="tel:911" className="mt-4 flex h-button items-center justify-center gap-2 rounded-full bg-danger text-body font-semibold text-white"><Phone size={18} /> Call emergency services</a>
+        {!finished && <SosButton rideId={activeRide.id} who="parent" onSent={() => void refreshActiveRide()} className="mt-3" />}
         <div className="mt-5 divide-y divide-line">
           <button type="button" onClick={() => void share()} className="flex w-full items-center gap-3 py-3.5 text-left">
             <Share2 size={20} className="text-brand-deep" />
@@ -220,7 +223,7 @@ export const LiveTracking = () => {
           )}
           <div className="py-3.5">
             <p className="text-label font-semibold">Before {childName} gets in</p>
-            <p className="mt-1 text-caption text-muted">Check the plate matches, and the driver says the safe word <span className="font-semibold text-ink">{activeRide.safeWord}</span>.</p>
+            <p className="mt-1 text-caption text-muted">Check the plate matches and the driver says the safe word <span className="font-semibold text-ink">{activeRide.safeWord}</span>. Then give them the trip code <span className="font-semibold text-ink">{activeRide.tripCode}</span>; they cannot start the trip without it.</p>
           </div>
         </div>
       </div>

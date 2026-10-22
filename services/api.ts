@@ -1,4 +1,4 @@
-import { AssignedDriver, Child, Ride, RideStatus, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
+import { AssignedDriver, Child, Ride, RideStatus, SafetyAlert, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
 
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const DEPLOYED_API_BASE_URL = 'https://kidride-backend.vercel.app/api';
@@ -302,6 +302,8 @@ const formatPickupTime = (value: unknown): string => {
   return Number.isNaN(parsedDate.getTime()) ? new Date().toLocaleTimeString() : parsedDate.toLocaleString();
 };
 
+const SAFETY_ALERTS: SafetyAlert[] = ['sos', 'trip_code', 'off_route', 'stalled'];
+
 export const mapRide = (raw: unknown): Ride => {
   const ride = (raw || {}) as Record<string, unknown>;
   const rideId = ride.id || ride._id;
@@ -347,6 +349,12 @@ export const mapRide = (raw: unknown): Ride => {
     offerExpiresAt: typeof ride.offerExpiresAt === 'string' ? ride.offerExpiresAt : null,
     nearbyDrivers: ride.dispatch && typeof (ride.dispatch as { nearbyDrivers?: unknown }).nearbyDrivers === 'number' ? (ride.dispatch as { nearbyDrivers: number }).nearbyDrivers : null,
     dropoffCoords: ride.dropoffCoords && typeof ride.dropoffCoords === 'object' ? ride.dropoffCoords as Ride['dropoffCoords'] : null,
+    arrivedAt: typeof ride.arrivedAt === 'string' ? ride.arrivedAt : null,
+    tripCodeVerified: ride.tripCodeVerified === true,
+    tripCodeAttempts: typeof ride.tripCodeAttempts === 'number' ? ride.tripCodeAttempts : 0,
+    safetyAlert: typeof ride.safetyAlert === 'string' && SAFETY_ALERTS.includes(ride.safetyAlert as SafetyAlert) ? ride.safetyAlert as SafetyAlert : null,
+    safetyAlertAt: typeof ride.safetyAlertAt === 'string' ? ride.safetyAlertAt : null,
+    cancelReason: ride.cancelReason === 'no_show' ? 'no_show' : null,
     serviceType: validServiceTypes.has(rawServiceType)
       ? (rawServiceType as ServiceType)
       : ServiceType.PICKUP

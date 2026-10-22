@@ -25,7 +25,7 @@ interface PricingSettings {
   stayPerMinute: number;
   stayMinimumMinutes: number;
   driverShare: number;
-  cancellation: { freeMinutesAfterBooking: number; freeHoursBeforeScheduled: number; driverAssignedFee: number; lateWindowMinutes: number; latePercent: number };
+  cancellation: { freeMinutesAfterBooking: number; freeHoursBeforeScheduled: number; driverAssignedFee: number; lateWindowMinutes: number; latePercent: number; noShowWaitMinutes: number; noShowFee: number };
 }
 
 const SERVICES: [string, string][] = [
@@ -35,7 +35,7 @@ const SERVICES: [string, string][] = [
   ['stay_with_child_and_dropoff', 'Stay, then drop-off']
 ];
 
-type Form = Record<string, string>;
+export type Form = Record<string, string>;
 const toForm = (s: PricingSettings): Form => ({
   currency: s.currency, timezone: s.timezone,
   baseFare: String(s.baseFare), perMile: String(s.perMile), perMinute: String(s.perMinute), minimumFare: String(s.minimumFare), bookingFee: String(s.bookingFee),
@@ -54,12 +54,13 @@ const fromForm = (f: Form): PricingSettings => {
     serviceMultipliers: Object.fromEntries(SERVICES.map(([type]) => [type, n(`m_${type}`)])),
     cancellation: {
       freeMinutesAfterBooking: n('c_freeMinutesAfterBooking'), freeHoursBeforeScheduled: n('c_freeHoursBeforeScheduled'),
-      driverAssignedFee: n('c_driverAssignedFee'), lateWindowMinutes: n('c_lateWindowMinutes'), latePercent: n('c_latePercent')
+      driverAssignedFee: n('c_driverAssignedFee'), lateWindowMinutes: n('c_lateWindowMinutes'), latePercent: n('c_latePercent'),
+      noShowWaitMinutes: n('c_noShowWaitMinutes'), noShowFee: n('c_noShowFee')
     }
   };
 };
 
-const Field: React.FC<{ label: string; name: string; form: Form; onChange: (name: string, value: string) => void; suffix?: string; hint?: string; wide?: boolean }> = ({ label, name, form, onChange, suffix, hint, wide }) => (
+export const Field: React.FC<{ label: string; name: string; form: Form; onChange: (name: string, value: string) => void; suffix?: string; hint?: string; wide?: boolean }> = ({ label, name, form, onChange, suffix, hint, wide }) => (
   <label className={`block ${wide ? 'sm:col-span-2' : ''}`}>
     <span className="text-label font-semibold">{label}</span>
     <span className="mt-1 flex items-center gap-2">
@@ -71,7 +72,7 @@ const Field: React.FC<{ label: string; name: string; form: Form; onChange: (name
   </label>
 );
 
-const Section: React.FC<{ title: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
+export const Section: React.FC<{ title: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
   <section className="rounded-card border border-line bg-white p-5">
     <h2 className="text-lead font-extrabold tracking-tight">{title}</h2>
     {note && <p className="mt-0.5 text-label text-muted">{note}</p>}
@@ -171,6 +172,11 @@ export const AdminPricing = () => {
             <Field label="Fee once a driver is assigned" name="c_driverAssignedFee" suffix={currency} {...props} />
             <Field label="Late window before a scheduled pickup" name="c_lateWindowMinutes" suffix="min" {...props} />
             <Field label="Late cancellation charge" name="c_latePercent" suffix="% of fare" {...props} />
+          </Section>
+
+          <Section title="No-show" note="The driver can record a no-show after waiting this long at the pickup; the parent pays the fee (never more than the fare).">
+            <Field label="Wait at the pickup" name="c_noShowWaitMinutes" suffix="min" {...props} />
+            <Field label="No-show fee" name="c_noShowFee" suffix={currency} {...props} />
           </Section>
 
           <Section title="Region">

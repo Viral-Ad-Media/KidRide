@@ -25,8 +25,12 @@ import {
   fetchAdminRides,
   fetchDriverApplicationDetail,
   fetchDriverApplications,
-  reviewDriverApplication
+  reviewDriverApplication,
+  RideIncident,
+  fetchRideIncidents,
+  resolveRideIncidents
 } from '../services/adminApi';
+import { SAFETY_ALERT_LABELS } from '../components/SafetyActions';
 import { RideStatus } from '../types';
 import { FareBreakdown } from '../components/FareBreakdown';
 import { formatRidePrice, rideEarnings } from '../utils/rideData';
@@ -48,6 +52,7 @@ export const AdminTabs = () => {
       <NavLink to="/admin/rides" className={cls}>Rides</NavLink>
       <NavLink to="/admin/live-map" className={cls}>Live map</NavLink>
       <NavLink to="/admin/pricing" className={cls}>Pricing</NavLink>
+      <NavLink to="/admin/safety" className={cls}>Safety</NavLink>
     </div>
   );
 };
@@ -368,6 +373,45 @@ export const AdminApplications = () => {
 
 /* ---------------- Rides ---------------- */
 
+const incidentLine = (incident: RideIncident) => {
+  const d = incident.details as Record<string, string | number | boolean | undefined>;
+  const who = incident.reporterRole === 'system' ? 'Automatic' : incident.reporterRole ? `By the ${incident.reporterRole}` : '';
+  const what = incident.kind === 'trip_code' ? `Wrong code, try ${d.attempt} of ${d.maxAttempts}${d.locked ? ' (locked)' : ''}`
+    : incident.kind === 'off_route' ? `${d.milesFromRoute} mi from the route`
+    : incident.kind === 'stalled' ? `Stopped ${d.stoppedMinutes} min`
+    : d.note ? `"${d.note}"` : 'SOS pressed';
+  const where = incident.location ? ` · at ${incident.location.latitude.toFixed(4)}, ${incident.location.longitude.toFixed(4)}` : '';
+  return `${new Date(incident.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${SAFETY_ALERT_LABELS[incident.kind]} · ${what}${who ? ` · ${who}` : ''}${where}`;
+};
+
+// The ride's safety incidents, newest first, and the button that clears its flag.
+const RideIncidents: React.FC<{ ride: AdminRide; onResolved: () => void }> = ({ ride, onResolved }) => {
+  const [incidents, setIncidents] = useState<RideIncident[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ride.safetyAlert) return;
+    fetchRideIncidents(ride.id).then(setIncidents).catch(() => setIncidents([]));
+  }, [ride.id, ride.safetyAlert, ride.safetyAlertAt]);
+  if (!ride.safetyAlert) return null;
+  const resolve = async () => {
+    setBusy(true); setError(null);
+    try { await resolveRideIncidents(ride.id); onResolved(); }
+    catch (err) { setError(errorMessage(err, 'Could not update the incident.')); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-2 max-w-xl rounded-card border border-danger/40 bg-danger/5 px-3 py-2 text-xs">
+      <ul className="space-y-1 text-ink">
+        {(incidents || []).filter((incident) => !incident.resolvedAt).map((incident) => <li key={incident.id}>{incidentLine(incident)}</li>)}
+        {incidents === null && <li className="text-muted">Loading incidents...</li>}
+      </ul>
+      {error && <p className="mt-1 text-danger">{error}</p>}
+      <button type="button" disabled={busy} onClick={() => void resolve()} className="mt-2 rounded-full bg-ink px-3 py-1.5 font-semibold text-white disabled:opacity-50">{busy ? 'Saving...' : 'Mark handled'}</button>
+    </div>
+  );
+};
+
 const scopes: RideScope[] = ['active', 'upcoming', 'past', 'all'];
 const allStatuses = Object.values(RideStatus) as RideStatus[];
 
@@ -498,6 +542,8 @@ export const AdminRides = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusChip status={ride.status} />
                       {ride.isScheduled && <ScheduleChip state={ride.scheduleState === 'needs_attention' ? 'needs_attention' : 'scheduled'} />}
+                      {ride.safetyAlert && <span className="inline-flex items-center gap-1 rounded-full bg-danger px-2.5 py-0.5 text-xs font-bold text-white"><AlertTriangle size={12} />{SAFETY_ALERT_LABELS[ride.safetyAlert]}</span>}
+                      {ride.cancelReason === 'no_show' && <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted">No-show</span>}
                       <span className="text-xs font-semibold uppercase text-muted">{ride.serviceType.replace(/_/g, ' ')}</span>
                     </div>
                     <p className="mt-2 break-words text-sm font-semibold text-ink">{ride.pickupLocation || 'Unknown pickup'} &rarr; {ride.dropoffLocation || 'Unknown drop-off'}</p>
@@ -514,6 +560,7 @@ export const AdminRides = () => {
                       {ride.fare ? (ride.fare.distanceSource === 'none' ? ' - distance unknown' : ` - ${ride.fare.miles.toFixed(1)} mi, ${ride.fare.minutes} min${ride.fare.distanceSource === 'estimate' ? ' (estimated)' : ''}`) : ' - flat price'}
                       {ride.cancellationFee ? ` - Cancellation fee ${formatRidePrice(ride.cancellationFee, '', ride.currency)}` : ''}
                     </p>
+                    <RideIncidents ride={ride} onResolved={() => { setFlash('Incident marked handled.'); void load(); }} />
                     {ride.fare && (
                       <details className="mt-1 max-w-sm text-xs">
                         <summary className="cursor-pointer font-semibold text-brand-deep">Fare breakdown</summary>
