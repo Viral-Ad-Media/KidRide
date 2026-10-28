@@ -49,12 +49,25 @@ export interface User {
   vehicle?: VehicleDetails;
   driverApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   children?: Child[];
+  /** Email on ride updates (on by default). */
+  notifyEmail?: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  rideId: string | null;
+  kind: string;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface AssignedDriver {
   id: string;
   name: string;
   photoUrl?: string;
+  phone?: string;
   isVerifiedDriver?: boolean;
   vehicle?: VehicleDetails;
 }
@@ -94,7 +107,28 @@ export interface RideRating {
 export type ScheduleState = 'scheduled' | 'dispatching' | 'assigned' | 'needs_attention';
 export const SCHEDULE_STATES: ScheduleState[] = ['scheduled', 'dispatching', 'assigned', 'needs_attention'];
 
+export interface FareLine { key: string; label: string; amount: number }
+/** The fare quoted at booking: distance and time from the route, plus each charge. */
+export interface FareBreakdown {
+  total: number;
+  lines: FareLine[];
+  miles: number;
+  minutes: number;
+  stayMinutes?: number;
+  /** 'routes' from Google driving directions; 'estimate' from straight-line distance. */
+  distanceSource: 'routes' | 'estimate' | 'none';
+}
+
 export interface Ride {
+  currency?: string;
+  /** Null for rides booked before distance pricing. */
+  fare?: FareBreakdown | null;
+  /** The driver's share of the fare. */
+  driverEarnings?: number;
+  cancellationFee?: number;
+  /** Booking only: the signed quote the server issued for this trip. */
+  quoteToken?: string;
+  stayMinutes?: number;
   driverLocation?: DriverLocation;
   /** 'targeted' while offered to the nearest drivers one at a time; 'open' when any driver may take it. */
   dispatchState?: 'targeted' | 'open';
@@ -120,10 +154,21 @@ export interface Ride {
   pickupTime: string;
   status: RideStatus;
   price: number;
+  /** Empty for the assigned driver: they ask for it at the pickup and enter it. */
   tripCode: string;
   safeWord: string;
   serviceType: ServiceType;
+  /** When the driver marked arrival at the pickup (starts the no-show wait). */
+  arrivedAt?: string | null;
+  tripCodeVerified?: boolean;
+  tripCodeAttempts?: number;
+  /** The most serious open safety incident on the ride. */
+  safetyAlert?: SafetyAlert | null;
+  safetyAlertAt?: string | null;
+  cancelReason?: 'no_show' | null;
 }
+
+export type SafetyAlert = 'sos' | 'trip_code' | 'off_route' | 'stalled';
 
 export interface CarpoolOffer {
   id: string;

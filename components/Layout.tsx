@@ -1,545 +1,267 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrandLockup } from './brand/BrandLockup';
+import { BrandMark } from './brand/BrandMark';
 import {
+  Bell,
   Briefcase,
   ClipboardCheck,
   Car,
-  CreditCard,
   DollarSign,
   HelpCircle,
   Home,
   LogOut,
   Map,
-  Menu,
   MessageCircle,
   Navigation,
-  Plus,
-  Shield,
   User,
   Users,
-  X
+  X,
+  Tag,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationsContext';
 import { UserRole } from '../types';
+
+// App shell: a collapsible icon rail on large screens (full labels or icons
+// only, remembered per browser), a slim top bar and a bottom tab bar on
+// phones. Plain Cloud background, hairlines, no decoration; the pages carry
+// the content.
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-type NavItem = {
-  icon: typeof Home;
-  label: string;
-  path: string;
-  description: string;
+type NavItem = { icon: typeof Home; label: string; path: string };
+
+const pageTitles: Record<string, string> = {
+  '/dashboard': 'Home',
+  '/add-child': 'Add a child',
+  '/book': 'Book a ride',
+  '/carpools': 'Carpools',
+  '/rides': 'Rides',
+  '/tracking/:id': 'Live tracking',
+  '/safety': 'Safety',
+  '/profile': 'Profile',
+  '/notifications': 'Notifications',
+  '/profile/notifications': 'Notification settings',
+  '/profile/payments': 'Payments',
+  '/driver-dashboard': 'Jobs',
+  '/driver-map': 'Map',
+  '/admin': 'Applications',
+  '/admin/drivers': 'Drivers',
+  '/admin/parents': 'Parents',
+  '/admin/live-map': 'Live map',
+  '/admin/rides': 'Rides',
+  '/admin/pricing': 'Pricing',
+  '/earnings': 'Earnings'
 };
 
-const routeMeta: Record<string, { title: string; subtitle: string }> = {
-  '/dashboard': {
-    title: 'Family Dashboard',
-    subtitle: 'See child profiles, current rides, and your next actions in one place.'
-  },
-  '/add-child': {
-    title: 'Add Child Profile',
-    subtitle: 'Create a real child profile before booking any ride.'
-  },
-  '/book': {
-    title: 'Book a Ride',
-    subtitle: 'Plan a trip with clear pickup details and a verified driver flow.'
-  },
-  '/carpools': {
-    title: 'Carpools',
-    subtitle: 'Browse community ride options and shared family transportation.'
-  },
-  '/rides': {
-    title: 'Ride History',
-    subtitle: 'Track active trips, upcoming bookings, and completed rides.'
-  },
-  '/tracking/:id': {
-    title: 'Live Tracking',
-    subtitle: 'Follow trip progress, trip code, and safety details in real time.'
-  },
-  '/safety': {
-    title: 'Safety Assistant',
-    subtitle: 'Get support guidance and quick answers while coordinating rides.'
-  },
-  '/profile': {
-    title: 'Profile & Settings',
-    subtitle: 'Manage your account, verification status, and preferences.'
-  },
-  '/profile/notifications': {
-    title: 'Notifications',
-    subtitle: 'Choose how KidRide keeps you up to date on ride activity.'
-  },
-  '/profile/payments': {
-    title: 'Payments',
-    subtitle: 'Keep payment methods and billing details organized.'
-  },
-  '/driver-dashboard': {
-    title: 'Driver Console',
-    subtitle: 'Review open jobs, active trips, and driver readiness at a glance.'
-  },
-  '/driver-map': {
-    title: 'Driver Map',
-    subtitle: 'See the service area and stay oriented while driving.'
-  },
-  '/admin': {
-    title: 'Driver Applications',
-    subtitle: 'Review driver documents and approve or reject pending applications.'
-  },
-  '/admin/drivers': {
-    title: 'Drivers',
-    subtitle: 'Every registered driver: details, ratings, approval and account status.'
-  },
-  '/admin/parents': {
-    title: 'Parents',
-    subtitle: 'Every registered parent: children, bookings and account status.'
-  },
-  '/admin/live-map': {
-    title: 'Live Map',
-    subtitle: 'Every online driver and ride in progress, updated every few seconds.'
-  },
-  '/admin/rides': {
-    title: 'Rides Overview',
-    subtitle: 'Monitor every ride on the platform and intervene when needed.'
-  },
-  '/earnings': {
-    title: 'Earnings',
-    subtitle: 'Track performance and income from completed rides.'
-  }
-};
+const mapScreenPaths = new Set(['/dashboard', '/book']);
 
-const resolveRouteKey = (pathname: string) => {
-  if (pathname.startsWith('/tracking/')) {
-    return '/tracking/:id';
-  }
+const publicPagePaths = new Set(['/', '/login', '/about', '/safety-info', '/for-drivers', '/faq', '/help', '/contact', '/privacy', '/terms', '/drive', '/driver-signup']);
 
-  return pathname;
-};
+const parentNavItems: NavItem[] = [
+  { icon: Home, label: 'Home', path: '/dashboard' },
+  { icon: Car, label: 'Rides', path: '/rides' },
+  { icon: MessageCircle, label: 'Safety', path: '/safety' },
+  { icon: User, label: 'Profile', path: '/profile' }
+];
 
-const userInitials = (name: string | undefined) => {
-  if (!name) {
-    return 'KR';
-  }
+const driverNavItems: NavItem[] = [
+  { icon: Briefcase, label: 'Jobs', path: '/driver-dashboard' },
+  { icon: Map, label: 'Map', path: '/driver-map' },
+  { icon: DollarSign, label: 'Earnings', path: '/earnings' },
+  { icon: User, label: 'Profile', path: '/profile' }
+];
 
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || '')
-    .join('');
-};
+const adminNavItems: NavItem[] = [
+  { icon: ClipboardCheck, label: 'Applications', path: '/admin' },
+  { icon: Car, label: 'Drivers', path: '/admin/drivers' },
+  { icon: Users, label: 'Parents', path: '/admin/parents' },
+  { icon: Map, label: 'Rides', path: '/admin/rides' },
+  { icon: Navigation, label: 'Live map', path: '/admin/live-map' },
+  { icon: Tag, label: 'Pricing', path: '/admin/pricing' },
+  { icon: User, label: 'Profile', path: '/profile' }
+];
+
+const resolveRouteKey = (pathname: string) => (pathname.startsWith('/tracking/') ? '/tracking/:id' : pathname.startsWith('/edit-child/') ? '/add-child' : pathname);
+
+const userInitials = (name: string | undefined) =>
+  (name || '').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'KR';
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const publicPagePaths = new Set([
-    '/',
-    '/login',
-    '/about',
-    '/safety-info',
-    '/for-drivers',
-    '/faq',
-    '/help',
-    '/contact',
-    '/privacy',
-    '/terms',
-    '/drive',
-    '/driver-signup'
-  ]);
-
-  const parentNavItems: NavItem[] = [
-    { icon: Home, label: 'Dashboard', path: '/dashboard', description: 'Overview and family activity' },
-    { icon: Car, label: 'Rides', path: '/rides', description: 'Trips, bookings, and history' },
-    { icon: MessageCircle, label: 'Safety', path: '/safety', description: 'Support guidance and help' },
-    { icon: User, label: 'Profile', path: '/profile', description: 'Account and preferences' }
-  ];
-
-  const driverNavItems: NavItem[] = [
-    { icon: Briefcase, label: 'Jobs', path: '/driver-dashboard', description: 'Open jobs and active rides' },
-    { icon: Map, label: 'Map', path: '/driver-map', description: 'Service area and location' },
-    { icon: DollarSign, label: 'Earnings', path: '/earnings', description: 'Performance and payouts' },
-    { icon: User, label: 'Profile', path: '/profile', description: 'Account and verification' }
-  ];
-
-  const adminNavItems: NavItem[] = [
-    { icon: ClipboardCheck, label: 'Applications', path: '/admin', description: 'Driver application review' },
-    { icon: Car, label: 'Drivers', path: '/admin/drivers', description: 'All drivers, approvals and blocks' },
-    { icon: Users, label: 'Parents', path: '/admin/parents', description: 'All parents and blocks' },
-    { icon: Map, label: 'Rides', path: '/admin/rides', description: 'All rides and overrides' },
-    { icon: Navigation, label: 'Live map', path: '/admin/live-map', description: 'Drivers and rides right now' },
-    { icon: User, label: 'Profile', path: '/profile', description: 'Account and preferences' }
-  ];
-
-  const isAdmin = user?.role === UserRole.ADMIN;
-  const navItems = isAdmin ? adminNavItems : user?.role === UserRole.DRIVER ? driverNavItems : parentNavItems;
-  const routeKey = resolveRouteKey(location.pathname);
-  const activeNavItem = navItems.find((item) => location.pathname === item.path);
-  const page = routeMeta[routeKey] || {
-    title: activeNavItem?.label || 'KidRide',
-    subtitle: user?.role === UserRole.DRIVER
-      ? 'Manage your driver account and live trip state from a single workspace.'
-      : 'Manage rides, children, and account settings from one place.'
-  };
-
-  const primaryAction = isAdmin
-    ? {
-        label: 'Review Applications',
-        path: '/admin',
-        icon: ClipboardCheck,
-        helper: 'Pending driver applications waiting for a decision.'
-      }
-    : user?.role === UserRole.DRIVER
-    ? {
-        label: 'View Driver Map',
-        path: '/driver-map',
-        icon: Map,
-        helper: 'Keep your service area and routing tools close by.'
-      }
-    : (user?.children?.length || 0) > 0
-      ? {
-          label: 'Book a Ride',
-          path: '/book',
-          icon: Car,
-          helper: 'Move quickly from planning into live ride tracking.'
-        }
-      : {
-          label: 'Add a Child',
-          path: '/add-child',
-          icon: Plus,
-          helper: 'Create your first child profile before booking a ride.'
-        };
-
-  const accountSummary = useMemo(() => {
-    if (user?.role === UserRole.ADMIN) {
-      return {
-        eyebrow: 'Admin Console',
-        label: 'Administrator',
-        meta: 'Driver review and ride operations'
-      };
-    }
-
-    if (user?.role === UserRole.DRIVER) {
-      const applicationStatus = user.driverApplicationStatus || 'none';
-      const driverLabel = applicationStatus === 'approved'
-        ? 'Verified driver'
-        : applicationStatus === 'pending'
-          ? 'Verification pending'
-          : 'Driver account';
-
-      return {
-        eyebrow: 'Driver Workspace',
-        label: driverLabel,
-        meta: 'Jobs, trip flow, and account readiness'
-      };
-    }
-
-    const childCount = user?.children?.length || 0;
-    return {
-      eyebrow: 'Family Hub',
-      label: childCount > 0 ? `${childCount} child ${childCount === 1 ? 'profile' : 'profiles'}` : 'No child profiles yet',
-      meta: 'Bookings, safety, and family coordination'
-    };
-  }, [user]);
+  // The rail shows icons only; pointing at it (or tapping the logo) opens it
+  // with labels and the page shifts over. It closes when the pointer leaves.
+  const [expanded, setExpanded] = useState(false);
 
   // Must come after every hook so public and app pages call the same hooks.
   if (publicPagePaths.has(location.pathname)) {
-    return <div className="min-h-screen text-slate-900">{children}</div>;
+    return <div className="min-h-screen text-ink">{children}</div>;
   }
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setIsMenuOpen(false);
-  };
+  const isAdmin = user?.role === UserRole.ADMIN;
+  const isDriver = user?.role === UserRole.DRIVER;
+  const navItems = isAdmin ? adminNavItems : isDriver ? driverNavItems : parentNavItems;
+  const homePath = isAdmin ? '/admin' : isDriver ? '/driver-dashboard' : '/dashboard';
+  const title = pageTitles[resolveRouteKey(location.pathname)] || navItems.find((item) => item.path === location.pathname)?.label || 'KidRide';
+  const roleLabel = isAdmin ? 'Admin' : isDriver ? (user?.driverApplicationStatus === 'approved' ? 'Verified driver' : 'Driver') : 'Parent';
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setIsMenuOpen(false);
-  };
+  const go = (path: string) => { navigate(path); setIsMenuOpen(false); };
+  const handleLogout = () => { logout(); navigate('/'); setIsMenuOpen(false); };
 
-  const renderAvatar = () => (
-    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[18px] bg-surface-2 text-sm font-bold text-brand-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-      {user?.photoUrl ? <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" /> : userInitials(user?.name)}
-    </div>
+  const Avatar: React.FC<{ size?: number }> = ({ size = 36 }) => (
+    <span className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-sm font-semibold text-brand-deep" style={{ width: size, height: size }}>
+      {user?.photoUrl ? <img src={user.photoUrl} alt="" className="h-full w-full object-cover" /> : userInitials(user?.name)}
+    </span>
   );
 
-  const secondaryActions = [
-    { icon: Shield, label: 'Verification', path: '/profile' },
-    { icon: CreditCard, label: 'Payments', path: '/profile/payments' },
-    { icon: HelpCircle, label: 'Help', path: '/help' }
-  ];
+  const badge = unreadCount > 0 && (
+    <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[11px] font-bold leading-none text-white" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+  );
 
-  const ActionIcon = primaryAction.icon;
+  const railItem = (item: NavItem) => {
+    const active = location.pathname === item.path;
+    return (
+      <button
+        key={item.path}
+        type="button"
+        onClick={() => go(item.path)}
+        title={expanded ? undefined : item.label}
+        aria-current={active ? 'page' : undefined}
+        className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors gap-3 px-3 ${
+          active ? 'bg-brand/15 font-semibold text-ink' : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
+        }`}
+      >
+        <item.icon size={22} strokeWidth={active ? 2.25 : 1.75} className={active ? 'text-brand-deep' : ''} />
+        <span className={`truncate transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>{item.label}</span>
+      </button>
+    );
+  };
 
   return (
-    <div className="min-h-screen text-slate-900">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-8rem] top-[-7rem] h-72 w-72 rounded-full bg-brand/30 blur-3xl" />
-        <div className="absolute right-[-6rem] top-24 h-64 w-64 rounded-full bg-amber-200/35 blur-3xl" />
-        <div className="absolute bottom-[-6rem] left-1/3 h-80 w-80 rounded-full bg-brand/10 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-surface text-ink">
+      <div className="flex min-h-screen">
+        {/* Icon rail / sidebar */}
+        <aside
+          className={`sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-[width] duration-200 ease-out lg:block ${expanded ? 'w-60' : 'w-[72px]'}`}
+          onMouseEnter={() => setExpanded(true)}
+          onMouseLeave={() => setExpanded(false)}
+          onFocus={() => setExpanded(true)}
+          onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setExpanded(false); }}
+        >
+         <div className="flex h-full w-60 flex-col border-r border-line bg-white">
+          <div className="flex h-16 items-center pl-4">
+            <button type="button" onClick={() => (expanded ? go(homePath) : setExpanded(true))} className="flex items-center" aria-label="KidRide home">
+              <BrandMark size={40} title="KidRide" />
+              <span className={`kr-wordmark ml-2.5 text-[22px] font-extrabold tracking-[-0.02em] text-ink transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">KidRide</span>
+            </button>
+          </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-[1600px] gap-4 px-3 py-3 sm:gap-5 sm:px-5 sm:py-5 xl:gap-6 xl:px-6">
-        <aside className="hidden xl:flex xl:w-[310px] xl:shrink-0">
-          <div className="glass-panel sticky top-5 flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-y-auto rounded-[32px] p-6">
+          <nav className="mt-4 flex flex-col gap-1 px-3">
+            {navItems.map(railItem)}
             <button
               type="button"
-              onClick={() => navigate(isAdmin ? '/admin' : user?.role === UserRole.DRIVER ? '/driver-dashboard' : '/dashboard')}
-              className="flex items-center gap-4 rounded-[24px] border border-white/60 bg-white/70 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-white/85"
+              onClick={() => go('/notifications')}
+              title={expanded ? undefined : 'Inbox'}
+              aria-current={location.pathname === '/notifications' ? 'page' : undefined}
+              className={`flex h-11 w-full items-center rounded-control text-left text-[15px] transition-colors gap-3 px-3 ${
+                location.pathname === '/notifications' ? 'bg-brand/15 font-semibold text-ink' : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
+              }`}
             >
-              <div>
-                <BrandLockup size={64} />
-                <p className="mt-1 text-xs font-semibold text-muted">Workspace</p>
-              </div>
+              <span className="relative"><Bell size={22} strokeWidth={location.pathname === '/notifications' ? 2.25 : 1.75} className={location.pathname === '/notifications' ? 'text-brand-deep' : ''} />{badge}</span>
+              <span className={`truncate transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>Inbox</span>
             </button>
+          </nav>
 
-            <div className="mt-5 flex items-center gap-4 rounded-[28px] border border-white/60 bg-white/72 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
-              {renderAvatar()}
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold text-slate-950">{user?.name || 'KidRide User'}</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-deep/85">{accountSummary.eyebrow}</p>
-                <p className="mt-2 text-xs text-slate-500">{accountSummary.label}</p>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-2">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleNavigation(item.path)}
-                    className={`flex w-full items-center gap-4 rounded-[22px] px-4 py-4 text-left transition-all ${
-                      isActive
-                        ? 'bg-slate-950 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]'
-                        : 'bg-transparent text-slate-600 hover:bg-white/80 hover:text-slate-950'
-                    }`}
-                  >
-                    <div className={`inline-flex h-11 w-11 items-center justify-center rounded-[16px] ${
-                      isActive ? 'bg-white/12 text-white' : 'bg-slate-100 text-brand-deep'
-                    }`}>
-                      <item.icon size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold">{item.label}</p>
-                      <p className={`mt-1 text-xs ${isActive ? 'text-white/68' : 'text-slate-400'}`}>{item.description}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(239,246,255,0.92)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
-              <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-[16px] bg-brand/10 text-brand-deep">
-                  <ActionIcon size={18} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">{primaryAction.label}</p>
-                  <p className="mt-1 text-xs text-slate-500">{primaryAction.helper}</p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleNavigation(primaryAction.path)}
-                className="mt-4 flex w-full items-center justify-between rounded-[20px] bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                <span>Open</span>
-                <span className="text-white/55">/</span>
-              </button>
-            </div>
-
-            <div className="mt-auto space-y-2 pt-6">
-              {secondaryActions.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => handleNavigation(item.path)}
-                  className="flex w-full items-center gap-4 rounded-[20px] px-4 py-3 text-left text-slate-600 transition hover:bg-white/80 hover:text-slate-950"
-                >
-                  <item.icon size={18} className="text-slate-400" />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="mt-3 flex w-full items-center gap-4 rounded-[20px] bg-red-50 px-4 py-3 text-left text-red-600 transition hover:bg-red-100"
-              >
-                <LogOut size={18} />
-                <span className="text-sm font-semibold">Log Out</span>
-              </button>
-            </div>
+          <div className={`mt-auto flex flex-col gap-1 px-3 pb-4 `}>
+            <button type="button" onClick={() => go('/help')} title={expanded ? undefined : 'Help'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-ink gap-3 px-3`}>
+              <HelpCircle size={22} strokeWidth={1.75} />
+              <span className={`transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>Help</span>
+            </button>
+            <button type="button" onClick={handleLogout} title={expanded ? undefined : 'Log out'} className={`flex h-11 w-full items-center rounded-control text-[15px] font-medium text-muted hover:bg-surface-2 hover:text-danger gap-3 px-3`}>
+              <LogOut size={22} strokeWidth={1.75} />
+              <span className={`transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>Log out</span>
+            </button>
+            <button type="button" onClick={() => go('/profile')} title={expanded ? undefined : user?.name} className={`mt-2 flex w-full items-center rounded-control border-t border-line pt-3 text-left gap-3 px-2`}>
+              <Avatar />
+              {(
+                <span className={`min-w-0 transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
+                  <span className="block truncate text-sm font-semibold text-ink">{user?.name || 'KidRide'}</span>
+                  <span className="block text-xs text-muted">{roleLabel}</span>
+                </span>
+              )}
+            </button>
           </div>
+         </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4 xl:gap-5">
-          <header className="glass-panel sticky top-3 z-40 rounded-[30px] px-4 py-4 sm:px-6 xl:top-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-3 xl:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setIsMenuOpen(true)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-100 text-slate-700 transition hover:bg-slate-200"
-                    aria-label="Open menu"
-                  >
-                    <Menu size={20} />
-                  </button>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-deep">{accountSummary.eyebrow}</p>
-                    <h2 className="truncate text-2xl font-bold text-slate-950">{page.title}</h2>
-                  </div>
-                </div>
-
-                <div className="hidden xl:block">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-deep">{accountSummary.eyebrow}</p>
-                  <h2 className="mt-1 text-3xl font-bold text-slate-950">{page.title}</h2>
-                </div>
-
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">{page.subtitle}</p>
-              </div>
-
-              <div className="hidden min-w-[260px] items-center justify-end gap-3 sm:flex">
-                <div className="rounded-[22px] border border-slate-200 bg-white/80 px-4 py-3 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Workspace Status</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{accountSummary.label}</p>
-                  <p className="mt-1 text-xs text-slate-500">{accountSummary.meta}</p>
-                </div>
-                {renderAvatar()}
-              </div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Phone top bar */}
+          <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white/95 px-4 backdrop-blur lg:hidden">
+            <button type="button" onClick={() => go(homePath)} aria-label="KidRide home"><BrandMark size={40} title="KidRide" /></button>
+            <h1 className="truncate text-lg font-extrabold tracking-tight">{title}</h1>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => go('/notifications')} className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink" aria-label="Inbox"><Bell size={22} strokeWidth={1.75} />{badge}</button>
+              <button type="button" onClick={() => setIsMenuOpen(true)} aria-label="Account menu"><Avatar size={34} /></button>
             </div>
           </header>
 
-          <main className="flex-1 pb-28 xl:pb-6">
-            <div className="glass-panel min-h-full rounded-[34px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-              <div className="mx-auto w-full max-w-[1180px]">
+          {mapScreenPaths.has(location.pathname) || location.pathname.startsWith('/tracking/') ? (
+            // Map-first screens draw edge to edge and bring their own sheet.
+            <main className="flex-1">{children}</main>
+          ) : (
+            <main className="flex-1 pb-24 lg:pb-10">
+              <div className="mx-auto w-full max-w-[1180px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8">
+                {/* Home screens open with their own greeting, so no page title there. */}
+                {location.pathname !== homePath && <h1 className="mb-6 hidden text-headline font-extrabold tracking-tight lg:block">{title}</h1>}
                 {children}
               </div>
-            </div>
-          </main>
+            </main>
+          )}
         </div>
+      </div>
 
-        <nav className="glass-panel fixed bottom-3 left-1/2 z-40 flex w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-[28px] px-3 py-2 xl:hidden">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+      {/* Phone bottom tabs */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {navItems.map((item) => {
+          const active = location.pathname === item.path;
+          return (
+            <button key={item.path} type="button" onClick={() => navigate(item.path)} aria-current={active ? 'page' : undefined} className={`flex min-w-0 flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-[11px] ${active ? 'font-semibold text-brand-deep' : 'font-medium text-muted'}`}>
+              <item.icon size={22} strokeWidth={active ? 2.25 : 1.75} />
+              <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => navigate(item.path)}
-                className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-center transition ${
-                  isActive ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.16)]' : 'text-slate-400'
-                }`}
-              >
-                <item.icon size={20} strokeWidth={isActive ? 2.4 : 2} />
-                <span className="text-[11px] font-semibold">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {isMenuOpen && (
-          <div className="fixed inset-0 z-50 xl:hidden">
-            <div
-              className="absolute inset-0 bg-slate-950/38 backdrop-blur-sm"
-              onClick={() => setIsMenuOpen(false)}
-            />
-            <div className="absolute right-0 top-0 h-full w-[86vw] max-w-sm p-3 sm:p-4">
-              <div className="glass-panel flex h-full flex-col rounded-[30px] p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-deep">{accountSummary.eyebrow}</p>
-                    <h2 className="mt-2 text-2xl font-bold text-slate-950">Menu</h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-100 text-slate-700"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="mt-6 flex items-center gap-4 rounded-[24px] border border-white/60 bg-white/75 p-4">
-                  {renderAvatar()}
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-slate-950">{user?.name || 'KidRide User'}</p>
-                    <p className="mt-1 text-xs text-slate-500">{accountSummary.label}</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-2">
-                  {navItems.map((item) => {
-                    const isActive = location.pathname === item.path;
-
-                    return (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => handleNavigation(item.path)}
-                        className={`flex w-full items-center gap-4 rounded-[22px] px-4 py-4 text-left transition ${
-                          isActive ? 'bg-slate-950 text-white' : 'bg-white/70 text-slate-700 hover:bg-white'
-                        }`}
-                      >
-                        <item.icon size={20} className={isActive ? 'text-white' : 'text-brand-deep'} />
-                        <div>
-                          <p className="font-semibold">{item.label}</p>
-                          <p className={`mt-1 text-xs ${isActive ? 'text-white/68' : 'text-slate-400'}`}>{item.description}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-6 rounded-[24px] bg-slate-950 p-5 text-white">
-                  <p className="text-sm font-semibold">{primaryAction.label}</p>
-                  <p className="mt-2 text-xs leading-6 text-white/68">{primaryAction.helper}</p>
-                  <button
-                    type="button"
-                    onClick={() => handleNavigation(primaryAction.path)}
-                    className="mt-4 rounded-[18px] bg-white px-4 py-3 text-sm font-semibold text-slate-950"
-                  >
-                    Open
-                  </button>
-                </div>
-
-                <div className="mt-auto space-y-2 pt-6">
-                  {secondaryActions.map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => handleNavigation(item.path)}
-                      className="flex w-full items-center gap-4 rounded-[18px] px-4 py-3 text-left text-slate-600 transition hover:bg-white/80 hover:text-slate-950"
-                    >
-                      <item.icon size={18} className="text-slate-400" />
-                      <span className="text-sm font-medium">{item.label}</span>
-                    </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-4 rounded-[18px] bg-red-50 px-4 py-3 text-left text-red-600"
-                  >
-                    <LogOut size={18} />
-                    <span className="text-sm font-semibold">Log Out</span>
-                  </button>
-                </div>
+      {/* Phone account sheet */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-ink/40" onClick={() => setIsMenuOpen(false)} />
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-sheet bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-float">
+            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-line" />
+            <div className="flex items-center gap-3">
+              <Avatar size={44} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-semibold">{user?.name || 'KidRide'}</p>
+                <p className="text-sm text-muted">{roleLabel}</p>
               </div>
+              <button type="button" onClick={() => setIsMenuOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-2" aria-label="Close"><X size={20} /></button>
+            </div>
+            <div className="mt-4 divide-y divide-line border-y border-line">
+              <button type="button" onClick={() => go('/profile')} className="flex h-12 w-full items-center gap-3 text-[15px] font-medium"><User size={20} className="text-muted" />Profile</button>
+              <button type="button" onClick={() => go('/help')} className="flex h-12 w-full items-center gap-3 text-[15px] font-medium"><HelpCircle size={20} className="text-muted" />Help</button>
+              <button type="button" onClick={handleLogout} className="flex h-12 w-full items-center gap-3 text-[15px] font-medium text-danger"><LogOut size={20} />Log out</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

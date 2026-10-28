@@ -233,7 +233,6 @@ export const SafetyChat = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Safety Center</h2>
 
       <div className="flex justify-center py-4">
         <button

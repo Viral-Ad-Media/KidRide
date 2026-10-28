@@ -38,10 +38,14 @@ interface LiveMapProps {
   pickupLabel?: string;
   dropoffLabel?: string;
   className?: string;
+  /** Where the zoom/recenter controls sit (Tailwind position classes). */
+  controlsClassName?: string;
+  /** Where the route/GPS notice sits. */
+  noticeClassName?: string;
   onRoute?: (info: RouteInfo) => void;
 }
 
-export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, driverLocation, nextStop = 'pickup', pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', className = 'h-full', onRoute }) => {
+export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, driverLocation, nextStop = 'pickup', pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', className = 'h-full', controlsClassName = 'bottom-24 right-3', noticeClassName = 'bottom-3 left-3 right-16', onRoute }) => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -193,9 +197,9 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     <div className={`relative overflow-hidden rounded-2xl bg-slate-100 ${className}`}>
       <div ref={containerRef} className="h-full w-full" aria-label="Trip map" />
       {mapsState.status === 'loading' && <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">Loading map...</div>}
-      {mapsState.status === 'ready' && <MapControls map={mapRef} onRecenter={recenter} recenterLabel="Show the whole trip" className="bottom-24 right-3" />}
+      {mapsState.status === 'ready' && <MapControls map={mapRef} onRecenter={recenter} recenterLabel="Show the whole trip" className={controlsClassName} />}
       {(routeError || stale || !driverLocation) && mapsState.status === 'ready' && (
-        <div className="absolute bottom-3 left-3 right-16 rounded-2xl bg-white/95 px-4 py-3 text-xs font-medium text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.12)] backdrop-blur">
+        <div className={`absolute ${noticeClassName} rounded-2xl bg-white/95 px-4 py-3 text-xs font-medium text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.12)] backdrop-blur`}>
           {routeError || (!driverLocation ? 'Waiting for the driver\'s live location.' : `Driver GPS is delayed. Last update ${new Date(recordedAt).toLocaleTimeString()}.`)}
         </div>
       )}

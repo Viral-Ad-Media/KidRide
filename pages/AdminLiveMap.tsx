@@ -1,6 +1,8 @@
 /// <reference types="google.maps" />
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MapPinOff, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, MapPinOff, RefreshCw, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { SAFETY_ALERT_LABELS } from '../components/SafetyActions';
 import { AdminTabs } from './Admin';
 import { HtmlMarker, carHtml, createHtmlMarker, dotHtml, waitingPinHtml } from '../components/mapMarkers';
 import { MapControls } from '../components/MapControls';
@@ -132,6 +134,8 @@ export const AdminLiveMap = () => {
     .filter((driver) => !search.trim() || `${driver.name} ${driver.vehicle || ''} ${driver.plate || ''}`.toLowerCase().includes(search.trim().toLowerCase())), [snapshot, filter, search]);
 
   const counts = snapshot?.counts;
+  const alertRides = (snapshot?.rides || []).filter((ride) => ride.safetyAlert);
+  const alertDrivers = new Set(alertRides.map((ride) => ride.driverId).filter(Boolean));
 
   return (
     <div>
@@ -143,20 +147,32 @@ export const AdminLiveMap = () => {
           ['Rides in progress', counts?.ridesInProgress],
           ['Waiting for a driver', counts?.searching]
         ].map(([label, value]) => (
-          <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs text-slate-500">{label}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-950">{value ?? '--'}</p>
+          <div key={label as string} className="rounded-card border border-line bg-white p-4">
+            <p className="text-xs text-muted">{label}</p>
+            <p className="mt-1 text-title font-extrabold tabular-nums text-ink">{value ?? '--'}</p>
           </div>
         ))}
       </div>
-      {error && <p className="mb-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>}
+      {error && <p className="mb-3 text-label font-semibold text-warning">{error}</p>}
+      {alertRides.length > 0 && (
+        <ul role="alert" className="mb-4 space-y-2">
+          {alertRides.map((ride) => (
+            <li key={ride.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border-2 border-danger bg-danger/5 px-4 py-3 text-sm">
+              <span className="flex items-center gap-1.5 font-bold text-danger"><AlertTriangle size={16} />{SAFETY_ALERT_LABELS[ride.safetyAlert!]}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{ride.pickup} &rarr; {ride.dropoff}{ride.driverName ? ` · ${ride.driverName}` : ''}</span>
+              {ride.safetyAlertAt && <span className="text-xs text-muted">{new Date(ride.safetyAlertAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>}
+              <Link to="/admin/rides" className="text-xs font-semibold text-brand-deep underline">Open in Rides</Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="relative h-[560px] overflow-hidden rounded-3xl bg-slate-100">
+        <div className="relative h-[560px] overflow-hidden rounded-card bg-surface-2">
           {mapsState.status === 'unavailable' ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-slate-600">
-              <MapPinOff size={24} className="text-slate-400" />
-              <p className="font-semibold text-slate-700">Map unavailable</p>
+            <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted">
+              <MapPinOff size={24} className="text-muted" />
+              <p className="font-semibold text-ink">Map unavailable</p>
               <p>{mapsState.reason}</p>
             </div>
           ) : (
@@ -164,48 +180,50 @@ export const AdminLiveMap = () => {
           )}
           {mapsState.status === 'ready' && <MapControls map={mapRef} onRecenter={frameAll} recenterLabel="Show all drivers and rides" />}
           {selectedDriver && (
-            <div className="absolute left-3 top-3 z-20 w-[260px] rounded-[22px] border border-slate-100 bg-white p-4 shadow-[0_20px_45px_rgba(15,23,42,0.2)]" role="dialog" aria-label="Driver details">
+            <div className="absolute left-3 top-3 z-20 w-[260px] rounded-[22px] border border-line bg-white p-4 shadow-[0_20px_45px_rgba(15,23,42,0.2)]" role="dialog" aria-label="Driver details">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-bold text-slate-950">{selectedDriver.name}</p>
+                  <p className="truncate text-base font-bold text-ink">{selectedDriver.name}</p>
                   <span className="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white" style={{ background: selectedDriver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{selectedDriver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>
                 </div>
-                <button type="button" onClick={() => setSelected(null)} aria-label="Close" className="rounded-full p-1 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+                <button type="button" onClick={() => setSelected(null)} aria-label="Close" className="rounded-full p-1 text-muted hover:bg-surface-2"><X size={16} /></button>
               </div>
-              <p className="mt-3 text-sm text-slate-600">{selectedDriver.vehicle || 'Vehicle not set'}{selectedDriver.plate ? ` · ${selectedDriver.plate}` : ''}</p>
-              {selectedDriver.phone && <p className="mt-1 text-sm text-slate-600">{selectedDriver.phone}</p>}
-              <p className="mt-2 text-xs text-slate-400">Updated {secondsAgo(selectedDriver.updatedAt)}s ago</p>
+              <p className="mt-3 text-sm text-muted">{selectedDriver.vehicle || 'Vehicle not set'}{selectedDriver.plate ? ` · ${selectedDriver.plate}` : ''}</p>
+              {selectedDriver.phone && <p className="mt-1 text-sm text-muted">{selectedDriver.phone}</p>}
+              <p className="mt-2 text-xs text-muted">Updated {secondsAgo(selectedDriver.updatedAt)}s ago</p>
             </div>
           )}
-          <div className="absolute bottom-3 left-3 flex flex-wrap gap-3 rounded-full bg-white/95 px-4 py-2 text-xs font-medium text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur">
+          <div className="absolute bottom-3 left-3 flex flex-wrap gap-3 rounded-full bg-white/95 px-4 py-2 text-xs font-medium text-muted shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur">
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: FREE_COLOR }} />Free driver</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: BUSY_COLOR }} />On a ride</span>
-            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" />Waiting for a driver</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-accent" />Waiting for a driver</span>
           </div>
         </div>
 
-        <aside className="flex h-[560px] flex-col rounded-3xl border border-slate-200 bg-white p-4">
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search drivers" className="rounded-full border border-slate-200 px-4 py-2 text-sm" />
+        <aside className="flex h-[560px] flex-col rounded-card border border-line bg-white p-4">
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search drivers" className="rounded-full border border-line px-4 py-2 text-sm" />
           <div className="mt-3 flex gap-2" role="tablist">
             {([['all', 'All'], ['free', 'Free'], ['on_ride', 'On a ride']] as [Filter, string][]).map(([value, label]) => (
-              <button key={value} type="button" role="tab" aria-selected={filter === value} onClick={() => setFilter(value)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${filter === value ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{label}</button>
+              <button key={value} type="button" role="tab" aria-selected={filter === value} onClick={() => setFilter(value)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${filter === value ? 'bg-ink text-white' : 'bg-surface-2 text-muted hover:bg-line'}`}>{label}</button>
             ))}
           </div>
           <ul className="mt-3 flex-1 space-y-2 overflow-y-auto">
             {visibleDrivers.map((driver) => (
               <li key={driver.id}>
-                <button type="button" onClick={() => setSelected(driver.id === selected ? null : driver.id)} className={`w-full rounded-2xl border px-3 py-2.5 text-left ${driver.id === selected ? 'border-brand bg-brand/10' : 'border-slate-200 hover:bg-slate-50'}`}>
+                <button type="button" onClick={() => setSelected(driver.id === selected ? null : driver.id)} className={`w-full rounded-card border px-3 py-2.5 text-left ${driver.id === selected ? 'border-brand bg-brand/10' : 'border-line hover:bg-surface-2'}`}>
                   <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-slate-900">{driver.name}</span>
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ background: driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{driver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>
+                    <span className="truncate text-sm font-semibold text-ink">{driver.name}</span>
+                    {alertDrivers.has(driver.id)
+                      ? <span className="shrink-0 rounded-full bg-danger px-2 py-0.5 text-[11px] font-semibold text-white">Alert</span>
+                      : <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white" style={{ background: driver.status === 'on_ride' ? BUSY_COLOR : FREE_COLOR }}>{driver.status === 'on_ride' ? 'On a ride' : 'Free'}</span>}
                   </span>
-                  <span className="mt-1 block truncate text-xs text-slate-500">{driver.vehicle || 'Vehicle not set'}{driver.plate ? ` · ${driver.plate}` : ''} · {secondsAgo(driver.updatedAt)}s ago</span>
+                  <span className="mt-1 block truncate text-xs text-muted">{driver.vehicle || 'Vehicle not set'}{driver.plate ? ` · ${driver.plate}` : ''} · {secondsAgo(driver.updatedAt)}s ago</span>
                 </button>
               </li>
             ))}
-            {snapshot && !visibleDrivers.length && <li className="py-8 text-center text-sm text-slate-500">No drivers online{filter !== 'all' || search ? ' match this filter' : ' right now'}.</li>}
+            {snapshot && !visibleDrivers.length && <li className="py-8 text-center text-sm text-muted">No drivers online{filter !== 'all' || search ? ' match this filter' : ' right now'}.</li>}
           </ul>
-          <p className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400"><RefreshCw size={12} /> Updates every {REFRESH_MS / 1000} s{snapshot ? ` · last ${new Date(snapshot.generatedAt).toLocaleTimeString()}` : ''}</p>
+          <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted"><RefreshCw size={12} /> Updates every {REFRESH_MS / 1000} s{snapshot ? ` · last ${new Date(snapshot.generatedAt).toLocaleTimeString()}` : ''}</p>
         </aside>
       </div>
     </div>

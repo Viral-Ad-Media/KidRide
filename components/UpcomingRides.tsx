@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCancellationFeeNote } from '../utils/useCancellationFee';
 import { AlarmClock, ArrowRight, CalendarClock } from 'lucide-react';
 import { Card, ConfirmModal, Input, Modal } from './UIComponents';
 import { Ride } from '../types';
@@ -74,6 +75,7 @@ export const ParentUpcomingRides: React.FC = () => {
   const [editing, setEditing] = useState<Ride | null>(null);
   const [editValue, setEditValue] = useState('');
   const [cancelling, setCancelling] = useState<Ride | null>(null);
+  const feeNote = useCancellationFeeNote(cancelling?.id, !!cancelling);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const editProblem = editing ? validateScheduleInput(editValue) : null;
@@ -96,8 +98,8 @@ export const ParentUpcomingRides: React.FC = () => {
 
   return (
     <Card>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Upcoming</p>
-      <h3 className="mt-2 text-2xl font-bold text-slate-950">Rides booked for later</h3>
+
+      <h3 className="text-lead font-bold">Upcoming rides</h3>
       {error && <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">{error}</p>}
       {rides.length === 0 ? (
         <p className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
@@ -113,7 +115,7 @@ export const ParentUpcomingRides: React.FC = () => {
               </div>
               <RideLine ride={ride} />
               <p className="mt-1 text-xs text-slate-500">
-                {formatRidePrice(ride.price)}
+                {formatRidePrice(ride.price, undefined, ride.currency)}
                 {ride.driver?.name ? ` · Driver: ${ride.driver.name}` : ride.scheduleState === 'scheduled' ? ' · Offered to drivers 30 min before pickup' : ''}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -144,7 +146,7 @@ export const ParentUpcomingRides: React.FC = () => {
       <ConfirmModal
         open={!!cancelling}
         title="Cancel this ride?"
-        body={cancelling ? <p>{formatScheduledTime(cancelling.pickupTime)} from {cancelling.pickupLocation}.{cancelling.driver?.name ? ' The driver will be told.' : ''}</p> : null}
+        body={cancelling ? <p>{formatScheduledTime(cancelling.pickupTime)} from {cancelling.pickupLocation}.{cancelling.driver?.name ? ' The driver will be told.' : ''} {feeNote}</p> : null}
         confirmLabel="Cancel ride"
         tone="danger"
         busy={busy}
@@ -177,14 +179,14 @@ export const DriverUpcomingRides: React.FC<{ refreshKey?: string }> = ({ refresh
       )}
       {rides.length > 0 && (
         <Card>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Upcoming</p>
-          <h3 className="mt-2 text-xl font-bold text-slate-950">Scheduled rides you accepted</h3>
+
+          <h3 className="text-lead font-bold">Upcoming rides</h3>
           <ul className="mt-4 space-y-3" aria-label="Your upcoming rides">
             {rides.map((ride) => (
               <li key={ride.id} className="rounded-[20px] bg-slate-50 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-bold text-slate-950">{formatScheduledTime(ride.pickupTime)}</p>
-                  <span className="text-sm font-semibold text-slate-700">{formatRidePrice(ride.price)}</span>
+                  <span className="text-sm font-semibold text-slate-700">{formatRidePrice(ride.price, undefined, ride.currency)}</span>
                 </div>
                 <RideLine ride={ride} />
               </li>

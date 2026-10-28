@@ -6,7 +6,15 @@ import { fetchUserRides, getStoredToken } from '../services/api';
 import { Ride, RideStatus } from '../types';
 import { RateRideModal, Stars } from '../components/Ratings';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin } from 'lucide-react';
-import { formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { formatMoney, formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { FareBreakdown } from '../components/FareBreakdown';
+
+const FareDetails: React.FC<{ ride: Ride }> = ({ ride }) => (
+  <details className="mt-2 text-xs text-gray-600">
+    <summary className="cursor-pointer font-semibold text-brand-deep">Fare details</summary>
+    <FareBreakdown fare={ride.fare!} currency={ride.currency} className="mt-2" />
+  </details>
+);
 
 export const RideHistory = () => {
   const navigate = useNavigate();
@@ -68,10 +76,10 @@ export const RideHistory = () => {
   const TabButton = ({ id, label }: { id: typeof activeTab; label: string }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+      className={`-mb-px px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
         activeTab === id
-          ? 'border-brand text-brand-deep'
-          : 'border-transparent text-gray-500 hover:text-gray-700'
+          ? 'border-brand-deep text-ink'
+          : 'border-transparent text-muted hover:text-ink'
       }`}
     >
       {label}
@@ -80,17 +88,13 @@ export const RideHistory = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">My Rides</h2>
-        <Button variant="ghost" className="text-brand-deep font-semibold" onClick={() => navigate('/book')}>
-          + Book Ride
-        </Button>
-      </div>
-
-      <div className="flex border-b border-gray-200 mb-6">
-        <TabButton id="active" label="Active" />
-        <TabButton id="upcoming" label="Upcoming" />
-        <TabButton id="past" label="Past" />
+      <div className="mb-6 flex items-center justify-between border-b border-line">
+        <div className="flex">
+          <TabButton id="active" label="Active" />
+          <TabButton id="upcoming" label="Upcoming" />
+          <TabButton id="past" label="Past" />
+        </div>
+        <button type="button" onClick={() => navigate('/book')} className="mb-2 hidden text-sm font-semibold text-brand-deep sm:block">+ Book a ride</button>
       </div>
 
       <div className="space-y-4 animate-fade-in">
@@ -103,7 +107,7 @@ export const RideHistory = () => {
                 </div>
                 <h3 className="font-bold text-gray-900">No active rides</h3>
                 <p className="text-sm text-gray-500 mb-4">You don't have any trips in progress.</p>
-                <Button onClick={() => navigate('/book')}>Book a Ride</Button>
+                <Button onClick={() => navigate('/book')} className="mx-auto">Book a ride</Button>
               </div>
             ) : (
               <Card onClick={() => navigate(`/tracking/${activeRide.id}`)} className="border-l-4 border-l-green-500">
@@ -160,8 +164,9 @@ export const RideHistory = () => {
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                     <StatusChip status={ride.status} />
-                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
+                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
+                  {ride.fare && <FareDetails ride={ride} />}
                 </Card>
               ))
             )}
@@ -200,8 +205,9 @@ export const RideHistory = () => {
                   </div>
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-xs text-gray-600">{ride.serviceType.replace(/_/g, ' ')}</span>
-                    <span className="font-bold text-gray-900">{formatRidePrice(ride.price)}</span>
+                    <span className="font-bold text-gray-900">{ride.status === RideStatus.CANCELLED ? (ride.cancellationFee ? `${formatMoney(ride.cancellationFee, ride.currency)} fee` : 'No charge') : formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
+                  {ride.fare && ride.status !== RideStatus.CANCELLED && <FareDetails ride={ride} />}
                   {ride.status === RideStatus.COMPLETED && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                       {ride.rating ? (

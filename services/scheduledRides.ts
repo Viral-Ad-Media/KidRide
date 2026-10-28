@@ -77,7 +77,8 @@ export const bookScheduledRide = async (ride: Ride): Promise<Ride> => mapRide(aw
     pickupTime: ride.pickupTime,
     scheduled: true,
     serviceType: ride.serviceType,
-    quotedPrice: ride.price,
+    quoteToken: ride.quoteToken,
+    stayMinutes: ride.stayMinutes,
     pickupCoords: ride.pickupCoords,
     dropoffCoords: ride.dropoffCoords
   }

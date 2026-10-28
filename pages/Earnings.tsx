@@ -3,7 +3,7 @@ import { DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../components/UIComponents';
 import { fetchDriverSummary, fetchUserRides, getStoredToken } from '../services/api';
 import { Ride } from '../types';
-import { formatPickupTime, formatRidePrice, getCompletedRideSummary } from '../utils/rideData';
+import { formatPickupTime, formatRidePrice, getCompletedRideSummary, rideEarnings } from '../utils/rideData';
 
 export const Earnings = () => {
   const [completedRides, setCompletedRides] = useState<Ride[]>([]);
@@ -54,17 +54,14 @@ export const Earnings = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h2 className="text-2xl font-bold text-gray-900">Earnings</h2>
 
-      <div className="rounded-2xl bg-brand-deep p-6 text-white shadow-lg shadow-brand-deep/20">
-        <p className="mb-1 font-medium text-blue-100">Completed Ride Earnings</p>
-        <h1 className="mb-4 text-4xl font-bold">{isLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</h1>
-        <div className="rounded-lg bg-white/20 px-4 py-3 text-sm font-semibold backdrop-blur-sm">
-          {isLoading ? 'Loading earnings...' : `${completedRides.length} completed ${completedRides.length === 1 ? 'ride' : 'rides'}`}
-        </div>
+      <div>
+        <p className="text-label text-muted">Earned from completed rides</p>
+        <p className="mt-1 text-display font-extrabold tabular-nums tracking-tight">{isLoading ? '--' : formatRidePrice(totalEarnings, '$0.00')}</p>
+        <p className="mt-1 text-label text-muted">{isLoading ? 'Loading...' : `${completedRides.length} completed ${completedRides.length === 1 ? 'ride' : 'rides'}`}</p>
       </div>
 
-      <h3 className="mt-6 font-bold text-gray-900">Completed Rides</h3>
+      <h3 className="text-lead font-bold">Completed rides</h3>
 
       {error ? (
         <Card className="border-red-100 bg-red-50 text-sm text-red-600">
@@ -83,25 +80,20 @@ export const Earnings = () => {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <ul className="divide-y divide-line rounded-card bg-white px-4 shadow-[0_1px_2px_rgba(20,33,61,0.06)]">
           {completedRides.map((ride) => (
-            <Card key={ride.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50 text-green-600">
-                  <DollarSign size={20} />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900">{ride.pickupLocation} to {ride.dropoffLocation}</p>
-                  <p className="flex items-center gap-1 text-xs text-gray-500">
-                    <Calendar size={12} />
-                    {formatPickupTime(ride.pickupTime)}
-                  </p>
-                </div>
+            <li key={ride.id} className="flex items-center justify-between gap-4 py-3.5">
+              <div className="min-w-0">
+                <p className="truncate text-label font-semibold">{ride.pickupLocation} to {ride.dropoffLocation}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-caption text-muted"><Calendar size={12} />{formatPickupTime(ride.pickupTime)}</p>
               </div>
-              <span className="font-bold text-green-600">{formatRidePrice(ride.price)}</span>
-            </Card>
+              <span className="shrink-0 text-right">
+                <span className="block text-body font-bold tabular-nums">{formatRidePrice(rideEarnings(ride), undefined, ride.currency)}</span>
+                {ride.fare && <span className="block text-caption text-muted tabular-nums">of {formatRidePrice(ride.price, undefined, ride.currency)} fare</span>}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

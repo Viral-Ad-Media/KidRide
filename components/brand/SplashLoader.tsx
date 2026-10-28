@@ -1,40 +1,62 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BrandLockup } from './BrandLockup';
 import { BrandMark } from './BrandMark';
 
-// Shown once per browser session on first load: the car drives in, wheels
-// spin, the bolt flickers, the child bobs and the wordmark fades up (brand.css).
-// With reduced motion the static lockup shows briefly instead.
+// Shown on every full page load, over a soft Sky gradient: the car races in
+// from the left trailing smoke, pauses in the middle while the wordmark
+// rises, then zooms off to the right (timings in index.css under "KidRide
+// splash"). With reduced motion the static lockup shows briefly instead.
 
-const SESSION_KEY = 'kidride_splash_seen';
-const SHOW_MS = 1400;
-const FADE_MS = 300;
+const SHOW_MS = 2400;
+const FADE_MS = 250;
 
-const alreadySeen = () => { try { return window.sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; } };
-const markSeen = () => { try { window.sessionStorage.setItem(SESSION_KEY, '1'); } catch { /* not remembered */ } };
 const prefersReducedMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
 
+// The lockup is about 2.5x the mark's width; keep it within 80% of the screen.
+const markSize = () => Math.max(96, Math.min(260, Math.round((window.innerWidth * 0.8) / 2.5)));
+
 export const SplashLoader: React.FC = () => {
-  const [phase, setPhase] = useState<'show' | 'leaving' | 'done'>(() => (alreadySeen() ? 'done' : 'show'));
+  const [phase, setPhase] = useState<'show' | 'leaving' | 'done'>('show');
+  const [go, setGo] = useState(false);
+  const [size] = useState(markSize);
+  const sceneRef = useRef<HTMLDivElement>(null);
+
+  // Start the clock (and the CSS animations) only once the stylesheet has
+  // reached the scene, so a slow dev server cannot eat the animation.
+  useEffect(() => {
+    let frame = 0;
+    const waitForStyles = () => {
+      const el = sceneRef.current;
+      if (el && getComputedStyle(el).position === 'fixed') setGo(true);
+      else frame = requestAnimationFrame(waitForStyles);
+    };
+    waitForStyles();
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
-    if (phase === 'done') return;
-    markSeen();
-    const reduced = prefersReducedMotion();
-    const leave = setTimeout(() => setPhase('leaving'), reduced ? 500 : SHOW_MS + 250);
-    const done = setTimeout(() => setPhase('done'), (reduced ? 500 : SHOW_MS + 250) + FADE_MS);
+    if (!go) return;
+    const showFor = prefersReducedMotion() ? 600 : SHOW_MS;
+    const leave = setTimeout(() => setPhase('leaving'), showFor);
+    const done = setTimeout(() => setPhase('done'), showFor + FADE_MS);
     return () => { clearTimeout(leave); clearTimeout(done); };
-  }, []);
+  }, [go]);
 
   if (phase === 'done') return null;
   return (
     <div
-      className={`fixed inset-0 z-[200] flex items-center justify-center bg-surface transition-opacity duration-300 ${phase === 'leaving' ? 'opacity-0' : 'opacity-100'}`}
+      ref={sceneRef}
+      className={`kr-scene ${go ? 'kr-go' : ''} fixed inset-0 z-[200] overflow-hidden transition-opacity duration-300 ${phase === 'leaving' ? 'opacity-0' : 'opacity-100'}`}
       role="status"
       aria-label="Loading KidRide"
     >
-      <div className="kr-splash">
-        <BrandLockup size={120} animate />
+      <div className="kr-splash-stage">
+        <div className="kr-splash">
+          <div className="kr-splash-smoke" aria-hidden="true">
+            {Array.from({ length: 7 }, (_, i) => <span key={i} style={{ animationDelay: `${i * 0.11}s` }} />)}
+          </div>
+          <BrandLockup size={size} />
+        </div>
       </div>
     </div>
   );

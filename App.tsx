@@ -17,6 +17,8 @@ import { DriverMap } from './pages/DriverMap';
 import { Earnings } from './pages/Earnings';
 import { AuthProvider, getDefaultRouteForUser, useAuth } from './contexts/AuthContext';
 import { RideProvider } from './contexts/RideContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
+import { Notifications } from './pages/Notifications';
 import { HelpPage, PrivacyPage, TermsPage } from './pages/StaticPages';
 import {
   FaqPage,
@@ -27,6 +29,8 @@ import {
   SafetyInfoPage
 } from './pages/Marketing';
 import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
+import { AdminPricing } from './pages/AdminPricing';
+import { AdminSafety } from './pages/AdminSafety';
 import { AdminLiveMap } from './pages/AdminLiveMap';
 import { UserRole } from './types';
 import { SplashLoader } from './components/brand/SplashLoader';
@@ -107,6 +111,8 @@ const AppRoutes = () => (
       <Route path="/admin/drivers" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminDrivers /></ProtectedRoute>} />
       <Route path="/admin/parents" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminParents /></ProtectedRoute>} />
       <Route path="/admin/live-map" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminLiveMap /></ProtectedRoute>} />
+      <Route path="/admin/pricing" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminPricing /></ProtectedRoute>} />
+      <Route path="/admin/safety" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminSafety /></ProtectedRoute>} />
       <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
       <Route
         path="/driver-dashboard"
@@ -197,6 +203,7 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route
         path="/profile/notifications"
         element={
@@ -221,10 +228,12 @@ const App = () => {
   return (
     <AuthProvider>
       <RideProvider>
+        <NotificationsProvider>
         <Router>
           <SplashLoader />
           <AppRoutes />
         </Router>
+        </NotificationsProvider>
       </RideProvider>
     </AuthProvider>
   );

@@ -73,57 +73,65 @@ const userInitials = (name: string | undefined) => (
 
 export const NotificationSettings = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState(true);
-  const [push, setPush] = useState(true);
-  const [sms, setSms] = useState(false);
+  const { user, updateProfile } = useAuth();
+  const [email, setEmail] = useState(user?.notifyEmail !== false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Preferences are not stored yet, so the switches are shown but cannot be changed.
-  const Toggle = ({ value }: { value: boolean, onChange: (v: boolean) => void }) => (
-    <div
-      aria-disabled="true"
-      className={`w-12 h-6 rounded-full p-1 opacity-50 cursor-not-allowed ${value ? 'bg-brand' : 'bg-gray-300'}`}
+  const toggleEmail = async () => {
+    const next = !email;
+    setEmail(next);
+    setSaving(true);
+    setError(null);
+    try { await updateProfile({ notifyEmail: next }); } catch (err) { setEmail(!next); setError(err instanceof Error ? err.message : 'Could not save.'); } finally { setSaving(false); }
+  };
+
+  const Toggle = ({ value, onChange, disabled = false }: { value: boolean; onChange?: () => void; disabled?: boolean }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      disabled={disabled}
+      onClick={onChange}
+      className={`h-7 w-12 rounded-full p-1 transition-colors ${value ? 'bg-success' : 'bg-line'} ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
     >
-      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${value ? 'translate-x-6' : 'translate-x-0'}`} />
+      <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0'}`} />
+    </button>
+  );
+
+  const Row = ({ icon, label, note, children }: { icon: React.ReactNode; label: string; note: string; children: React.ReactNode }) => (
+    <div className="flex items-center justify-between gap-4 px-4 py-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand-deep">{icon}</span>
+        <span className="min-w-0">
+          <span className="block font-semibold">{label}</span>
+          <span className="block text-sm text-muted">{note}</span>
+        </span>
+      </div>
+      {children}
     </div>
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
-                <ArrowLeft size={24} />
-            </button>
-            <h2 className="text-xl font-bold text-gray-900">Notification Settings</h2>
-        </div>
+    <div className="space-y-6">
+        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-deep">
+            <ArrowLeft size={18} /> Back
+        </button>
 
-        <div className="rounded-2xl border border-brand/30 bg-brand/10 p-4 text-sm text-brand-deep">
-            <p className="font-semibold">Coming soon</p>
-            <p className="mt-1">You will be able to choose how KidRide contacts you here. For now, ride updates appear in the app while you have it open.</p>
+        <p className="text-sm text-muted">Ride updates always appear in your inbox in the app. Choose where else KidRide reaches you.</p>
+
+        <div className="divide-y divide-line rounded-card border border-line bg-white">
+            <Row icon={<Mail size={20} />} label="Email" note={saving ? 'Saving...' : `Ride updates to ${user?.email || 'your email'}`}>
+                <Toggle value={email} onChange={toggleEmail} disabled={saving} />
+            </Row>
+            <Row icon={<Bell size={20} />} label="Push" note="Needs the KidRide phone app, not available yet">
+                <Toggle value={false} disabled />
+            </Row>
+            <Row icon={<MessageSquare size={20} />} label="SMS" note="Not available yet">
+                <Toggle value={false} disabled />
+            </Row>
         </div>
-        
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-brand/10 text-brand-deep rounded-lg"><Mail size={20}/></div>
-                    <span className="font-medium text-gray-900">Email Notifications</span>
-                </div>
-                <Toggle value={email} onChange={setEmail} />
-            </div>
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Bell size={20}/></div>
-                    <span className="font-medium text-gray-900">Push Notifications</span>
-                </div>
-                <Toggle value={push} onChange={setPush} />
-            </div>
-            <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-50 text-green-600 rounded-lg"><MessageSquare size={20}/></div>
-                    <span className="font-medium text-gray-900">SMS Notifications</span>
-                </div>
-                <Toggle value={sms} onChange={setSms} />
-            </div>
-        </div>
+        {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
 };
@@ -186,8 +194,6 @@ export const Profile = () => {
 
     return (
     <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-        
         {/* User Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="w-16 h-16 bg-brand/15 rounded-full flex items-center justify-center overflow-hidden">
@@ -260,24 +266,23 @@ export const Profile = () => {
         </div>
 
         {/* Refer a Driver Section */}
-        <div className="bg-gradient-to-r from-purple-500 to-[#6C63FF] p-6 rounded-2xl shadow-sm text-white relative overflow-hidden">
-             <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-2">
-                    <UserPlus size={24} />
-                    <h3 className="font-bold text-lg">Refer a Driver</h3>
+        <div className="rounded-card border border-line bg-white p-5">
+             <div>
+                <div className="flex items-center gap-2">
+                    <UserPlus size={20} className="text-brand-deep" />
+                    <h3 className="text-lead font-bold">Refer a driver</h3>
                 </div>
-                <p className="text-white/90 text-sm mb-4">
-                    Know someone trustworthy? Invite a spouse, nanny, or friend to create a driver profile.
+                <p className="mt-2 text-sm text-muted">
+                    Know someone trustworthy? Invite a spouse, nanny or friend to create a driver profile.
                 </p>
-                <button 
+                <button
                     onClick={handleShare}
-                    className="bg-white text-purple-600 px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-opacity-90 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-deep"
                 >
-                    <Share2 size={16} /> Share Invite Link
+                    <Share2 size={16} /> Share invite link
                 </button>
-                {shareNote && <p className="mt-3 text-sm text-white/90">{shareNote}</p>}
+                {shareNote && <p className="mt-3 text-sm text-muted">{shareNote}</p>}
              </div>
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full transform translate-x-10 -translate-y-10"></div>
         </div>
 
         {/* Settings Links */}

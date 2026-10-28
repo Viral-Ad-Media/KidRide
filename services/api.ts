@@ -1,4 +1,4 @@
-import { AssignedDriver, Child, Ride, RideStatus, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
+import { AssignedDriver, Child, Ride, RideStatus, SafetyAlert, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
 
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const DEPLOYED_API_BASE_URL = 'https://kidride-backend.vercel.app/api';
@@ -238,6 +238,7 @@ const mapAssignedDriver = (raw: unknown): AssignedDriver | undefined => {
     id: String(driverId),
     name: typeof driver.name === 'string' && driver.name.trim() ? driver.name : 'Assigned driver',
     photoUrl: typeof driver.photoUrl === 'string' ? driver.photoUrl : undefined,
+    phone: typeof driver.phone === 'string' && driver.phone.trim() ? driver.phone : undefined,
     isVerifiedDriver: Boolean(driver.isVerifiedDriver),
     vehicle: mapVehicle(driver.vehicle)
   };
@@ -269,6 +270,7 @@ export const mapUser = (raw: unknown): User => {
     phone: typeof user.phone === 'string' ? user.phone : undefined,
     vehicle: user.vehicle && typeof user.vehicle === 'object' ? user.vehicle as VehicleDetails : undefined,
     isVerifiedDriver: Boolean(user.isVerifiedDriver),
+    notifyEmail: user.notifyEmail !== false,
     driverApplicationStatus:
       user.driverApplicationStatus === 'pending' ||
       user.driverApplicationStatus === 'approved' ||
@@ -299,6 +301,8 @@ const formatPickupTime = (value: unknown): string => {
   const parsedDate = new Date(String(value));
   return Number.isNaN(parsedDate.getTime()) ? new Date().toLocaleTimeString() : parsedDate.toLocaleString();
 };
+
+const SAFETY_ALERTS: SafetyAlert[] = ['sos', 'trip_code', 'off_route', 'stalled'];
 
 export const mapRide = (raw: unknown): Ride => {
   const ride = (raw || {}) as Record<string, unknown>;
@@ -331,6 +335,10 @@ export const mapRide = (raw: unknown): Ride => {
     driverLocation: typeof ride.driverLocation === 'object' && ride.driverLocation !== null ? ride.driverLocation as Ride['driverLocation'] : undefined,
     status: validRideStatuses.has(rawStatus) ? (rawStatus as RideStatus) : RideStatus.REQUESTED,
     price: typeof ride.price === 'number' ? ride.price : Number(ride.price || 0),
+    currency: typeof ride.currency === 'string' ? ride.currency : 'USD',
+    fare: ride.fare && typeof ride.fare === 'object' && Array.isArray((ride.fare as { lines?: unknown }).lines) ? ride.fare as Ride['fare'] : null,
+    driverEarnings: typeof ride.driverEarnings === 'number' ? ride.driverEarnings : undefined,
+    cancellationFee: typeof ride.cancellationFee === 'number' ? ride.cancellationFee : 0,
     tripCode: typeof ride.tripCode === 'string' ? ride.tripCode : '',
     safeWord: typeof ride.safeWord === 'string' ? ride.safeWord : '',
     rating: ride.rating && typeof ride.rating === 'object' ? ride.rating as Ride['rating'] : null,
@@ -341,6 +349,12 @@ export const mapRide = (raw: unknown): Ride => {
     offerExpiresAt: typeof ride.offerExpiresAt === 'string' ? ride.offerExpiresAt : null,
     nearbyDrivers: ride.dispatch && typeof (ride.dispatch as { nearbyDrivers?: unknown }).nearbyDrivers === 'number' ? (ride.dispatch as { nearbyDrivers: number }).nearbyDrivers : null,
     dropoffCoords: ride.dropoffCoords && typeof ride.dropoffCoords === 'object' ? ride.dropoffCoords as Ride['dropoffCoords'] : null,
+    arrivedAt: typeof ride.arrivedAt === 'string' ? ride.arrivedAt : null,
+    tripCodeVerified: ride.tripCodeVerified === true,
+    tripCodeAttempts: typeof ride.tripCodeAttempts === 'number' ? ride.tripCodeAttempts : 0,
+    safetyAlert: typeof ride.safetyAlert === 'string' && SAFETY_ALERTS.includes(ride.safetyAlert as SafetyAlert) ? ride.safetyAlert as SafetyAlert : null,
+    safetyAlertAt: typeof ride.safetyAlertAt === 'string' ? ride.safetyAlertAt : null,
+    cancelReason: ride.cancelReason === 'no_show' ? 'no_show' : null,
     serviceType: validServiceTypes.has(rawServiceType)
       ? (rawServiceType as ServiceType)
       : ServiceType.PICKUP
