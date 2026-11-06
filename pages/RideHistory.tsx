@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { RepeatingRides } from '../components/RepeatingRides';
 import { useRide } from '../contexts/RideContext';
 import { Button, Card, StatusChip } from '../components/UIComponents';
 import { fetchUserRides, getStoredToken } from '../services/api';
 import { Ride, RideStatus } from '../types';
 import { RateRideModal, Stars } from '../components/Ratings';
-import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin } from 'lucide-react';
+import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin, Repeat } from 'lucide-react';
 import { formatMoney, formatPickupTime, formatRidePrice } from '../utils/rideData';
 import { FareBreakdown } from '../components/FareBreakdown';
 
@@ -19,7 +20,10 @@ const FareDetails: React.FC<{ ride: Ride }> = ({ ride }) => (
 export const RideHistory = () => {
   const navigate = useNavigate();
   const { activeRide } = useRide();
-  const [activeTab, setActiveTab] = useState<'active' | 'upcoming' | 'past'>('active');
+  const [params] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'active' | 'upcoming' | 'past'>(() => (params.get('tab') === 'upcoming' ? 'upcoming' : params.get('tab') === 'past' ? 'past' : 'active'));
+  // Bumped when a repeating booking changes (or books its next week) so the list reloads.
+  const [reloadKey, setReloadKey] = useState(0);
   const [upcomingRides, setUpcomingRides] = useState<Ride[]>([]);
   const [pastRides, setPastRides] = useState<Ride[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +75,7 @@ export const RideHistory = () => {
     return () => {
       isMounted = false;
     };
-  }, [activeTab]);
+  }, [activeTab, reloadKey]);
 
   const TabButton = ({ id, label }: { id: typeof activeTab; label: string }) => (
     <button
@@ -131,6 +135,7 @@ export const RideHistory = () => {
 
         {activeTab === 'upcoming' && (
           <div className="space-y-4">
+            <RepeatingRides onChanged={() => setReloadKey((key) => key + 1)} />
             {isLoading ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                 <p className="text-sm text-gray-500">Loading upcoming rides...</p>
@@ -153,6 +158,7 @@ export const RideHistory = () => {
                   <div className="flex items-center gap-3 mb-3 text-sm text-gray-600">
                     <Calendar size={16} className="text-brand-deep" />
                     <span className="font-semibold text-gray-900">{formatPickupTime(ride.pickupTime)}</span>
+                    {ride.seriesId && <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-semibold text-ink"><Repeat size={12} /> Repeats weekly</span>}
                   </div>
                   <div className="pl-7 border-l-2 border-gray-100 space-y-2 mb-4">
                     <p className="text-sm flex items-center gap-2">

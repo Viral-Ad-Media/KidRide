@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CalendarClock, Check, CheckCircle2, MapPin, Zap } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Check, CheckCircle2, MapPin, Repeat, Zap } from 'lucide-react';
 import { Button, Input } from '../components/UIComponents';
 import { BookingMap } from '../components/BookingMap';
 import { MapScreen } from '../components/MapScreen';
@@ -13,6 +13,8 @@ import { FareBreakdown as Fare, MAX_CHILDREN_PER_RIDE, PlaceCoords, Ride, RideSt
 import { FareBreakdown } from '../components/FareBreakdown';
 import { formatMoney, joinNames } from '../utils/rideData';
 import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalInputValue, validateScheduleInput } from '../services/scheduledRides';
+import { RepeatPlanPicker } from '../components/RepeatingRides';
+import { RideSeries, SCHOOL_DAYS, SeriesPlan, SeriesPreview, addDays, bookSeries, describeDays, formatClock, formatDay, planDays, previewSeries, validatePlan, ymd } from '../services/rideSeries';
 
 // Booking as one sheet per question over the map, the way Uber and Bolt do
 // it: who (one or more children), where, when, which service, confirm. One pill button per sheet;
@@ -52,7 +54,14 @@ export const BookRide = () => {
   const [dropoff, setDropoff] = useState('');
   const [pickupCoords, setPickupCoords] = useState<PlaceCoords | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<PlaceCoords | null>(null);
-  const [when, setWhen] = useState<'now' | 'later'>(params.get('when') === 'later' ? 'later' : 'now');
+  const [when, setWhen] = useState<'now' | 'later' | 'weekly'>(params.get('when') === 'later' ? 'later' : params.get('when') === 'weekly' ? 'weekly' : 'now');
+  // Repeating school-week plan: weekdays, local pickup time, first and last day.
+  const [plan, setPlan] = useState<SeriesPlan>(() => {
+    const start = addDays(ymd(new Date()), 1);
+    return { weekdays: SCHOOL_DAYS, pickupLocalTime: '07:45', startDate: start, endDate: addDays(start, 55) };
+  });
+  const [preview, setPreview] = useState<SeriesPreview | null>(null);
+  const [bookedSeries, setBookedSeries] = useState<RideSeries | null>(null);
   const [scheduleValue, setScheduleValue] = useState(() => toLocalInputValue(firstSlot()));
   const [serviceType, setServiceType] = useState<ServiceType>(ServiceType.PICKUP);
   const [stayMinutes, setStayMinutes] = useState(60);
@@ -64,7 +73,11 @@ export const BookRide = () => {
   const [searching, setSearching] = useState(false);
   const [scheduledRide, setScheduledRide] = useState<Ride | null>(null);
 
-  const pickupIso = when === 'later' && !validateScheduleInput(scheduleValue) ? new Date(scheduleValue).toISOString() : null;
+  const planProblem = when === 'weekly' ? validatePlan(plan) : null;
+  const firstDay = when === 'weekly' && !planProblem ? planDays(plan, new Date(), 1)[0] : null;
+  // A repeating booking is quoted at its first ride; the confirm step shows each ride's own fare.
+  const pickupIso = when === 'later' && !validateScheduleInput(scheduleValue) ? new Date(scheduleValue).toISOString()
+    : firstDay ? firstDay.pickup.toISOString() : null;
   // Server-side fares for every service over this route, priced as the parent reaches the service step.
   useEffect(() => {
     if (step !== 'service') return;
@@ -72,7 +85,7 @@ export const BookRide = () => {
     setQuotes(null); setPricing(true); setError(null);
     apiRequest<{ quotes: Record<string, Quote> }>('/rides/quotes', {
       method: 'POST', token: getStoredToken(),
-      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when === 'later', pickupTime: pickupIso, stayMinutes, childCount: childIds.length }
+      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when !== 'now', pickupTime: pickupIso, stayMinutes, childCount: childIds.length }
     })
       .then((result) => { if (live) setQuotes(result.quotes); })
       .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price this trip.'); })
@@ -80,6 +93,17 @@ export const BookRide = () => {
     return () => { live = false; };
   }, [step, pickup, dropoff, pickupCoords, dropoffCoords, when, pickupIso, stayMinutes, childIds.length]);
   const quote = quotes?.[serviceType] || null;
+  const seriesTrip = () => ({ childIds, pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, serviceType, stayMinutes });
+  // Every ride day and its own fare, before a repeating booking is made.
+  useEffect(() => {
+    if (step !== 'confirm' || when !== 'weekly' || planProblem) { setPreview(null); return; }
+    let live = true;
+    setPreview(null);
+    previewSeries(seriesTrip(), plan)
+      .then((result) => { if (live) setPreview(result); })
+      .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price these rides.'); });
+    return () => { live = false; };
+  }, [step, when, plan, serviceType, stayMinutes, pickup, dropoff, pickupCoords, dropoffCoords, childIds]);
 
   // Follow the ride once a driver takes it.
   useEffect(() => {
@@ -96,10 +120,11 @@ export const BookRide = () => {
     switch (step) {
       case 'child': return riders.length > 0;
       case 'where': return !!pickup.trim() && !!dropoff.trim();
-      case 'when': return !scheduleProblem;
+      case 'when': return when === 'weekly' ? !planProblem : !scheduleProblem;
+      case 'confirm': return quote !== null && (when !== 'weekly' || (!!preview && preview.rideCount > 0));
       default: return quote !== null;
     }
-  }, [step, riders.length, pickup, dropoff, scheduleProblem, serviceType, quote]);
+  }, [step, riders.length, pickup, dropoff, scheduleProblem, planProblem, when, serviceType, quote, preview]);
 
   const back = () => (stepIndex > 0 && !(step === 'where' && skipWho) ? setStep(ORDER[stepIndex - 1]) : navigate(-1));
 
@@ -107,6 +132,13 @@ export const BookRide = () => {
     setError(null);
     if (step !== 'confirm') { setStep(ORDER[stepIndex + 1]); return; }
     if (quote === null) return;
+    if (when === 'weekly') {
+      setBusy(true);
+      try { setBookedSeries(await bookSeries(seriesTrip(), plan)); }
+      catch (err) { setError(err instanceof Error ? err.message : 'Could not book these rides. Please try again.'); }
+      finally { setBusy(false); }
+      return;
+    }
     const ride: Ride = {
       id: '', childId: riders[0].id, childIds: riders.map((item) => item.id), pickupLocation: pickup.trim(), dropoffLocation: dropoff.trim(), pickupCoords, dropoffCoords,
       pickupTime: pickupIso || new Date().toISOString(),
@@ -141,7 +173,19 @@ export const BookRide = () => {
   let sheet: React.ReactNode;
   let matching = false;
 
-  if (scheduledRide) {
+  if (bookedSeries) {
+    sheet = (
+      <div className="py-4 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success"><Repeat size={30} /></span>
+        <h2 className="mt-4 text-title font-extrabold tracking-tight">Repeating rides booked for {childName}</h2>
+        <p className="mt-1 text-lead font-semibold text-brand-deep">{describeDays(bookedSeries.weekdays)} at {formatClock(bookedSeries.pickupLocalTime)}</p>
+        <p className="mt-1 text-label text-muted">{formatDay(bookedSeries.startDate)} to {formatDay(bookedSeries.endDate)}</p>
+        <p className="mt-3 text-label text-muted">Each ride is booked a week ahead and offered to the nearest verified drivers 30 minutes before pickup. Skip a day or cancel the whole booking from Rides, Upcoming.</p>
+        <Button fullWidth className="mt-6" onClick={() => navigate('/rides?tab=upcoming')}>See upcoming rides</Button>
+        <Button fullWidth variant="secondary" className="mt-2" onClick={() => navigate('/dashboard')}>Done</Button>
+      </div>
+    );
+  } else if (scheduledRide) {
     sheet = (
       <div className="py-4 text-center">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success"><CheckCircle2 size={32} /></span>
@@ -205,8 +249,8 @@ export const BookRide = () => {
         {step === 'when' && (
           <>
             <Heading title="When?" />
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Pickup time">
-              {([['now', 'Now', Zap, 'A driver heads over right away'], ['later', 'Later', CalendarClock, 'Up to 30 days ahead']] as const).map(([value, label, Icon, note]) => (
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Pickup time">
+              {([['now', 'Now', Zap, 'A driver heads over right away'], ['later', 'Later', CalendarClock, 'One ride, up to 30 days ahead'], ['weekly', 'Every week', Repeat, 'School days on repeat']] as const).map(([value, label, Icon, note]) => (
                 <button key={value} type="button" role="radio" aria-checked={when === value} onClick={() => setWhen(value)} className={`rounded-card border p-4 text-left transition-colors ${when === value ? 'border-brand bg-brand/10' : 'border-line bg-white hover:border-ink/30'}`}>
                   <Icon size={22} className={when === value ? 'text-brand-deep' : 'text-muted'} />
                   <span className="mt-3 block text-body font-bold">{label}</span>
@@ -220,6 +264,7 @@ export const BookRide = () => {
                 <p className={`-mt-2 text-label ${scheduleProblem ? 'text-danger' : 'text-muted'}`}>{scheduleProblem || formatScheduledTime(scheduleValue)}</p>
               </div>
             )}
+            {when === 'weekly' && <RepeatPlanPicker plan={plan} onChange={setPlan} problem={planProblem} />}
           </>
         )}
         {step === 'service' && (
@@ -255,13 +300,13 @@ export const BookRide = () => {
         )}
         {step === 'confirm' && (
           <>
-            <Heading title="Confirm the ride" />
+            <Heading title={when === 'weekly' ? 'Confirm the repeating rides' : 'Confirm the ride'} />
             <dl className="divide-y divide-line rounded-card border border-line bg-white">
               {([
                 [several ? 'Riders' : 'Rider', joinNames(riders.map((item) => item.name))],
                 ['Pickup', pickup.trim()],
                 ['Drop-off', dropoff.trim()],
-                ['When', when === 'later' ? formatScheduledTime(scheduleValue) : 'Now'],
+                ['When', when === 'weekly' ? `${describeDays(plan.weekdays)} at ${formatClock(plan.pickupLocalTime)}, ${formatDay(plan.startDate)} to ${formatDay(plan.endDate)}` : when === 'later' ? formatScheduledTime(scheduleValue) : 'Now'],
                 ['Service', serviceLabel(serviceType)]
               ] as const).map(([label, value]) => (
                 <div key={label} className="flex gap-4 px-4 py-3">
@@ -269,17 +314,35 @@ export const BookRide = () => {
                   <dd className="min-w-0 flex-1 text-label font-semibold">{value}</dd>
                 </div>
               ))}
-              <div className="flex items-center justify-between px-4 py-3">
-                <dt className="text-label text-muted">Fare</dt>
-                <dd className="text-title font-extrabold tabular-nums">{quote ? formatMoney(quote.total, quote.currency) : ''}</dd>
-              </div>
+              {when === 'weekly' ? (
+                <div className="px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-label text-muted">Rides</dt>
+                    <dd className="text-title font-extrabold tabular-nums">{preview ? preview.rideCount : '...'}</dd>
+                  </div>
+                  {preview && preview.rides.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-label" aria-label="First rides and their fares">
+                      {preview.rides.slice(0, 5).map((ride) => (
+                        <li key={ride.date} className="flex justify-between"><span>{formatDay(ride.date)}</span><span className="font-semibold tabular-nums">{formatMoney(ride.total, preview.currency)}</span></li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <dt className="text-label text-muted">Fare</dt>
+                  <dd className="text-title font-extrabold tabular-nums">{quote ? formatMoney(quote.total, quote.currency) : ''}</dd>
+                </div>
+              )}
             </dl>
-            {quote && <FareBreakdown fare={quote} currency={quote.currency} showTotal={false} className="mt-3 px-1" />}
+            {when === 'weekly'
+              ? <p className="mt-3 px-1 text-caption text-muted">Each ride is priced and charged on its own, so a school-run peak day can cost a little more. Rides are booked a week ahead; skip a day or cancel any time from Rides.</p>
+              : quote && <FareBreakdown fare={quote} currency={quote.currency} showTotal={false} className="mt-3 px-1" />}
           </>
         )}
         {error && <p className="mt-3 text-label text-danger">{error}</p>}
         <Button fullWidth className="mt-5" onClick={() => void next()} disabled={!canContinue || busy}>
-          {step === 'confirm' ? (busy ? 'Booking...' : when === 'later' ? 'Book for later' : 'Book now') : step === 'service' ? (pricing ? 'Pricing...' : 'Continue') : 'Next'}
+          {step === 'confirm' ? (busy ? 'Booking...' : when === 'weekly' ? `Book ${preview?.rideCount || ''} rides` : when === 'later' ? 'Book for later' : 'Book now') : step === 'service' ? (pricing ? 'Pricing...' : 'Continue') : 'Next'}
         </Button>
       </div>
     );
