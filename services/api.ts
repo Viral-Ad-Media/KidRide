@@ -59,8 +59,13 @@ const getDefaultApiBaseUrl = (): string => {
   return DEPLOYED_API_BASE_URL;
 };
 
+// The localStorage override is a developer tool: it is ignored on the live site
+// so a stray value can never point real users at another server.
+const isLocalHost = () => typeof window !== 'undefined'
+  && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
 export const getApiBaseUrl = (): string => {
-  const configured = typeof window === 'undefined'
+  const configured = typeof window === 'undefined' || !(import.meta.env.DEV || isLocalHost())
     ? null
     : window.localStorage.getItem('kidride_api_base_url');
 

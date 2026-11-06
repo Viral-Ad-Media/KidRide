@@ -246,7 +246,7 @@ export const SafetyChat = () => {
       </div>
 
       <p className="px-8 text-center text-xs text-gray-500">
-        Emergency dispatch and location sharing are not connected in this build. Use local emergency services if you need immediate help.
+        In an emergency, call your local emergency number first. KidRide does not dispatch emergency services.
       </p>
 
       {sosNotice && (

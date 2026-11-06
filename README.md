@@ -14,6 +14,8 @@ npm run preview
 
 Use Node.js 22 or newer. Set `VITE_API_BASE_URL=http://localhost:5000/api` for a local backend. URL resolution uses the `kidride_api_base_url` localStorage override first, then `VITE_API_BASE_URL`, then localhost/production defaults. Ensure the backend's `FRONTEND_URLS` includes the browser origin.
 
+Copy `.env.example` to `.env.local`. Optional error monitoring: set `VITE_SENTRY_DSN` (a Sentry browser DSN) at build time; when unset, Sentry is not even downloaded. A crash shows a reload screen instead of a blank page. The `kidride_api_base_url` localStorage override only works on localhost.
+
 **Do not configure a frontend Gemini secret.** Safety chat calls the authenticated backend `/api/safety-chat` proxy. Remove old `GEMINI_API_KEY` frontend settings and revoke any key previously shipped in a bundle.
 
 ## Layout
