@@ -6,6 +6,7 @@ export default {
     './*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './pages/**/*.{ts,tsx}',
+    './legal/**/*.{ts,tsx}',
     './contexts/**/*.{ts,tsx}',
     './services/**/*.{ts,tsx}',
     './utils/**/*.{ts,tsx}'

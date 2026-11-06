@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, FileUpload, CameraCapture, VerificationPhotos } from '../components/UIComponents';
 import { ArrowLeft, Car, ShieldCheck, CheckCircle, AlertCircle, Home } from 'lucide-react';
 import { getDefaultRouteForUser, useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,7 @@ export const DriverSignup = () => {
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -74,7 +75,8 @@ export const DriverSignup = () => {
     formData.licenseDoc !== null &&
     formData.insuranceDoc !== null &&
     formData.registrationDoc !== null &&
-    formData.verificationPhotos !== null;
+    formData.verificationPhotos !== null &&
+    (!requiresAccountCreation || acceptTerms);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -119,7 +121,8 @@ export const DriverSignup = () => {
           name: formData.fullName,
           email: formData.email,
           password: formData.password,
-          role: UserRole.DRIVER
+          role: UserRole.DRIVER,
+          acceptTerms
         });
 
         if (!registeredUser) {
@@ -437,6 +440,17 @@ export const DriverSignup = () => {
               <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-600">
                 <p>By submitting, you consent to manual document review. Approval requires the operator to complete their verification process.</p>
               </div>
+
+              {requiresAccountCreation && (
+                <label className="flex items-start gap-3 text-sm text-gray-600">
+                  <input type="checkbox" checked={acceptTerms} onChange={(event) => setAcceptTerms(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-brand-deep" />
+                  <span>
+                    I am 18 or over and agree to the{' '}
+                    <Link to="/terms" target="_blank" className="font-semibold text-brand-deep hover:underline">Terms of Service</Link>{' '}and{' '}
+                    <Link to="/privacy" target="_blank" className="font-semibold text-brand-deep hover:underline">Privacy Policy</Link>, including identity, document and background checks.
+                  </span>
+                </label>
+              )}
             </div>
 
             {error && (

@@ -42,6 +42,7 @@ export const Welcome = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -65,6 +66,11 @@ export const Welcome = () => {
     setError(null);
     setNotice(null);
 
+    if (isSignup && !acceptTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy to create an account.');
+      return;
+    }
+
     if (isSignup && formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -78,7 +84,8 @@ export const Welcome = () => {
             name: formData.name,
             email: formData.email,
             password: formData.password,
-            role: selectedRole
+            role: selectedRole,
+            acceptTerms
           })
         : await login({
             email: formData.email,
@@ -224,6 +231,24 @@ export const Welcome = () => {
                 autoComplete="new-password"
                 required
               />
+            )}
+
+            {isSignup && (
+              <label className="flex items-start gap-3 rounded-2xl px-1 py-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(event) => { setAcceptTerms(event.target.checked); setError(null); }}
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 accent-brand-deep"
+                  required
+                />
+                <span>
+                  I am 18 or over and agree to the{' '}
+                  <Link to="/terms" target="_blank" className="font-semibold text-brand-deep hover:underline">Terms of Service</Link>{' '}and{' '}
+                  <Link to="/privacy" target="_blank" className="font-semibold text-brand-deep hover:underline">Privacy Policy</Link>
+                  {selectedRole === UserRole.PARENT ? ', including how my children\'s details and ride locations are used.' : '.'}
+                </span>
+              </label>
             )}
 
             <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">

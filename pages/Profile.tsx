@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 import { DriverReviews } from '../components/Ratings';
+import { AccountPrivacy } from '../components/AccountPrivacy';
 
 // Name and phone are editable here; vehicle details are part of the verified
 // driver application, so changing them means re-applying.
@@ -307,6 +308,8 @@ export const Profile = () => {
                 <ChevronRight size={20} className="text-gray-400" />
             </div>
         </div>
+
+        <AccountPrivacy />
     </div>
     );
 };

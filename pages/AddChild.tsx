@@ -105,6 +105,10 @@ export const AddChild = () => {
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Optional. By adding notes you agree they can be shared with your child's driver for each ride. See the{' '}
+            <a href="#/privacy" className="font-semibold text-brand-deep hover:underline">Privacy Policy</a>.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-4 text-sm text-slate-500">
