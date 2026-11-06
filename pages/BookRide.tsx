@@ -9,13 +9,13 @@ import { ChildChip } from './ParentDashboard';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
-import { FareBreakdown as Fare, PlaceCoords, Ride, RideStatus, ServiceType } from '../types';
+import { FareBreakdown as Fare, MAX_CHILDREN_PER_RIDE, PlaceCoords, Ride, RideStatus, ServiceType } from '../types';
 import { FareBreakdown } from '../components/FareBreakdown';
-import { formatMoney } from '../utils/rideData';
+import { formatMoney, joinNames } from '../utils/rideData';
 import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalInputValue, validateScheduleInput } from '../services/scheduledRides';
 
 // Booking as one sheet per question over the map, the way Uber and Bolt do
-// it: who, where, when, which service, confirm. One pill button per sheet;
+// it: who (one or more children), where, when, which service, confirm. One pill button per sheet;
 // the map shows the pins and route as the addresses are chosen.
 
 type Step = 'child' | 'where' | 'when' | 'service' | 'confirm';
@@ -39,8 +39,15 @@ export const BookRide = () => {
   const children = user?.children || [];
 
   const presetChild = children.find((child) => child.id === params.get('child'))?.id || '';
-  const [step, setStep] = useState<Step>(presetChild ? 'where' : 'child');
-  const [childId, setChildId] = useState(presetChild || children[0]?.id || '');
+  // With one child there is nothing to ask; with several, the who step lets the parent add brothers and sisters.
+  const skipWho = !!presetChild && children.length === 1;
+  const [step, setStep] = useState<Step>(skipWho ? 'where' : 'child');
+  const [childIds, setChildIds] = useState<string[]>(() => [presetChild || children[0]?.id].filter(Boolean) as string[]);
+  // Several children can share one car, up to MAX_CHILDREN_PER_RIDE; at least one stays picked.
+  const toggleChild = (id: string) => setChildIds((current) => (
+    current.includes(id) ? (current.length > 1 ? current.filter((item) => item !== id) : current)
+      : current.length < MAX_CHILDREN_PER_RIDE ? [...current, id] : current
+  ));
   const [pickup, setPickup] = useState('');
   const [dropoff, setDropoff] = useState('');
   const [pickupCoords, setPickupCoords] = useState<PlaceCoords | null>(null);
@@ -65,13 +72,13 @@ export const BookRide = () => {
     setQuotes(null); setPricing(true); setError(null);
     apiRequest<{ quotes: Record<string, Quote> }>('/rides/quotes', {
       method: 'POST', token: getStoredToken(),
-      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when === 'later', pickupTime: pickupIso, stayMinutes }
+      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when === 'later', pickupTime: pickupIso, stayMinutes, childCount: childIds.length }
     })
       .then((result) => { if (live) setQuotes(result.quotes); })
       .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price this trip.'); })
       .finally(() => { if (live) setPricing(false); });
     return () => { live = false; };
-  }, [step, pickup, dropoff, pickupCoords, dropoffCoords, when, pickupIso, stayMinutes]);
+  }, [step, pickup, dropoff, pickupCoords, dropoffCoords, when, pickupIso, stayMinutes, childIds.length]);
   const quote = quotes?.[serviceType] || null;
 
   // Follow the ride once a driver takes it.
@@ -79,27 +86,29 @@ export const BookRide = () => {
     if (searching && activeRide && [RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVED, RideStatus.IN_PROGRESS].includes(activeRide.status)) navigate(`/tracking/${activeRide.id}`);
   }, [activeRide, searching]);
 
-  const child = children.find((item) => item.id === childId);
-  const childName = child?.name.split(' ')[0] || 'your child';
+  // Booking order, so the first child picked is the ride's main child.
+  const riders = childIds.map((id) => children.find((item) => item.id === id)).filter((item): item is NonNullable<typeof item> => !!item);
+  const several = riders.length > 1;
+  const childName = joinNames(riders.map((item) => item.name.split(' ')[0])) || 'your child';
   const scheduleProblem = when === 'later' ? validateScheduleInput(scheduleValue) : null;
   const stepIndex = ORDER.indexOf(step);
   const canContinue = useMemo(() => {
     switch (step) {
-      case 'child': return !!childId;
+      case 'child': return riders.length > 0;
       case 'where': return !!pickup.trim() && !!dropoff.trim();
       case 'when': return !scheduleProblem;
       default: return quote !== null;
     }
-  }, [step, childId, pickup, dropoff, scheduleProblem, serviceType, quote]);
+  }, [step, riders.length, pickup, dropoff, scheduleProblem, serviceType, quote]);
 
-  const back = () => (stepIndex > 0 && !(step === 'where' && presetChild) ? setStep(ORDER[stepIndex - 1]) : navigate(-1));
+  const back = () => (stepIndex > 0 && !(step === 'where' && skipWho) ? setStep(ORDER[stepIndex - 1]) : navigate(-1));
 
   const next = async () => {
     setError(null);
     if (step !== 'confirm') { setStep(ORDER[stepIndex + 1]); return; }
     if (quote === null) return;
     const ride: Ride = {
-      id: '', childId, pickupLocation: pickup.trim(), dropoffLocation: dropoff.trim(), pickupCoords, dropoffCoords,
+      id: '', childId: riders[0].id, childIds: riders.map((item) => item.id), pickupLocation: pickup.trim(), dropoffLocation: dropoff.trim(), pickupCoords, dropoffCoords,
       pickupTime: pickupIso || new Date().toISOString(),
       status: RideStatus.SEARCHING_DRIVER, price: quote.total, quoteToken: quote.quoteToken, stayMinutes, tripCode: '', safeWord: '', serviceType
     };
@@ -136,7 +145,7 @@ export const BookRide = () => {
     sheet = (
       <div className="py-4 text-center">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success"><CheckCircle2 size={32} /></span>
-        <h2 className="mt-4 text-title font-extrabold tracking-tight">{childName}'s ride is booked</h2>
+        <h2 className="mt-4 text-title font-extrabold tracking-tight">Ride booked for {childName}</h2>
         <p className="mt-1 text-lead font-semibold text-brand-deep">{formatScheduledTime(scheduledRide.pickupTime)}</p>
         <p className="mt-3 text-label text-muted">We offer it to the nearest verified drivers 30 minutes before pickup. Change the time or cancel from Rides until then.</p>
         <Button fullWidth className="mt-6" onClick={() => navigate('/dashboard')}>Done</Button>
@@ -176,15 +185,16 @@ export const BookRide = () => {
         <Progress />
         {step === 'child' && (
           <>
-            <Heading title="Who is riding?" />
+            <Heading title="Who is riding?" note={children.length > 1 ? `Pick everyone going to the same place, up to ${MAX_CHILDREN_PER_RIDE}. One driver, one trip code.` : undefined} />
             <div className="flex flex-wrap gap-2">
-              {children.map((item) => <ChildChip key={item.id} child={item} selected={item.id === childId} onClick={() => setChildId(item.id)} />)}
+              {children.map((item) => <ChildChip key={item.id} child={item} selected={childIds.includes(item.id)} onClick={() => toggleChild(item.id)} />)}
             </div>
+            {several && <p className="mt-3 text-label text-muted">{riders.length} children in one car. Each child after the first adds a small extra-child fee, shown before you book.</p>}
           </>
         )}
         {step === 'where' && (
           <>
-            <Heading title={`Where is ${childName} going?`} />
+            <Heading title={`Where ${several ? 'are' : 'is'} ${childName} going?`} />
             <div className="relative z-20 space-y-1">
               <PlacesInput label="Pickup" placeholder="Home, school, an address" value={pickup} onChange={(text) => { setPickup(text); setPickupCoords(null); }} onSelect={({ address, coords }) => { setPickup(address); setPickupCoords(coords); }} />
               <PlacesInput label="Drop-off" placeholder="Where to?" value={dropoff} onChange={(text) => { setDropoff(text); setDropoffCoords(null); }} onSelect={({ address, coords }) => { setDropoff(address); setDropoffCoords(coords); }} />
@@ -248,7 +258,7 @@ export const BookRide = () => {
             <Heading title="Confirm the ride" />
             <dl className="divide-y divide-line rounded-card border border-line bg-white">
               {([
-                ['Rider', child?.name || ''],
+                [several ? 'Riders' : 'Rider', joinNames(riders.map((item) => item.name))],
                 ['Pickup', pickup.trim()],
                 ['Drop-off', dropoff.trim()],
                 ['When', when === 'later' ? formatScheduledTime(scheduleValue) : 'Now'],

@@ -33,7 +33,7 @@ import {
 import { SAFETY_ALERT_LABELS } from '../components/SafetyActions';
 import { RideStatus } from '../types';
 import { FareBreakdown } from '../components/FareBreakdown';
-import { formatRidePrice, rideEarnings } from '../utils/rideData';
+import { formatRidePrice, rideChildNames, rideEarnings } from '../utils/rideData';
 
 const formatDate = (value?: string | null) => {
   if (!value) return 'Unknown';
@@ -549,7 +549,7 @@ export const AdminRides = () => {
                     <p className="mt-2 break-words text-sm font-semibold text-ink">{ride.pickupLocation || 'Unknown pickup'} &rarr; {ride.dropoffLocation || 'Unknown drop-off'}</p>
                     <p className="mt-1 text-xs text-muted">
                       Pickup {formatDate(ride.pickupTime)}
-                      {ride.childName ? ` - Child: ${ride.childName}` : ''}
+                      {rideChildNames(ride) ? ` - ${(ride.childIds?.length || 1) > 1 ? 'Children' : 'Child'}: ${rideChildNames(ride)}` : ''}
                       {ride.parentName ? ` - Parent: ${ride.parentName}` : ''}
                       {` - Driver: ${ride.driver?.name || (ride.driverId ? ride.driverId : 'unassigned')}`}
                     </p>

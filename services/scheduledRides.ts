@@ -72,6 +72,7 @@ export const bookScheduledRide = async (ride: Ride): Promise<Ride> => mapRide(aw
   token: token(),
   body: {
     childId: ride.childId,
+    childIds: ride.childIds,
     pickup: ride.pickupLocation,
     dropoff: ride.dropoffLocation,
     pickupTime: ride.pickupTime,

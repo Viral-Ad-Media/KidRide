@@ -11,7 +11,7 @@ import { DriverIdleMap } from '../components/DriverIdleMap';
 import { apiRequest, fetchDriverSummary, getStoredToken } from '../services/api';
 import { SosButton } from '../components/SafetyActions';
 import { RideStatus } from '../types';
-import { formatPickupTime, formatRidePrice, rideEarnings } from '../utils/rideData';
+import { childCountLabel, formatPickupTime, formatRidePrice, rideChildNames, rideEarnings } from '../utils/rideData';
 
 import { useDriverLocation } from '../services/driverLocation';
 
@@ -65,7 +65,7 @@ const TripCodeEntry: React.FC<{ childName: string; onSubmit: (code: string) => P
           placeholder="0000"
           className="h-button w-32 rounded-control border border-line bg-white px-4 text-center font-mono text-title font-bold tracking-[0.3em] focus:border-brand-deep focus:outline-none"
         />
-        <Button type="submit" className="flex-1" disabled={busy || code.length !== 4}>{busy ? 'Checking...' : `${childName} is in the car`}</Button>
+        <Button type="submit" className="flex-1" disabled={busy || code.length !== 4}>{busy ? 'Checking...' : childName.includes(' and ') ? 'Everyone is in the car' : `${childName} is in the car`}</Button>
       </div>
       {error && <p role="alert" className="mt-2 text-label text-danger">{error}</p>}
     </form>
@@ -99,7 +99,7 @@ const NoShowAction: React.FC<{ rideId: string; childName: string; onConfirm: () 
   return (
     <>
       {open
-        ? <button type="button" onClick={() => setConfirming(true)} className="w-full rounded-full border border-line py-3 text-label font-semibold text-ink hover:bg-surface-2">{childName} is not here: record a no-show</button>
+        ? <button type="button" onClick={() => setConfirming(true)} className="w-full rounded-full border border-line py-3 text-label font-semibold text-ink hover:bg-surface-2">{childName} {childName.includes(' and ') ? 'are' : 'is'} not here: record a no-show</button>
         : <p className="text-center text-caption text-muted">{childName} not out yet? You can record a no-show from {opensAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} ({terms.waitMinutes} min wait).</p>}
       <ConfirmModal
         open={confirming}
@@ -202,7 +202,9 @@ export const DriverDashboard = () => {
     finally { setCancelling(false); setConfirmingCancel(false); }
   };
 
-  const childName = activeRide?.child?.name?.split(' ')[0] || 'the child';
+  // Every child on the ride by first name, so the driver greets the right children at the pickup.
+  const childName = (activeRide && rideChildNames(activeRide)) || 'the child';
+  const several = (activeRide?.childIds?.length || activeRide?.childCount || 1) > 1;
   const offerOpen = !!activeRide && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);
   const tripHeadline = !activeRide ? ''
     : activeRide.status === RideStatus.DRIVER_ASSIGNED ? 'Head to the pickup'
@@ -267,7 +269,7 @@ export const DriverDashboard = () => {
                   <p className="text-label font-semibold text-brand-deep">New request{activeRide.isScheduled ? ' (booked ahead)' : ''}</p>
                   <p className="mt-1 text-display font-extrabold tabular-nums tracking-tight">{formatRidePrice(rideEarnings(activeRide), undefined, activeRide.currency)}</p>
                   <p className="text-caption text-muted">You earn{activeRide.fare ? ` · ${activeRide.fare.miles.toFixed(1)} mi, about ${activeRide.fare.minutes} min` : ''}</p>
-                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} · Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
+                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} · {childCountLabel(activeRide)} · Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
                 </div>
                 {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
               </div>
@@ -282,6 +284,7 @@ export const DriverDashboard = () => {
               <div className="px-5 pt-5">
                 <StatusChip status={activeRide.status} />
                 <h3 className="mt-3 text-title font-extrabold tracking-tight">{tripHeadline}</h3>
+                {several && <p className="mt-1 text-label font-semibold">{childCountLabel(activeRide)}: {childName}. Check every child is in before you start.</p>}
                 <p className="mt-1 text-label text-muted">Pickup {formatPickupTime(activeRide.pickupTime, 'now')} · You earn {formatRidePrice(rideEarnings(activeRide), undefined, activeRide.currency)}</p>
               </div>
               <div className="mx-5 mt-4 flex items-center justify-between rounded-card bg-accent/15 px-4 py-3">

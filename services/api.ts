@@ -324,9 +324,17 @@ export const mapRide = (raw: unknown): Ride => {
       ? String(rawChild._id)
       : '';
 
+  const childIds = Array.isArray(ride.childIds) ? ride.childIds.filter((id): id is string => typeof id === 'string') : [];
+  const rideChildren = Array.isArray(ride.children)
+    ? (ride.children as Record<string, unknown>[]).filter((item) => item && typeof item.id === 'string').map((item) => ({ id: String(item.id), name: typeof item.name === 'string' ? item.name : '', age: typeof item.age === 'number' ? item.age : null }))
+    : [];
+
   return {
     id: rideId ? String(rideId) : `ride-${Date.now()}`,
     childId,
+    childIds: childIds.length ? childIds : childId ? [childId] : [],
+    children: rideChildren,
+    childCount: typeof ride.childCount === 'number' ? ride.childCount : Math.max(1, childIds.length),
     driverId,
     driver,
     pickupLocation: typeof ride.pickupLocation === 'string' ? ride.pickupLocation : '',
