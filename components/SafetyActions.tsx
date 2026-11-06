@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Siren } from 'lucide-react';
+import { AlertTriangle, Copy, Phone, Siren } from 'lucide-react';
 import { ConfirmModal } from './UIComponents';
 import { apiRequest, getStoredToken } from '../services/api';
 import { SafetyAlert } from '../types';
@@ -25,6 +25,9 @@ export const SosButton: React.FC<{ rideId: string; who: 'parent' | 'driver'; onS
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentAt, setSentAt] = useState<Date | null>(null);
+  const [liveUrl, setLiveUrl] = useState<string | null>(null);
+  const [contactsNotified, setContactsNotified] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   const send = async () => {
     setBusy(true);
@@ -32,7 +35,9 @@ export const SosButton: React.FC<{ rideId: string; who: 'parent' | 'driver'; onS
     try {
       const position = await currentPosition();
       const location = position ? { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy } : undefined;
-      await apiRequest(`/rides/${rideId}/sos`, { method: 'POST', token: getStoredToken(), body: { confirm: true, location } });
+      const result = await apiRequest<{ liveUrl?: string; contactsNotified?: number }>(`/rides/${rideId}/sos`, { method: 'POST', token: getStoredToken(), body: { confirm: true, location } });
+      setLiveUrl(result?.liveUrl || null);
+      setContactsNotified(Number(result?.contactsNotified) || 0);
       setSentAt(new Date());
       setConfirming(false);
       onSent?.();
@@ -43,24 +48,40 @@ export const SosButton: React.FC<{ rideId: string; who: 'parent' | 'driver'; onS
     }
   };
 
+  const copyLink = async () => {
+    if (!liveUrl) return;
+    try { await navigator.clipboard.writeText(liveUrl); setCopied(true); } catch { window.prompt('Copy this live location link', liveUrl); }
+  };
+  const contactsText = contactsNotified ? ` ${contactsNotified} trusted contact${contactsNotified === 1 ? ' was' : 's were'} emailed a live location link.` : '';
+
   return (
     <div className={className}>
       {sentAt ? (
-        <p role="status" className="flex items-start gap-2 rounded-card bg-danger/10 px-4 py-3 text-label font-semibold text-danger">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-          <span>SOS sent at {sentAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. KidRide support has been alerted with your location. If anyone is in danger, call 911.</span>
-        </p>
+        <div role="status" className="rounded-card bg-danger/10 px-4 py-3 text-label text-danger">
+          <p className="flex items-start gap-2 font-semibold">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <span>SOS sent at {sentAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. KidRide support has been alerted with your location.{who === 'parent' ? contactsText : ''}</span>
+          </p>
+          {who === 'parent' && liveUrl && (
+            <button type="button" onClick={() => void copyLink()} className="mt-2 inline-flex items-center gap-1.5 font-semibold text-ink underline">
+              <Copy size={14} /> {copied ? 'Link copied' : 'Copy live location link to share'}
+            </button>
+          )}
+        </div>
       ) : (
         <button type="button" onClick={() => setConfirming(true)} className="flex h-button w-full items-center justify-center gap-2 rounded-full border-2 border-danger bg-white text-body font-semibold text-danger hover:bg-danger/5">
           <Siren size={18} /> SOS: alert KidRide support
         </button>
       )}
+      <a href="tel:911" className="mt-2 flex h-button w-full items-center justify-center gap-2 rounded-full bg-danger text-body font-semibold text-white hover:bg-danger/90">
+        <Phone size={18} /> Call 911
+      </a>
       <ConfirmModal
         open={confirming}
         title="Send an SOS?"
         body={who === 'parent'
-          ? 'KidRide support gets an alert now with the time, this ride and your location, and will contact you and the driver. The driver is not told you pressed it. For immediate danger, call 911 first.'
-          : 'KidRide support and the parent get an alert now with the time, this ride and your location. For immediate danger, call 911 first.'}
+          ? 'KidRide support gets an alert now with the time, this ride and your location, and will contact you and the driver. Trusted contacts with an email get a live location link. The driver is not told you pressed it. For immediate danger, call 911 first.'
+          : 'KidRide support, the parent and the parent\'s trusted contacts get an alert now with the time, this ride and a live location link. For immediate danger, call 911 first.'}
         confirmLabel="Send SOS"
         tone="danger"
         busy={busy}

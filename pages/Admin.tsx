@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { AdminSosAlarm } from '../components/AdminSosAlarm';
 import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, X, XCircle } from 'lucide-react';
 import { ConfirmModal, Modal, StatusChip } from '../components/UIComponents';
 import { ScheduleChip } from '../components/UpcomingRides';
@@ -45,6 +46,7 @@ export const AdminTabs = () => {
   const cls = ({ isActive }: { isActive: boolean }) =>
     `rounded-full px-4 py-2 text-sm font-semibold transition ${isActive ? 'bg-ink text-white' : 'bg-surface-2 text-muted hover:bg-line'}`;
   return (
+    <>
     <div className="mb-6 flex flex-wrap gap-2">
       <NavLink to="/admin" end className={cls}>Driver applications</NavLink>
       <NavLink to="/admin/drivers" className={cls}>Drivers</NavLink>
@@ -54,6 +56,8 @@ export const AdminTabs = () => {
       <NavLink to="/admin/pricing" className={cls}>Pricing</NavLink>
       <NavLink to="/admin/safety" className={cls}>Safety</NavLink>
     </div>
+    <AdminSosAlarm />
+    </>
   );
 };
 
@@ -381,7 +385,8 @@ const incidentLine = (incident: RideIncident) => {
     : incident.kind === 'stalled' ? `Stopped ${d.stoppedMinutes} min`
     : d.note ? `"${d.note}"` : 'SOS pressed';
   const where = incident.location ? ` · at ${incident.location.latitude.toFixed(4)}, ${incident.location.longitude.toFixed(4)}` : '';
-  return `${new Date(incident.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${SAFETY_ALERT_LABELS[incident.kind]} · ${what}${who ? ` · ${who}` : ''}${where}`;
+  const contacts = incident.contactsNotified ? ` · ${incident.contactsNotified} trusted contact${incident.contactsNotified === 1 ? '' : 's'} emailed` : '';
+  return `${new Date(incident.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${SAFETY_ALERT_LABELS[incident.kind]} · ${what}${who ? ` · ${who}` : ''}${where}${contacts}`;
 };
 
 // The ride's safety incidents, newest first, and the button that clears its flag.

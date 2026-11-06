@@ -232,8 +232,27 @@ export interface RideIncident {
   details: Record<string, unknown>;
   createdAt: string;
   resolvedAt: string | null;
+  contactsNotified?: number | null;
+  liveLinkExpiresAt?: string | null;
 }
 export const fetchRideIncidents = async (id: string) => (await apiRequest<{ incidents: RideIncident[] }>(`/rides/${encodeURIComponent(id)}/incidents`, { token: requireToken() })).incidents;
+
+export interface IncidentWithRide extends RideIncident {
+  ride: {
+    id: string;
+    status: string;
+    pickup: string;
+    dropoff: string;
+    child: string | null;
+    parent: { name: string; phone: string | null } | null;
+    driver: { name: string; phone: string | null } | null;
+  } | null;
+}
+/** Incident history across rides (newest first); `status` open | all. */
+export const fetchAllIncidents = async (status: 'open' | 'all' = 'open', kind?: SafetyAlert) => {
+  const query = new URLSearchParams({ status, ...(kind ? { kind } : {}) });
+  return (await apiRequest<{ incidents: IncidentWithRide[] }>(`/admin/safety/incidents?${query}`, { token: requireToken() })).incidents;
+};
 
 export const adminCancelRide = async (id: string): Promise<unknown> => apiRequest(`/rides/${encodeURIComponent(id)}/cancel`, {
   method: 'PUT',

@@ -101,7 +101,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [expanded, setExpanded] = useState(false);
 
   // Must come after every hook so public and app pages call the same hooks.
-  if (publicPagePaths.has(location.pathname)) {
+  if (publicPagePaths.has(location.pathname) || location.pathname.startsWith('/sos/')) {
     return <div className="min-h-screen text-ink">{children}</div>;
   }
 

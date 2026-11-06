@@ -32,6 +32,7 @@ import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pag
 import { AdminPricing } from './pages/AdminPricing';
 import { AdminSafety } from './pages/AdminSafety';
 import { AdminLiveMap } from './pages/AdminLiveMap';
+import { SosLive } from './pages/SosLive';
 import { UserRole } from './types';
 import { SplashLoader } from './components/brand/SplashLoader';
 
@@ -87,6 +88,7 @@ const AppRoutes = () => (
       <Route path="/for-drivers" element={<ForDriversPage />} />
       <Route path="/faq" element={<FaqPage />} />
       <Route path="/help" element={<HelpPage />} />
+      <Route path="/sos/:token" element={<SosLive />} />
       <Route path="/contact" element={<MarketingContactPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />

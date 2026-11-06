@@ -3,6 +3,10 @@ import { Send, Bot, Users, ArrowLeft, Plus, X, AlertTriangle, ShieldAlert } from
 import { generateSafetyResponse } from '../services/geminiService';
 import { Button, Card, Input } from '../components/UIComponents';
 import { ApiError, apiRequest, getStoredToken } from '../services/api';
+import { useRide } from '../contexts/RideContext';
+import { useAuth } from '../contexts/AuthContext';
+import { SosButton } from '../components/SafetyActions';
+import { RideStatus, UserRole } from '../types';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -13,6 +17,7 @@ interface TrustedContact {
   id: string;
   name: string;
   phone: string;
+  email: string | null;
   relationship: string | null;
 }
 
@@ -21,7 +26,9 @@ const contactsPath = '/users/me/trusted-contacts';
 
 export const SafetyChat = () => {
   const [view, setView] = useState<'menu' | 'chat' | 'contacts'>('menu');
-  const [sosNotice, setSosNotice] = useState<string | null>(null);
+  const { activeRide, refreshActiveRide } = useRide();
+  const { user } = useAuth();
+  const rideInProgress = activeRide && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) ? activeRide : null;
 
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Hi! I'm the KidRide Safety Assistant. Ask me anything about verifying drivers, carpool rules, or trip safety." }
@@ -32,7 +39,7 @@ export const SafetyChat = () => {
 
   const [contacts, setContacts] = useState<TrustedContact[]>([]);
   const [showAddContact, setShowAddContact] = useState(false);
-  const [newContact, setNewContact] = useState({ name: '', phone: '', relation: '' });
+  const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', relation: '' });
   const [contactsLoading, setContactsLoading] = useState(true);
   const [contactError, setContactError] = useState<string | null>(null);
   const [savingContact, setSavingContact] = useState(false);
@@ -77,10 +84,10 @@ export const SafetyChat = () => {
       const result = await apiRequest<{ contacts: TrustedContact[] }>(contactsPath, {
         method: 'POST',
         token: getStoredToken(),
-        body: { name: newContact.name.trim(), phone: newContact.phone.trim(), relationship: newContact.relation.trim() }
+        body: { name: newContact.name.trim(), phone: newContact.phone.trim(), email: newContact.email.trim(), relationship: newContact.relation.trim() }
       });
       setContacts(result.contacts);
-      setNewContact({ name: '', phone: '', relation: '' });
+      setNewContact({ name: '', phone: '', email: '', relation: '' });
       setShowAddContact(false);
     } catch (err) {
       setContactError(err instanceof ApiError ? err.message : 'Could not save this contact.');
@@ -97,10 +104,6 @@ export const SafetyChat = () => {
     } catch (err) {
       setContactError(err instanceof ApiError ? err.message : 'Could not remove this contact.');
     }
-  };
-
-  const handleSosClick = () => {
-    setSosNotice('Emergency dispatch and live location sharing are not connected in this build. Call local emergency services directly if you need immediate help.');
   };
 
   if (view === 'chat') {
@@ -182,7 +185,7 @@ export const SafetyChat = () => {
                 </div>
                 <div>
                   <h4 className="font-bold text-gray-900">{contact.name}</h4>
-                  <p className="text-xs text-gray-500">{contact.relationship || 'Trusted contact'} • {contact.phone}</p>
+                  <p className="text-xs text-gray-500">{contact.relationship || 'Trusted contact'} • <a href={`tel:${contact.phone}`} className="underline">{contact.phone}</a>{contact.email ? ` • ${contact.email}` : ''}</p>
                 </div>
               </div>
               <button onClick={() => void handleRemoveContact(contact.id)} aria-label={`Remove ${contact.name}`} className="rounded-full p-2 text-red-400 hover:bg-red-50">
@@ -212,6 +215,7 @@ export const SafetyChat = () => {
               <div className="space-y-3">
                 <Input placeholder="Name" value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} />
                 <Input placeholder="Phone" value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} />
+                <Input type="email" placeholder="Email (gets a live location link if you press SOS)" value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} />
                 <Input placeholder="Relation (e.g. Neighbor)" value={newContact.relation} onChange={(e) => setNewContact({ ...newContact, relation: e.target.value })} />
                 <div className="flex gap-2">
                   <Button onClick={() => void handleAddContact()} disabled={savingContact} className="h-10 flex-1">{savingContact ? 'Saving...' : 'Save'}</Button>
@@ -234,26 +238,24 @@ export const SafetyChat = () => {
   return (
     <div className="space-y-6">
 
-      <div className="flex justify-center py-4">
-        <button
-          onClick={handleSosClick}
-          className="flex h-40 w-40 flex-col items-center justify-center rounded-full bg-red-500 shadow-xl transition-all duration-200 hover:bg-red-600 active:scale-95"
-        >
-          <ShieldAlert size={48} className="mb-2 text-white" />
-          <span className="text-xl font-bold text-white">SOS</span>
-          <span className="mt-1 text-xs font-medium text-white/80">Emergency</span>
-        </button>
-      </div>
-
-      <p className="px-8 text-center text-xs text-gray-500">
-        Emergency dispatch and location sharing are not connected in this build. Use local emergency services if you need immediate help.
-      </p>
-
-      {sosNotice && (
-        <Card className="border-red-100 bg-red-50">
-          <p className="text-sm text-red-700">{sosNotice}</p>
-        </Card>
-      )}
+      <Card className="border-red-100">
+        <div className="flex items-start gap-3">
+          <ShieldAlert size={28} className="shrink-0 text-danger" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-gray-900">Emergency</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              {rideInProgress
+                ? 'SOS alerts KidRide support with your location and this ride, and emails your trusted contacts a live location link.'
+                : 'SOS is available during a ride, here and on the tracking screen. No ride is in progress right now.'}
+            </p>
+            {rideInProgress ? (
+              <SosButton rideId={rideInProgress.id} who={user?.role === UserRole.DRIVER ? 'driver' : 'parent'} onSent={() => void refreshActiveRide()} className="mt-3" />
+            ) : (
+              <a href="tel:911" className="mt-3 inline-flex h-button items-center justify-center rounded-full bg-danger px-6 text-body font-semibold text-white hover:bg-danger/90">Call 911</a>
+            )}
+          </div>
+        </div>
+      </Card>
 
       <div className="mt-8 grid grid-cols-2 gap-4">
         <Card onClick={() => setView('contacts')} className="flex flex-col items-center justify-center gap-3 py-6 transition-colors hover:border-green-200 hover:bg-green-50">
