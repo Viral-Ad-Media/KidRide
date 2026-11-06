@@ -65,6 +65,11 @@ export const Welcome = () => {
     setError(null);
     setNotice(null);
 
+    if (isSignup && formData.password.length < 8) {
+      setError('Use a password of at least 8 characters.');
+      return;
+    }
+
     if (isSignup && formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
       return;
