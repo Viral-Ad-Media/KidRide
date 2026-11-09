@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, BadgeCheck, Camera, Car, ChevronRight, Clock, CreditCard, Loader2, MapPin, ScanFace, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertTriangle, BadgeCheck, Camera, Car, ChevronRight, Clock, CreditCard, FileText, Fingerprint, Loader2, MapPin, ScanFace, ShieldCheck, XCircle } from 'lucide-react';
 import { Button, Card } from '../components/UIComponents';
 import { LivenessCheck } from '../components/verification/LivenessCheck';
 import { PhotoCheck } from '../components/verification/PhotoCheck';
-import { CHECK_HELP, CHECK_LABELS, CheckKind, DriverCheck, IdentityState, fetchMyChecks, refreshIdentity, startIdentity } from '../services/driverChecks';
+import { CHECK_HELP, CHECK_LABELS, CheckKind, DriverCheck, IdentityState, fetchMyChecks, refreshIdentity, startBackground, startIdentity } from '../services/driverChecks';
 
 // Driver: identity verification and any checks KidRide has asked for. While a
 // check is open the driver cannot go online or accept new rides.
 
-const ICONS: Record<CheckKind, typeof Camera> = { identity: CreditCard, liveness: ScanFace, id_document: CreditCard, vehicle_photo: Car, plate_photo: Camera, location_photo: MapPin };
+const ICONS: Record<CheckKind, typeof Camera> = { identity: CreditCard, liveness: ScanFace, id_document: CreditCard, insurance_document: FileText, vehicle_photo: Car, plate_photo: Camera, location_photo: MapPin, background: Fingerprint };
 
 const IDENTITY_TEXT: Record<IdentityState['status'], string> = {
   none: 'Not verified yet',
@@ -28,7 +28,8 @@ const statusChip = (check: DriverCheck) => {
 };
 
 export const DriverVerification = () => {
-  const [data, setData] = useState<{ identity: IdentityState; checks: DriverCheck[]; blocked: boolean } | null>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof fetchMyChecks>> | null>(null);
+  const [manualBackground, setManualBackground] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<DriverCheck | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,6 +59,15 @@ export const DriverVerification = () => {
   };
 
   const finish = () => { setActive(null); void load(); };
+  const open_ = async (check: DriverCheck) => {
+    if (check.kind !== 'background') { setActive(check); return; }
+    setBusy(true); setError(null);
+    try {
+      const result = await startBackground();
+      if (result.url) window.location.assign(result.url);
+      else { setManualBackground(true); setBusy(false); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not start the background check.'); setBusy(false); }
+  };
 
   if (active) {
     return (
@@ -123,12 +133,12 @@ export const DriverVerification = () => {
               const Icon = ICONS[check.kind];
               const canStart = check.status === 'pending';
               return (
-                <button key={check.id} type="button" disabled={!canStart} onClick={() => setActive(check)}
+                <button key={check.id} type="button" disabled={!canStart || busy} onClick={() => void open_(check)}
                   className="flex w-full items-center gap-3 rounded-card border border-line bg-white p-4 text-left transition enabled:hover:bg-surface disabled:cursor-default">
                   <Icon size={22} className="shrink-0 text-brand-deep" />
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">{CHECK_LABELS[check.kind]}</span>
-                    <span className="block text-caption text-muted">{check.status === 'failed' ? (check.reviewNote || 'Not accepted. KidRide support will contact you.') : check.reasonLabel}</span>
+                    <span className="block text-caption text-muted">{check.status === 'failed' ? (check.reviewNote || 'Not accepted. KidRide support will contact you.') : check.reasonLabel}{check.dueAt && check.status === 'pending' ? ` · due by ${new Date(check.dueAt).toLocaleDateString()}` : ''}</span>
                   </span>
                   {statusChip(check)}
                   {canStart && <ChevronRight size={18} className="text-muted" />}
@@ -137,6 +147,12 @@ export const DriverVerification = () => {
             })}
           </div>
         </section>
+      )}
+
+      {manualBackground && (
+        <p className="rounded-card border border-line bg-white px-4 py-3 text-label">
+          Email a copy of your background certificate (for example an enhanced DBS certificate) and its number to KidRide support. We will mark this check done once we have checked it.
+        </p>
       )}
 
       {history.length > 0 && (

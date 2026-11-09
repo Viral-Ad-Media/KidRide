@@ -11,7 +11,7 @@ import { CHECK_LABELS, CheckKind, DriverCheck, fetchAdminCheck, fetchAdminChecks
 
 type Filter = 'submitted' | 'open' | 'all';
 const FILTERS: { key: Filter; label: string }[] = [{ key: 'submitted', label: 'To review' }, { key: 'open', label: 'Open' }, { key: 'all', label: 'All' }];
-const KINDS: CheckKind[] = ['liveness', 'identity', 'id_document', 'vehicle_photo', 'plate_photo', 'location_photo'];
+const KINDS: CheckKind[] = ['liveness', 'identity', 'id_document', 'insurance_document', 'vehicle_photo', 'plate_photo', 'location_photo', 'background'];
 const SLOT_LABELS: Record<string, string> = { neutral: 'Looking at camera', turn_left: 'Turned left', turn_right: 'Turned right', open_mouth: 'Mouth open', nod: 'Nod', blink: 'Blink', smile: 'Smile', photo: 'Photo', license: 'Licence (application)', photo_front: 'Car front (application)', first_face: 'First face check' };
 const STATUS_STYLE: Record<string, string> = { pending: 'bg-warning/15 text-ink', submitted: 'bg-brand/20 text-ink', passed: 'bg-success/10 text-success', failed: 'bg-danger/10 text-danger', cancelled: 'bg-surface-2 text-muted' };
 
@@ -22,6 +22,13 @@ const detailLine = (check: DriverCheck) => {
   if (d.method === 'detected') parts.push('Actions confirmed on device');
   if (typeof d.metersFromLastFix === 'number') parts.push(`${d.metersFromLastFix} m from the last GPS ping`);
   if (d.position && typeof d.position === 'object') { const p = d.position as { lat: number; lng: number }; parts.push(`at ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`); }
+  if (d.faceMatch && typeof d.faceMatch === 'object') { const f = d.faceMatch as { similarity: number; against: string; threshold: number }; parts.push(`Face match ${f.similarity}% vs ${f.against === 'licence' ? 'licence photo' : 'first face check'} (needs ${f.threshold}%)`); }
+  if (d.plateRead && typeof d.plateRead === 'object') { const r = d.plateRead as { plate: string | null; registered: string }; parts.push(`Plate read ${r.plate || 'none'} · registered ${r.registered || 'unknown'}`); }
+  if (typeof d.autoError === 'string') parts.push(d.autoError);
+  if (typeof d.expiresOn === 'string') parts.push(`Expires ${d.expiresOn}`);
+  if (typeof d.km === 'number') parts.push(`${d.km} km from last position`);
+  if (typeof d.changed === 'string') parts.push(`Changed: ${d.changed}`);
+  if (typeof d.result === 'string') parts.push(`Background result: ${d.result}`);
   if (typeof d.note === 'string') parts.push(`Note: ${d.note}`);
   if (typeof d.repeatCount === 'number') parts.push(`${d.repeatCount} times in the window`);
   return parts.join(' · ');
@@ -70,7 +77,7 @@ const CheckReview: React.FC<{ id: string; onClose: () => void; onChanged: () => 
           <>
             <Photos title="Submitted" photos={detail.evidence} />
             <Photos title="Compare with" photos={detail.reference} />
-            <p className="text-caption text-muted">Pass only if the face matches the licence and earlier photos, every prompt was done, and the car and plate match the registration.</p>
+            <p className="text-caption text-muted">{check?.kind === 'background' ? 'For a manual background check, record the certificate number and issue date in the note, then pass. For a Checkr "consider" result, review the report in Checkr first.' : 'Pass only if the face matches the licence and earlier photos, every prompt was done, and the car and plate match the registration.'}</p>
             {check && ['pending', 'submitted', 'failed'].includes(check.status) && (
               <>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Note (shown to the driver if failed)" className="w-full rounded-control border border-line p-3 text-label" />

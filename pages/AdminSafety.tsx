@@ -23,8 +23,11 @@ interface SafetySettings {
   spotCheckMinDays: number;
   inactivityDays: number;
   identityRenewDays: number;
+  farLoginKm: number;
+  documentReminderDays: number;
+  faceMatchThreshold: number;
 }
-const KEYS: (keyof SafetySettings)[] = ['tripCodeMaxAttempts', 'offRouteMiles', 'stalledMinutes', 'stalledRadiusMeters', 'dropoffQuietMeters', 'overshootNearMeters', 'overshootMeters', 'stopSeconds', 'maxStopsPerTrip', 'maxSpeedKph', 'spotCheckPercent', 'spotCheckMinDays', 'inactivityDays', 'identityRenewDays'];
+const KEYS: (keyof SafetySettings)[] = ['tripCodeMaxAttempts', 'offRouteMiles', 'stalledMinutes', 'stalledRadiusMeters', 'dropoffQuietMeters', 'overshootNearMeters', 'overshootMeters', 'stopSeconds', 'maxStopsPerTrip', 'maxSpeedKph', 'spotCheckPercent', 'spotCheckMinDays', 'inactivityDays', 'identityRenewDays', 'farLoginKm', 'documentReminderDays', 'faceMatchThreshold'];
 const toForm = (s: SafetySettings): Form => Object.fromEntries(KEYS.map((key) => [key, String(s[key])]));
 const fromForm = (f: Form): SafetySettings => Object.fromEntries(KEYS.map((key) => [key, f[key].trim() === '' ? NaN : Number(f[key])])) as unknown as SafetySettings;
 
@@ -98,6 +101,11 @@ export const AdminSafety = () => {
           <Field label="At most one spot check every" name="spotCheckMinDays" suffix="days" {...props} />
           <Field label="Face check after being away for" name="inactivityDays" suffix="days" {...props} />
           <Field label="Renew ID verification every" name="identityRenewDays" suffix="days" {...props} />
+          <Field label="Face and location check when this far from the last position" name="farLoginKm" suffix="km" {...props} />
+        </Section>
+        <Section title="Documents and automatic checks" note="Expiry reminders run once a day. Face matching needs the AWS keys on the server; without them every face check goes to an admin.">
+          <Field label="Ask for a new licence or insurance photo" name="documentReminderDays" suffix="days before expiry" {...props} />
+          <Field label="Face match needed to pass automatically" name="faceMatchThreshold" suffix="%" {...props} />
         </Section>
         {error && <p role="alert" className="text-label text-danger">{error}</p>}
         {flash && <p className="text-label font-semibold text-success">{flash}</p>}

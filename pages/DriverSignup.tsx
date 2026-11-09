@@ -30,6 +30,8 @@ export const DriverSignup = () => {
     year: '',
     color: '',
     plate: '',
+    licenseExpiresOn: '',
+    insuranceExpiresOn: '',
     licenseDoc: null as File | null,
     insuranceDoc: null as File | null,
     registrationDoc: null as File | null,
@@ -55,6 +57,7 @@ export const DriverSignup = () => {
     }));
   }, [user]);
 
+  const today = new Date().toISOString().slice(0, 10);
   const isStep1Valid =
     formData.phone.trim() !== '' &&
     (!requiresAccountCreation ||
@@ -69,7 +72,9 @@ export const DriverSignup = () => {
     formData.model.trim() !== '' &&
     formData.year.trim() !== '' &&
     formData.color.trim() !== '' &&
-    formData.plate.trim() !== '';
+    formData.plate.trim() !== '' &&
+    formData.licenseExpiresOn > today &&
+    formData.insuranceExpiresOn > today;
 
   const isStep3Valid =
     formData.licenseDoc !== null &&
@@ -138,6 +143,8 @@ export const DriverSignup = () => {
       await submitDriverApplication({
         documents,
         phone: formData.phone,
+        licenseExpiresOn: formData.licenseExpiresOn,
+        insuranceExpiresOn: formData.insuranceExpiresOn,
         vehicle: {
           make: formData.make,
           model: formData.model,
@@ -378,6 +385,23 @@ export const DriverSignup = () => {
                 value={formData.plate}
                 onChange={(event) => handleInputChange('plate', event.target.value)}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Licence expires"
+                  type="date"
+                  min={today}
+                  value={formData.licenseExpiresOn}
+                  onChange={(event) => handleInputChange('licenseExpiresOn', event.target.value)}
+                />
+                <Input
+                  label="Insurance expires"
+                  type="date"
+                  min={today}
+                  value={formData.insuranceExpiresOn}
+                  onChange={(event) => handleInputChange('insuranceExpiresOn', event.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted">We will remind you to send new photos before either expires.</p>
             </div>
 
             {error && (
@@ -393,7 +417,7 @@ export const DriverSignup = () => {
               {!isStep2Valid && (
                 <p className="text-center text-xs text-red-400 mt-2 flex items-center justify-center gap-1">
                   <AlertCircle size={12} />
-                  All vehicle fields are required
+                  All vehicle fields and future expiry dates are required
                 </p>
               )}
             </div>

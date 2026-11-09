@@ -3,7 +3,8 @@ import { apiRequest, getStoredToken } from './api';
 // Driver verification checks: identity with the ID provider, face checks with
 // random actions, and live photos (car, plate, licence, current location).
 
-export type CheckKind = 'identity' | 'liveness' | 'id_document' | 'vehicle_photo' | 'plate_photo' | 'location_photo';
+export type CheckKind = 'identity' | 'liveness' | 'id_document' | 'insurance_document' | 'vehicle_photo' | 'plate_photo' | 'location_photo' | 'background';
+export const DOCUMENT_KINDS: CheckKind[] = ['id_document', 'insurance_document'];
 export type CheckStatus = 'pending' | 'submitted' | 'passed' | 'failed' | 'cancelled';
 export type LivenessAction = 'turn_left' | 'turn_right' | 'open_mouth' | 'nod' | 'blink' | 'smile';
 
@@ -22,6 +23,7 @@ export interface DriverCheck {
   submittedAt: string | null;
   reviewedAt: string | null;
   reviewNote: string | null;
+  dueAt: string | null;
   driver?: { id: string; name: string; email: string; vehicle: Record<string, string> } | null;
 }
 
@@ -36,15 +38,19 @@ export const CHECK_LABELS: Record<CheckKind, string> = {
   identity: 'ID and selfie',
   liveness: 'Face check',
   id_document: 'Licence photo',
+  insurance_document: 'Insurance photo',
   vehicle_photo: 'Car photo',
   plate_photo: 'Licence plate photo',
-  location_photo: 'Where you are now'
+  location_photo: 'Where you are now',
+  background: 'Background check'
 };
 
 export const CHECK_HELP: Record<CheckKind, string> = {
   identity: 'Scan your driving licence and take a selfie. Our ID partner checks that the face matches the licence.',
   liveness: 'Look at the camera and follow three quick prompts so we know it is really you.',
-  id_document: 'Take a live photo of the front of your driving licence.',
+  id_document: 'Take a live photo of the front of your driving licence and enter its expiry date.',
+  insurance_document: 'Take a live photo of your current insurance certificate and enter its expiry date.',
+  background: 'A criminal and driving record check, required for everyone who drives children.',
   vehicle_photo: 'Take a live photo of your car from the front, with the whole car in view.',
   plate_photo: 'Take a close, readable photo of your licence plate.',
   location_photo: 'Take a photo of your surroundings. We record your GPS position with it.'
@@ -61,7 +67,8 @@ export const ACTION_PROMPTS: Record<LivenessAction, string> = {
 
 const token = () => getStoredToken();
 
-export const fetchMyChecks = () => apiRequest<{ identity: IdentityState; checks: DriverCheck[]; blocked: boolean }>('/driver-checks', { token: token() });
+export const fetchMyChecks = () => apiRequest<{ identity: IdentityState; background: { mode: 'checkr' | 'manual' | 'off' }; checks: DriverCheck[]; blocked: boolean }>('/driver-checks', { token: token() });
+export const startBackground = () => apiRequest<{ mode: 'checkr' | 'manual'; url: string | null }>('/driver-checks/background/start', { method: 'POST', token: token() });
 export const startIdentity = () => apiRequest<{ url: string }>('/driver-checks/identity/start', { method: 'POST', token: token() });
 export const refreshIdentity = () => apiRequest<IdentityState>('/driver-checks/identity/refresh', { method: 'POST', token: token() });
 export const startCheck = (id: string) => apiRequest<{ checkId: string; kind: CheckKind; actions?: LivenessAction[]; expiresAt: string }>(`/driver-checks/${id}/start`, { method: 'POST', token: token() });
@@ -74,7 +81,7 @@ export const uploadCheckPhoto = async (checkId: string, slot: string, blob: Blob
   return path;
 };
 
-export const submitCheck = (checkId: string, body: { files: Record<string, string>; position?: { latitude: number; longitude: number; accuracy: number } | null; method?: 'detected' | 'manual' }) =>
+export const submitCheck = (checkId: string, body: { files: Record<string, string>; position?: { latitude: number; longitude: number; accuracy: number } | null; method?: 'detected' | 'manual'; expiresOn?: string }) =>
   apiRequest<DriverCheck>(`/driver-checks/${checkId}/submit`, { method: 'POST', token: token(), body });
 
 // Admin.

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Loader2, MapPin, RotateCcw } from 'lucide-react';
 import { Button } from '../UIComponents';
-import { CHECK_HELP, CheckKind, currentPosition, grabFrame, startCheck, submitCheck, uploadCheckPhoto } from '../../services/driverChecks';
+import { CHECK_HELP, CheckKind, DOCUMENT_KINDS, currentPosition, grabFrame, startCheck, submitCheck, uploadCheckPhoto } from '../../services/driverChecks';
 
 // Live photo check (car, plate, licence or current location). The camera is the
 // only source, so a saved or old picture cannot be used, and the device's GPS
@@ -13,6 +13,9 @@ export const PhotoCheck: React.FC<{ checkId: string; kind: CheckKind; onDone: ()
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expiresOn, setExpiresOn] = useState('');
+  const needsExpiry = DOCUMENT_KINDS.includes(kind);
+  const today = new Date().toISOString().slice(0, 10);
   const facing = 'environment';
 
   useEffect(() => {
@@ -46,9 +49,10 @@ export const PhotoCheck: React.FC<{ checkId: string; kind: CheckKind; onDone: ()
     setError(null);
     try {
       const fix = await currentPosition();
+      if (needsExpiry && !(expiresOn > today)) throw new Error('Enter the expiry date shown on the document.');
       if (kind === 'location_photo' && !fix) throw new Error('Allow location access so we can record where the photo was taken.');
       const path = await uploadCheckPhoto(checkId, 'photo', photo.blob);
-      await submitCheck(checkId, { files: { photo: path }, position: fix ? { latitude: fix.coords.latitude, longitude: fix.coords.longitude, accuracy: fix.coords.accuracy } : null });
+      await submitCheck(checkId, { files: { photo: path }, position: fix ? { latitude: fix.coords.latitude, longitude: fix.coords.longitude, accuracy: fix.coords.accuracy } : null, ...(needsExpiry ? { expiresOn } : {}) });
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send the photo.');
@@ -64,6 +68,11 @@ export const PhotoCheck: React.FC<{ checkId: string; kind: CheckKind; onDone: ()
         {photo && <img src={photo.url} alt="Your photo" className="h-full w-full object-cover" />}
         {!ready && !error && <div className="absolute inset-0 flex items-center justify-center text-white"><Loader2 className="animate-spin" size={32} /></div>}
       </div>
+      {needsExpiry && (
+        <label className="block text-label font-semibold">Expiry date on the document
+          <input type="date" min={today} value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} className="mt-1 h-11 w-full rounded-control border border-line px-3 font-normal" />
+        </label>
+      )}
       {kind === 'location_photo' && <p className="flex items-center gap-2 text-caption text-muted"><MapPin size={14} />Your GPS position is sent with this photo.</p>}
       {error && <p role="alert" className="text-label text-danger">{error}</p>}
       <div className="flex gap-2">

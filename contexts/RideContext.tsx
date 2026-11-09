@@ -4,6 +4,16 @@ import { useAuth } from './AuthContext';
 import { ApiError, apiRequest, getStoredToken, mapRide } from '../services/api';
 import { watchSharedPosition } from '../services/sharedPosition';
 
+// A random id for this phone or browser, so going online from a new device can ask for a face check.
+const DEVICE_KEY = 'kidride_device_id';
+const readDeviceId = () => {
+  try {
+    let id = window.localStorage.getItem(DEVICE_KEY);
+    if (!id) { id = crypto.randomUUID(); window.localStorage.setItem(DEVICE_KEY, id); }
+    return id;
+  } catch { return undefined; }
+};
+
 interface RideContextType {
   activeRide: Ride | null;
   syncError: string | null;
@@ -107,9 +117,10 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = getStoredToken();
       if (!token) return;
       const heading = position?.coords.heading;
+      const deviceId = readDeviceId();
       const body = position
-        ? { online: true, latitude: position.coords.latitude, longitude: position.coords.longitude, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null }
-        : { online: true };
+        ? { online: true, deviceId, latitude: position.coords.latitude, longitude: position.coords.longitude, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null }
+        : { online: true, deviceId };
       void apiRequest('/users/me/presence', { method: 'PUT', token, body }).then(() => setVerificationRequired(false)).catch((error) => {
         // An open verification check keeps the driver offline until it is done.
         if (error instanceof ApiError && (error.data as { code?: string } | null)?.code === 'verification_required') {
