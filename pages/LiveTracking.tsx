@@ -11,6 +11,7 @@ import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
+import { rideChildNames } from '../utils/rideData';
 
 // Tracking, the way DoorDash and Uber do it: a status stepper, one headline
 // that says what is happening and how long it will take, the driver card
@@ -74,8 +75,8 @@ export const LiveTracking = () => {
 
   const status = activeRide.status;
   const driver = activeRide.driver;
-  const child = user?.children?.find((item) => item.id === activeRide.childId);
-  const childName = child?.name.split(' ')[0] || 'Your child';
+  const childName = rideChildNames(activeRide, user?.children) || 'Your child';
+  const several = (activeRide.childIds?.length || 1) > 1;
   const driverFirst = driver?.name.split(' ')[0] || 'Your driver';
   const searching = [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(status);
   const onBoard = status === RideStatus.IN_PROGRESS;
@@ -87,10 +88,10 @@ export const LiveTracking = () => {
   const vehicleLine = [vehicle?.color, vehicle?.make, vehicle?.model].filter(Boolean).join(' ');
 
   const headline = status === RideStatus.CANCELLED ? 'This ride was cancelled'
-    : status === RideStatus.COMPLETED ? `${childName} has arrived`
+    : status === RideStatus.COMPLETED ? `${childName} ${several ? 'have' : 'has'} arrived`
     : searching ? 'Finding a verified driver nearby'
     : arrived ? `${driverFirst} is at the pickup`
-    : onBoard ? (eta ? `${childName} arrives in ${eta}` : `${childName} is in the car`)
+    : onBoard ? (eta ? `${childName} arrives in ${eta}` : `${childName} ${several ? 'are' : 'is'} in the car`)
     : eta ? `${driverFirst} arriving in ${eta}` : `${driverFirst} is on the way`;
   const subline = searching
     ? (activeRide.nearbyDrivers === 0 ? 'No drivers right next to the pickup yet; open to all drivers.' : typeof activeRide.nearbyDrivers === 'number' ? `${activeRide.nearbyDrivers} driver${activeRide.nearbyDrivers === 1 ? '' : 's'} near the pickup` : 'Your request is with nearby drivers.')

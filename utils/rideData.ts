@@ -13,6 +13,25 @@ const toDayKey = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+/** "Ava", "Ava and Leo", "Ava, Leo and Mia". */
+export const joinNames = (names: string[]): string => (
+  names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] || ''
+);
+
+/** First names of everyone riding, from the ride itself or (for the parent) their own children. */
+export const rideChildNames = (ride: Ride, accountChildren: { id: string; name: string }[] = []): string => {
+  const ids = ride.childIds?.length ? ride.childIds : [ride.childId];
+  const fromRide = new Map((ride.children || []).map((child) => [child.id, child.name]));
+  const fromAccount = new Map(accountChildren.map((child) => [child.id, child.name]));
+  return joinNames(ids.map((id) => (fromRide.get(id) || fromAccount.get(id) || '').trim().split(/\s+/)[0]).filter(Boolean));
+};
+
+/** "2 children" for offers, where the driver sees the count but not the names. */
+export const childCountLabel = (ride: Ride): string => {
+  const count = ride.childIds?.length || ride.childCount || 1;
+  return `${count} ${count === 1 ? 'child' : 'children'}`;
+};
+
 export const hasRidePrice = (price: number): boolean => Number.isFinite(price) && price > 0;
 
 export const formatRidePrice = (price: number, fallback = 'Pricing pending', currency = 'USD'): string => (

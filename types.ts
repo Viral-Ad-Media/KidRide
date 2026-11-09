@@ -143,7 +143,13 @@ export interface Ride {
   /** The parent's rating of this ride, when they have rated it. */
   rating?: RideRating | null;
   id: string;
+  /** The first child; childIds lists every child in the car (one trip code covers them all). */
   childId: string;
+  childIds?: string[];
+  /** First names of the children on the ride, in booking order (not shown on offers). */
+  children?: RideChild[];
+  /** Offers: how many children (seats) the ride needs. */
+  childCount?: number;
   driverId?: string;
   driver?: AssignedDriver;
   pickupLocation: string;
@@ -167,6 +173,11 @@ export interface Ride {
   safetyAlertAt?: string | null;
   cancelReason?: 'no_show' | null;
 }
+
+export interface RideChild { id: string; name: string; age?: number | null }
+
+/** Children in one ride: the first rides on the base fare, each extra adds the extra-child fee. */
+export const MAX_CHILDREN_PER_RIDE = 4;
 
 export type SafetyAlert = 'sos' | 'trip_code' | 'off_route' | 'stalled';
 
