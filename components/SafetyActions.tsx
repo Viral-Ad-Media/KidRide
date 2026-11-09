@@ -12,7 +12,10 @@ export const SAFETY_ALERT_LABELS: Record<SafetyAlert, string> = {
   sos: 'SOS raised',
   trip_code: 'Wrong trip code',
   off_route: 'Off route',
-  stalled: 'Car stopped'
+  stalled: 'Car stopped',
+  overshoot: 'Drove past drop-off',
+  frequent_stops: 'Frequent stops',
+  gps_jump: 'GPS jump'
 };
 
 const currentPosition = () => new Promise<GeolocationPosition | null>((resolve) => {
@@ -74,12 +77,15 @@ export const SosButton: React.FC<{ rideId: string; who: 'parent' | 'driver'; onS
 
 // What the parent sees on tracking when the ride has an automatic alert.
 export const SafetyAlertNote: React.FC<{ alert?: SafetyAlert | null; driverName: string }> = ({ alert, driverName }) => {
-  if (!alert || alert === 'sos') return null;
+  // SOS has its own banner; frequent stops and GPS jumps go to support only.
+  if (!alert || alert === 'sos' || alert === 'frequent_stops' || alert === 'gps_jump') return null;
   const text = alert === 'trip_code'
     ? `${driverName} entered a trip code that does not match. Only let your child in once the code matches.`
     : alert === 'off_route'
       ? `The car is away from the expected route. KidRide support has been alerted; you can call ${driverName} below.`
-      : `The car has not moved for a while. KidRide support has been alerted; you can call ${driverName} below.`;
+      : alert === 'overshoot'
+        ? `The car went past the drop-off with your child still onboard. KidRide support has been alerted; you can call ${driverName} below.`
+        : `The car has not moved for a while. KidRide support has been alerted; you can call ${driverName} below.`;
   return (
     <p role="alert" className="flex items-start gap-2 rounded-card bg-warning/15 px-4 py-3 text-label text-ink">
       <AlertTriangle size={18} className="mt-0.5 shrink-0 text-warning" />{text}

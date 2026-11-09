@@ -53,6 +53,7 @@ export const AdminTabs = () => {
       <NavLink to="/admin/live-map" className={cls}>Live map</NavLink>
       <NavLink to="/admin/pricing" className={cls}>Pricing</NavLink>
       <NavLink to="/admin/safety" className={cls}>Safety</NavLink>
+      <NavLink to="/admin/verification" className={cls}>Verification</NavLink>
     </div>
   );
 };
@@ -379,6 +380,9 @@ const incidentLine = (incident: RideIncident) => {
   const what = incident.kind === 'trip_code' ? `Wrong code, try ${d.attempt} of ${d.maxAttempts}${d.locked ? ' (locked)' : ''}`
     : incident.kind === 'off_route' ? `${d.milesFromRoute} mi from the route`
     : incident.kind === 'stalled' ? `Stopped ${d.stoppedMinutes} min`
+    : incident.kind === 'overshoot' ? `${d.metersPastDropoff} m past the drop-off`
+    : incident.kind === 'frequent_stops' ? `${d.stops} stops on this trip`
+    : incident.kind === 'gps_jump' ? `Jumped ${d.km} km in ${d.seconds} s`
     : d.note ? `"${d.note}"` : 'SOS pressed';
   const where = incident.location ? ` · at ${incident.location.latitude.toFixed(4)}, ${incident.location.longitude.toFixed(4)}` : '';
   return `${new Date(incident.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${SAFETY_ALERT_LABELS[incident.kind]} · ${what}${who ? ` · ${who}` : ''}${where}`;

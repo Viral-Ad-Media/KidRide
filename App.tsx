@@ -31,6 +31,8 @@ import {
 import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
 import { AdminPricing } from './pages/AdminPricing';
 import { AdminSafety } from './pages/AdminSafety';
+import { AdminVerification } from './pages/AdminVerification';
+import { DriverVerification } from './pages/DriverVerification';
 import { AdminLiveMap } from './pages/AdminLiveMap';
 import { UserRole } from './types';
 import { SplashLoader } from './components/brand/SplashLoader';
@@ -113,6 +115,8 @@ const AppRoutes = () => (
       <Route path="/admin/live-map" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminLiveMap /></ProtectedRoute>} />
       <Route path="/admin/pricing" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminPricing /></ProtectedRoute>} />
       <Route path="/admin/safety" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminSafety /></ProtectedRoute>} />
+      <Route path="/admin/verification" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminVerification /></ProtectedRoute>} />
+      <Route path="/driver-verification" element={<ProtectedRoute roles={[UserRole.DRIVER]}><DriverVerification /></ProtectedRoute>} />
       <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
       <Route
         path="/driver-dashboard"

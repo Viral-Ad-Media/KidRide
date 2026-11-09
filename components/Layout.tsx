@@ -17,6 +17,7 @@ import {
   Users,
   X,
   Tag,
+  ShieldCheck,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,7 +55,9 @@ const pageTitles: Record<string, string> = {
   '/admin/live-map': 'Live map',
   '/admin/rides': 'Rides',
   '/admin/pricing': 'Pricing',
-  '/earnings': 'Earnings'
+  '/earnings': 'Earnings',
+  '/driver-verification': 'Verification',
+  '/admin/verification': 'Verification'
 };
 
 const mapScreenPaths = new Set(['/dashboard', '/book']);
@@ -72,6 +75,7 @@ const driverNavItems: NavItem[] = [
   { icon: Briefcase, label: 'Jobs', path: '/driver-dashboard' },
   { icon: Map, label: 'Map', path: '/driver-map' },
   { icon: DollarSign, label: 'Earnings', path: '/earnings' },
+  { icon: ShieldCheck, label: 'Verify', path: '/driver-verification' },
   { icon: User, label: 'Profile', path: '/profile' }
 ];
 
@@ -82,6 +86,7 @@ const adminNavItems: NavItem[] = [
   { icon: Map, label: 'Rides', path: '/admin/rides' },
   { icon: Navigation, label: 'Live map', path: '/admin/live-map' },
   { icon: Tag, label: 'Pricing', path: '/admin/pricing' },
+  { icon: ShieldCheck, label: 'Verification', path: '/admin/verification' },
   { icon: User, label: 'Profile', path: '/profile' }
 ];
 
