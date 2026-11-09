@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PublicSiteLayout } from '../components/PublicSite';
+import { PrivacyContent, TermsContent } from '../legal/LegalContent';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeft,
@@ -232,27 +233,10 @@ export const PrivacyPage = () => (
   <PublicPageShell
     icon={Lock}
     eyebrow="Privacy Policy"
-    title="How KidRide handles account and ride information."
-    description="This privacy page explains the kinds of information the app stores, why it is used, and what expectations users should have around session and ride data."
+    title="How KidRide looks after your family's information."
+    description="What we collect, including children's details and location during rides, why we use it, how long we keep it and how to download or delete it."
   >
-    <Section title="Information we collect">
-      <p>KidRide stores account details such as name, email address, role, and authentication tokens needed to keep a user signed in.</p>
-      <p>The app may also store child profile details, driver application data, ride information, and profile metadata that supports the parent and driver experiences.</p>
-    </Section>
-
-    <Section title="How information is used">
-      <p>Account data is used to authenticate users, restore sessions, and determine whether the signed-in experience should follow the parent or driver path.</p>
-      <p>Ride and profile data is used to support booking, assignment, status updates, and safety-related visibility within the product.</p>
-    </Section>
-
-    <Section title="Storage and access">
-      <p>Authentication tokens and cached profile data are stored in browser local storage by the frontend so sessions can be restored across refreshes.</p>
-      <p>Protected backend routes require a bearer token. If the backend rejects a session, the frontend clears the cached token and profile data.</p>
-    </Section>
-
-    <Section title="Your choices">
-      <p>You can sign out at any time from the app menu. If you need assistance removing account data, contact support using the channels listed on the contact page.</p>
-    </Section>
+    <PrivacyContent />
   </PublicPageShell>
 );
 
@@ -260,26 +244,9 @@ export const TermsPage = () => (
   <PublicPageShell
     icon={FileText}
     eyebrow="Terms of Service"
-    title="The basic rules for using KidRide."
-    description="These terms set expectations for account creation, acceptable use, and the relationship between frontend behavior and backend services."
+    title="The rules for parents and drivers using KidRide."
+    description="Accounts, rides for children, driver responsibilities, safety features, fees and ending your account."
   >
-    <Section title="Using the service">
-      <p>Users are responsible for providing accurate account details during signup and for keeping login credentials secure.</p>
-      <p>Driver applicants are expected to submit complete and truthful verification information when using the application flow.</p>
-    </Section>
-
-    <Section title="Platform behavior">
-      <p>KidRide depends on backend services for authentication, ride operations, and profile persistence. Some features may be unavailable if those services are unreachable or misconfigured.</p>
-      <p>The app may restrict access to authenticated routes when no valid session is present, and it may clear stale session data when the backend rejects a token.</p>
-    </Section>
-
-    <Section title="Acceptable use">
-      <p>Do not misuse the platform, attempt to access data you are not authorized to view, or submit false driver information through the verification flow.</p>
-      <p>Use of the service is subject to review, suspension, or removal if activity creates safety, legal, or operational risk.</p>
-    </Section>
-
-    <Section title="Contact">
-      <p>Questions about these terms can be directed to the support channels on the contact page.</p>
-    </Section>
+    <TermsContent />
   </PublicPageShell>
 );

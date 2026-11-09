@@ -22,6 +22,7 @@ export interface LoginPayload {
 export interface RegisterPayload extends LoginPayload {
   name: string;
   role?: UserRole;
+  acceptTerms: boolean;
 }
 
 interface DriverApplicationPayload {
@@ -48,6 +49,7 @@ interface AuthContextType {
   /** Resolves to null when the account must confirm its email before logging in. */
   register: (payload: RegisterPayload) => Promise<User | null>;
   logout: () => void;
+  deleteAccount: (password: string) => Promise<void>;
   submitDriverApplication: (payload?: DriverApplicationPayload) => Promise<void>;
   addChild: (child: Child) => Promise<void>;
   /** Re-reads the account from the server, e.g. to pick up a driver review decision. */
@@ -201,14 +203,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return finalizeAuthentication(authResult);
   };
 
-  const register = async ({ name, email, password, role = UserRole.PARENT }: RegisterPayload) => {
+  const register = async ({ name, email, password, role = UserRole.PARENT, acceptTerms }: RegisterPayload) => {
     const authResult = await apiRequest<AuthResponse>('/auth/register', {
       method: 'POST',
       body: {
         name: name.trim(),
         email: normalizeEmail(email),
         password,
-        role
+        role,
+        acceptTerms
       }
     });
 
@@ -227,6 +230,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       void revokeSession(token).catch(() => undefined);
     }
+  };
+
+  // Deletes (anonymises) the account on the server, then signs out locally.
+  const deleteAccount = async (password: string) => {
+    const token = getStoredToken();
+    if (!token) throw new Error('You must be logged in to delete your account.');
+    await apiRequest<{ deleted: boolean }>('/account', { method: 'DELETE', token, body: { password } });
+    clearSession();
   };
 
   const submitDriverApplication = async (payload?: DriverApplicationPayload) => {
@@ -331,7 +342,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, submitDriverApplication, addChild, refreshUser, updateProfile, updateChild, removeChild }}>
+    <AuthContext.Provider value={{ user, isHydrating, login, register, logout, deleteAccount, submitDriverApplication, addChild, refreshUser, updateProfile, updateChild, removeChild }}>
       {children}
     </AuthContext.Provider>
   );
