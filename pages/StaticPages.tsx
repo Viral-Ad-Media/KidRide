@@ -200,31 +200,31 @@ export const ContactPage = () => (
     icon={Mail}
     eyebrow="Contact"
     title="Reach the KidRide team."
-    description="Public support channels are still being finalized, so this page reflects only the contact paths that are actually available in this build."
+    description="How to reach us about your account, a ride, or a safety concern."
   >
     <div className="grid gap-4 sm:grid-cols-2">
       <ContactCard icon={Mail} title="Account Support">
-        <p>Direct support email is not published yet.</p>
-        <p className="mt-1">Use the Help page and in-app guidance after sign-in for current support instructions.</p>
+        <p>Signed in? Open Help in the app for answers about rides, payments and your account.</p>
+        <p className="mt-1">Questions about a specific ride go fastest from that ride's page.</p>
       </ContactCard>
       <ContactCard icon={PhoneCall} title="Urgent Help">
-        <p>Emergency dispatch is not handled inside this app build.</p>
-        <p className="mt-1">Call local emergency services directly if you need immediate help.</p>
+        <p>In an emergency, call your local emergency number first.</p>
+        <p className="mt-1">During a ride, the SOS button alerts the KidRide safety team straight away.</p>
       </ContactCard>
       <ContactCard icon={MapPin} title="Operations">
-        <p>Mailing details are not published yet.</p>
-        <p className="mt-1">Check back once operations contact information is configured.</p>
+        <p>Our safety team reviews every SOS and trip alert.</p>
+        <p className="mt-1">Drivers are approved only after their documents are checked.</p>
       </ContactCard>
       <ContactCard icon={Clock3} title="Response Timing">
-        <p>Response targets have not been announced for this build.</p>
-        <p className="mt-1">Support availability may vary while channels are still being set up.</p>
+        <p>Safety alerts are handled first, as they come in.</p>
+        <p className="mt-1">Other questions are answered as soon as we can, usually within one business day.</p>
       </ContactCard>
     </div>
 
     <Section title="How to get help right now">
-      <p>If you cannot access your account, start from the Help page and confirm the frontend can reach the configured backend API.</p>
+      <p>If you cannot sign in, check your connection and that you are using the email you signed up with, then try again.</p>
       <p>For urgent safety concerns, do not wait on in-app tools. Use local emergency services and your own emergency contacts directly.</p>
-      <p>For deployment troubleshooting, include your frontend origin and API base URL so environment issues can be diagnosed faster.</p>
+      <p>When you contact us about a problem, tell us roughly when it happened and which ride it was about, so we can find it quickly.</p>
     </Section>
   </PublicPageShell>
 );

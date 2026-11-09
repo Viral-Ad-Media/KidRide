@@ -116,7 +116,7 @@ export const Welcome = () => {
           {/* The lockup above shows the name; the heading stays for screen readers. */}
           <h1 className="sr-only">KidRide</h1>
           <p className="mt-4 max-w-lg text-lg text-white/82">
-            Real parent and driver accounts backed by the API, with session restore and protected app routes.
+            Safe, verified rides for your children, with live tracking from pickup to drop-off.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">

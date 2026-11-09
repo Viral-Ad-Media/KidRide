@@ -188,8 +188,8 @@ export const Profile = () => {
                 await navigator.clipboard.writeText(shareData.url);
                 setShareNote('Invite link copied to your clipboard.');
             }
-        } catch (err) {
-            console.log('Share dismissed', err);
+        } catch {
+            // The share sheet was dismissed; nothing to do.
         }
     };
 

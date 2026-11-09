@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 test-screenshots/
+
+# Local secrets
+.env
+.env.*
+!.env.example
