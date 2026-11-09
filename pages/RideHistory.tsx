@@ -28,7 +28,8 @@ export const RideHistory = () => {
   const [pastRides, setPastRides] = useState<Ride[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ratingRideId, setRatingRideId] = useState<string | null>(null);
+  // ?rate=<rideId> (from the "arrived" alert or the tracking screen) opens the rating sheet.
+  const [ratingRideId, setRatingRideId] = useState<string | null>(() => params.get('rate'));
 
   useEffect(() => {
     if (activeTab === 'active') {
@@ -218,6 +219,8 @@ export const RideHistory = () => {
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                       {ride.rating ? (
                         <span className="flex items-center gap-2 text-xs text-gray-500">Your rating <Stars value={ride.rating.stars} /></span>
+                      ) : !ride.canRate ? (
+                        <span className="text-xs text-gray-500">Rating closed</span>
                       ) : (
                         <>
                           <span className="text-xs text-gray-500">How was your driver?</span>
@@ -242,7 +245,7 @@ export const RideHistory = () => {
       <RateRideModal
         rideId={ratingRideId}
         onClose={() => setRatingRideId(null)}
-        onRated={(rideId, rating) => setPastRides((rides) => rides.map((ride) => (ride.id === rideId ? { ...ride, rating } : ride)))}
+        onRated={(rideId, rating) => setPastRides((rides) => rides.map((ride) => (ride.id === rideId ? { ...ride, rating, canRate: false } : ride)))}
       />
     </div>
   );

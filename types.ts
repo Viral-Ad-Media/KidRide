@@ -101,6 +101,7 @@ export interface PlaceCoords {
 
 export interface RideRating {
   stars: number;
+  tags?: string[];
   comment?: string | null;
 }
 
@@ -145,6 +146,8 @@ export interface Ride {
   nearbyDrivers?: number | null;
   /** The parent's rating of this ride, when they have rated it. */
   rating?: RideRating | null;
+  /** Completed, not yet rated by this user and still inside the rating window. */
+  canRate?: boolean;
   id: string;
   /** The first child; childIds lists every child in the car (one trip code covers them all). */
   childId: string;

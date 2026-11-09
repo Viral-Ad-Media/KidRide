@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components/UIComponents';
 import { ShieldCheck, ChevronRight, ArrowLeft, Mail, Bell, MessageSquare, CreditCard, UserPlus, Share2, CheckCircle, Clock } from 'lucide-react';
@@ -7,6 +7,7 @@ import { UserRole } from '../types';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 import { DriverReviews } from '../components/Ratings';
 import { AccountPrivacy } from '../components/AccountPrivacy';
+import { fetchPushConfig, isPushOn, pushPermission, pushSupport, sendTestPush, turnPushOff, turnPushOn } from '../services/push';
 
 // Name and phone are editable here; vehicle details are part of the verified
 // driver application, so changing them means re-applying.
@@ -79,6 +80,39 @@ export const NotificationSettings = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Browser push: on when this browser is subscribed. It is per device, like Uber on the web.
+  const support = pushSupport();
+  const [push, setPush] = useState(false);
+  const [pushAvailable, setPushAvailable] = useState<boolean | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushNote, setPushNote] = useState<string | null>(null);
+  useEffect(() => {
+    void isPushOn().then(setPush).catch(() => setPush(false));
+    fetchPushConfig().then((config) => setPushAvailable(config.enabled)).catch(() => setPushAvailable(false));
+  }, []);
+  const togglePush = async () => {
+    setPushBusy(true);
+    setPushNote(null);
+    try {
+      if (push) { await turnPushOff(); setPush(false); }
+      else { await turnPushOn(); setPush(true); setPushNote('Alerts are on for this device.'); }
+    } catch (err) {
+      setPushNote(err instanceof Error ? err.message : 'Could not change alerts.');
+    } finally {
+      setPushBusy(false);
+    }
+  };
+  const testPush = async () => {
+    setPushNote(null);
+    try { const { sent } = await sendTestPush(); setPushNote(sent ? 'Test alert sent. It should appear in a few seconds.' : 'No device got the test. Turn alerts off and on again.'); } catch (err) { setPushNote(err instanceof Error ? err.message : 'Could not send a test.'); }
+  };
+  const pushLabel = support === 'needs-home-screen'
+    ? 'On iPhone: tap Share, then Add to Home Screen, and open KidRide from there'
+    : support === 'unsupported' ? 'This browser cannot show alerts'
+    : pushAvailable === false ? 'Not switched on for KidRide yet'
+    : pushPermission() === 'denied' ? 'Blocked. Allow notifications for this site in your browser settings'
+    : pushBusy ? 'Saving...' : push ? 'Ride alerts on this device, even when KidRide is closed' : 'Get ride alerts on this device';
+
   const toggleEmail = async () => {
     const next = !email;
     setEmail(next);
@@ -125,13 +159,15 @@ export const NotificationSettings = () => {
             <Row icon={<Mail size={20} />} label="Email" note={saving ? 'Saving...' : `Ride updates to ${user?.email || 'your email'}`}>
                 <Toggle value={email} onChange={toggleEmail} disabled={saving} />
             </Row>
-            <Row icon={<Bell size={20} />} label="Push" note="Needs the KidRide phone app, not available yet">
-                <Toggle value={false} disabled />
+            <Row icon={<Bell size={20} />} label="Push alerts" note={pushLabel}>
+                <Toggle value={push} onChange={() => void togglePush()} disabled={pushBusy || support !== 'supported' || pushAvailable !== true || (!push && pushPermission() === 'denied')} />
             </Row>
             <Row icon={<MessageSquare size={20} />} label="SMS" note="Not available yet">
                 <Toggle value={false} disabled />
             </Row>
         </div>
+        {push && <button type="button" onClick={() => void testPush()} className="text-sm font-semibold text-brand-deep">Send a test alert</button>}
+        {pushNote && <p className="text-sm text-muted">{pushNote}</p>}
         {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
