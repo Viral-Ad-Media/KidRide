@@ -28,6 +28,8 @@ export interface RegisterPayload extends LoginPayload {
 interface DriverApplicationPayload {
   documents?: Record<string, string>;
   phone?: string;
+  licenseExpiresOn?: string;
+  insuranceExpiresOn?: string;
   vehicle?: {
     make?: string;
     model?: string;
@@ -261,7 +263,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: {
         phone: payload?.phone,
         vehicle: incomingVehicle,
-        documents: payload?.documents
+        documents: payload?.documents,
+        licenseExpiresOn: payload?.licenseExpiresOn,
+        insuranceExpiresOn: payload?.insuranceExpiresOn
       }
     });
 

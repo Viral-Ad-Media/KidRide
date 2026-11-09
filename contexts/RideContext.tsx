@@ -1,8 +1,18 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Ride, RideStatus, UserRole } from '../types';
 import { useAuth } from './AuthContext';
-import { apiRequest, getStoredToken, mapRide } from '../services/api';
+import { ApiError, apiRequest, getStoredToken, mapRide } from '../services/api';
 import { watchSharedPosition } from '../services/sharedPosition';
+
+// A random id for this phone or browser, so going online from a new device can ask for a face check.
+const DEVICE_KEY = 'kidride_device_id';
+const readDeviceId = () => {
+  try {
+    let id = window.localStorage.getItem(DEVICE_KEY);
+    if (!id) { id = crypto.randomUUID(); window.localStorage.setItem(DEVICE_KEY, id); }
+    return id;
+  } catch { return undefined; }
+};
 
 interface RideContextType {
   activeRide: Ride | null;
@@ -19,6 +29,8 @@ interface RideContextType {
   refreshActiveRide: () => Promise<void>;
   /** Driver availability; offers are only fetched while online. Remembered per browser. */
   isOnline: boolean;
+  /** The server refused Online: the driver has verification checks to finish. */
+  verificationRequired: boolean;
   setIsOnline: (online: boolean) => void;
 }
 const ONLINE_STORAGE_KEY = 'kidride_driver_online';
@@ -44,6 +56,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshing = useRef(false);
   const approved = user?.role === UserRole.DRIVER && user.isVerifiedDriver && user.driverApplicationStatus === 'approved';
   const [isOnline, setIsOnlineState] = useState(readOnline);
+  const [verificationRequired, setVerificationRequired] = useState(false);
   const online = useRef(isOnline);
 
   const refreshActiveRide = async () => {
@@ -104,10 +117,18 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = getStoredToken();
       if (!token) return;
       const heading = position?.coords.heading;
+      const deviceId = readDeviceId();
       const body = position
-        ? { online: true, latitude: position.coords.latitude, longitude: position.coords.longitude, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null }
-        : { online: true };
-      void apiRequest('/users/me/presence', { method: 'PUT', token, body }).catch(() => undefined);
+        ? { online: true, deviceId, latitude: position.coords.latitude, longitude: position.coords.longitude, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null }
+        : { online: true, deviceId };
+      void apiRequest('/users/me/presence', { method: 'PUT', token, body }).then(() => setVerificationRequired(false)).catch((error) => {
+        // An open verification check keeps the driver offline until it is done.
+        if (error instanceof ApiError && (error.data as { code?: string } | null)?.code === 'verification_required') {
+          setVerificationRequired(true);
+          setIsOnlineState(false);
+          online.current = false;
+        }
+      });
     };
     beat();
     const interval = setInterval(beat, PRESENCE_INTERVAL_MS);
@@ -140,7 +161,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await mutate(`/rides/${activeRide.id}/decline`, undefined, true);
     await refreshActiveRide();
   };
-  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, markNoShow, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline }}>{children}</RideContext.Provider>;
+  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, markNoShow, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline, verificationRequired }}>{children}</RideContext.Provider>;
 };
 export const useRide = () => {
   const context = useContext(RideContext);

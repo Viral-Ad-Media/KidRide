@@ -182,7 +182,7 @@ export interface RideChild { id: string; name: string; age?: number | null }
 /** Children in one ride: the first rides on the base fare, each extra adds the extra-child fee. */
 export const MAX_CHILDREN_PER_RIDE = 4;
 
-export type SafetyAlert = 'sos' | 'trip_code' | 'off_route' | 'stalled';
+export type SafetyAlert = 'sos' | 'trip_code' | 'off_route' | 'stalled' | 'overshoot' | 'frequent_stops' | 'gps_jump';
 
 export interface CarpoolOffer {
   id: string;

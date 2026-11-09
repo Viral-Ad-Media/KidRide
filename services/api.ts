@@ -307,7 +307,7 @@ const formatPickupTime = (value: unknown): string => {
   return Number.isNaN(parsedDate.getTime()) ? new Date().toLocaleTimeString() : parsedDate.toLocaleString();
 };
 
-const SAFETY_ALERTS: SafetyAlert[] = ['sos', 'trip_code', 'off_route', 'stalled'];
+const SAFETY_ALERTS: SafetyAlert[] = ['sos', 'trip_code', 'off_route', 'stalled', 'overshoot', 'frequent_stops', 'gps_jump'];
 
 export const mapRide = (raw: unknown): Ride => {
   const ride = (raw || {}) as Record<string, unknown>;

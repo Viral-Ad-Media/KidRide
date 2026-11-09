@@ -14,8 +14,20 @@ interface SafetySettings {
   stalledMinutes: number;
   stalledRadiusMeters: number;
   dropoffQuietMeters: number;
+  overshootNearMeters: number;
+  overshootMeters: number;
+  stopSeconds: number;
+  maxStopsPerTrip: number;
+  maxSpeedKph: number;
+  spotCheckPercent: number;
+  spotCheckMinDays: number;
+  inactivityDays: number;
+  identityRenewDays: number;
+  farLoginKm: number;
+  documentReminderDays: number;
+  faceMatchThreshold: number;
 }
-const KEYS: (keyof SafetySettings)[] = ['tripCodeMaxAttempts', 'offRouteMiles', 'stalledMinutes', 'stalledRadiusMeters', 'dropoffQuietMeters'];
+const KEYS: (keyof SafetySettings)[] = ['tripCodeMaxAttempts', 'offRouteMiles', 'stalledMinutes', 'stalledRadiusMeters', 'dropoffQuietMeters', 'overshootNearMeters', 'overshootMeters', 'stopSeconds', 'maxStopsPerTrip', 'maxSpeedKph', 'spotCheckPercent', 'spotCheckMinDays', 'inactivityDays', 'identityRenewDays', 'farLoginKm', 'documentReminderDays', 'faceMatchThreshold'];
 const toForm = (s: SafetySettings): Form => Object.fromEntries(KEYS.map((key) => [key, String(s[key])]));
 const fromForm = (f: Form): SafetySettings => Object.fromEntries(KEYS.map((key) => [key, f[key].trim() === '' ? NaN : Number(f[key])])) as unknown as SafetySettings;
 
@@ -72,6 +84,28 @@ export const AdminSafety = () => {
           <Field label="Alert after stopped for" name="stalledMinutes" suffix="min" {...props} />
           <Field label="Counts as stopped within" name="stalledRadiusMeters" suffix="m" {...props} />
           <Field label="No alert this close to the drop-off" name="dropoffQuietMeters" suffix="m" hint="The car is parking" {...props} />
+        </Section>
+        <Section title="Drove past the drop-off" note="The car reached the drop-off and then drove away with the child still onboard. Alerts the parent and admins and sends the driver to re-verify.">
+          <Field label="Counts as reached within" name="overshootNearMeters" suffix="m" {...props} />
+          <Field label="Alert when this far away again" name="overshootMeters" suffix="m" {...props} />
+        </Section>
+        <Section title="Frequent stops" note="Stops away from the pickup and drop-off while the child is in the car. Admins only.">
+          <Field label="A stop lasts at least" name="stopSeconds" suffix="s" hint="Two minutes or more leaves out traffic lights" {...props} />
+          <Field label="Alert at this many stops in one trip" name="maxStopsPerTrip" {...props} />
+        </Section>
+        <Section title="GPS spoofing" note="A position that moves faster than any car could. Admins only; the driver must re-verify.">
+          <Field label="Top believable speed" name="maxSpeedKph" suffix="km/h" {...props} />
+        </Section>
+        <Section title="Re-verification when going online" note="Checked when a driver switches to Online. See the Verification tab for everything else that triggers a check.">
+          <Field label="Random spot check chance" name="spotCheckPercent" suffix="%" {...props} />
+          <Field label="At most one spot check every" name="spotCheckMinDays" suffix="days" {...props} />
+          <Field label="Face check after being away for" name="inactivityDays" suffix="days" {...props} />
+          <Field label="Renew ID verification every" name="identityRenewDays" suffix="days" {...props} />
+          <Field label="Face and location check when this far from the last position" name="farLoginKm" suffix="km" {...props} />
+        </Section>
+        <Section title="Documents and automatic checks" note="Expiry reminders run once a day. Face matching needs the AWS keys on the server; without them every face check goes to an admin.">
+          <Field label="Ask for a new licence or insurance photo" name="documentReminderDays" suffix="days before expiry" {...props} />
+          <Field label="Face match needed to pass automatically" name="faceMatchThreshold" suffix="%" {...props} />
         </Section>
         {error && <p role="alert" className="text-label text-danger">{error}</p>}
         {flash && <p className="text-label font-semibold text-success">{flash}</p>}

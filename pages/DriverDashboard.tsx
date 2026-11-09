@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle, TimerReset } from 'lucide-react';
 import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponents';
 import { StickyNote } from '../components/StickyNote';
@@ -117,7 +118,7 @@ const NoShowAction: React.FC<{ rideId: string; childName: string; onConfirm: () 
 };
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, markNoShow, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline, refreshActiveRide } = useRide();
+  const { activeRide, updateRideStatus, markNoShow, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline, refreshActiveRide, verificationRequired } = useRide();
   const { user } = useAuth();
   const rating = useDriverRating(user?.id);
   const locationError = useDriverLocation();
@@ -243,6 +244,11 @@ export const DriverDashboard = () => {
         <div className="px-4 py-4"><p className="text-xs text-muted">Rating</p><p className="mt-1 text-title font-extrabold tabular-nums">{rating?.count && rating.average !== null ? `\u2605 ${rating.average.toFixed(1)}` : '\u2013'}</p></div>
       </div>
 
+      {verificationRequired && (
+        <p role="alert" className="text-label text-ink">
+          KidRide needs you to verify again before you can go online. <Link to="/driver-verification" className="font-semibold text-brand-deep underline">Open verification</Link>
+        </p>
+      )}
       {(syncError || locationError) && <p className="text-label text-warning">{syncError || locationError}</p>}
       {error && <p className="text-label text-danger">{error}</p>}
 
