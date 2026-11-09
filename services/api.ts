@@ -358,6 +358,8 @@ export const mapRide = (raw: unknown): Ride => {
     pickupCoords: ride.pickupCoords && typeof ride.pickupCoords === 'object' ? ride.pickupCoords as Ride['pickupCoords'] : null,
     dispatchState: ride.dispatchState === 'targeted' ? 'targeted' : 'open',
     isScheduled: ride.isScheduled === true,
+    seriesId: typeof ride.seriesId === 'string' ? ride.seriesId : null,
+    seriesDate: typeof ride.seriesDate === 'string' ? ride.seriesDate : null,
     scheduleState: typeof ride.scheduleState === 'string' && SCHEDULE_STATES.includes(ride.scheduleState as ScheduleState) ? ride.scheduleState as ScheduleState : null,
     offerExpiresAt: typeof ride.offerExpiresAt === 'string' ? ride.offerExpiresAt : null,
     nearbyDrivers: ride.dispatch && typeof (ride.dispatch as { nearbyDrivers?: unknown }).nearbyDrivers === 'number' ? (ride.dispatch as { nearbyDrivers: number }).nearbyDrivers : null,

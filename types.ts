@@ -134,6 +134,9 @@ export interface Ride {
   dispatchState?: 'targeted' | 'open';
   /** Booked for later (pickupTime is then the scheduled pickup). */
   isScheduled?: boolean;
+  /** Part of a repeating weekly booking (ride_series id) and the day it covers. */
+  seriesId?: string | null;
+  seriesDate?: string | null;
   /** Rides for later: not yet offered to drivers, being offered, accepted, or no driver 5 min before pickup. */
   scheduleState?: ScheduleState | null;
   /** Driver view: when the offer made to this driver runs out. */
