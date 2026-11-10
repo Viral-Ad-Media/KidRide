@@ -6,6 +6,7 @@ import { LiveMap, RouteInfo } from '../components/LiveMap';
 import { MapScreen } from '../components/MapScreen';
 import { Button, ConfirmModal } from '../components/UIComponents';
 import { RatingBadge, useDriverRating } from '../components/Ratings';
+import { PushPrompt } from '../components/AlertBanners';
 import { SafetyAlertNote, SosButton } from '../components/SafetyActions';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -137,6 +138,7 @@ export const LiveTracking = () => {
         {(syncError || actionError) && <p className="mt-2 text-label text-warning">{actionError || syncError}</p>}
       </div>
       {!finished && <SafetyAlertNote alert={activeRide.safetyAlert} driverName={driverFirst} />}
+      {!finished && <PushPrompt />}
 
       {driver ? (
         <div className="rounded-card border border-line bg-white p-4">
@@ -183,7 +185,7 @@ export const LiveTracking = () => {
       {!onBoard && !finished && (
         <button type="button" onClick={() => setConfirmingCancel(true)} className="w-full text-center text-label font-semibold text-danger">Cancel ride</button>
       )}
-      {finished && <Button fullWidth onClick={() => navigate(status === RideStatus.COMPLETED ? '/rides' : '/dashboard')}>{status === RideStatus.COMPLETED ? 'Rate the ride' : 'Back to home'}</Button>}
+      {finished && <Button fullWidth onClick={() => navigate(status === RideStatus.COMPLETED ? `/rides?tab=past&rate=${activeRide.id}` : '/dashboard')}>{status === RideStatus.COMPLETED ? 'Rate the ride' : 'Back to home'}</Button>}
 
       <ConfirmModal open={confirmingCancel} title="Cancel this ride?" body={`The trip will be cancelled for you and the driver. ${feeNote}`} confirmLabel="Cancel ride" tone="danger" busy={cancelling} onConfirm={() => void confirmCancel()} onClose={() => setConfirmingCancel(false)} />
     </div>

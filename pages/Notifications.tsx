@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Car, CheckCircle2, MapPin, UserCheck, XCircle } from 'lucide-react';
+import { Bell, Car, CheckCircle2, KeyRound, MapPin, ShieldAlert, Star, UserCheck, XCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { notificationLink, PushPrompt } from '../components/AlertBanners';
 import { useNotifications } from '../contexts/NotificationsContext';
 import { AppNotification } from '../types';
 
@@ -13,7 +15,14 @@ const ICONS: Record<string, typeof Bell> = {
   driver_arrived_at_pickup: MapPin,
   child_picked_up: Car,
   completed: CheckCircle2,
-  cancelled: XCircle
+  cancelled: XCircle,
+  no_show: XCircle,
+  sos: ShieldAlert,
+  off_route: ShieldAlert,
+  stalled: ShieldAlert,
+  trip_code: KeyRound,
+  compliment: Star,
+  rating_low: Star
 };
 
 const when = (iso: string) => {
@@ -37,11 +46,12 @@ const groupLabel = (iso: string) => {
 export const Notifications = () => {
   const navigate = useNavigate();
   const { notifications, loading, markAllRead, refresh } = useNotifications();
+  const { user } = useAuth();
 
   useEffect(() => { void refresh().then(() => markAllRead()); }, []);
 
   const open = (item: AppNotification) => {
-    if (item.rideId) navigate(`/tracking/${item.rideId}`);
+    navigate(notificationLink(item, user?.role));
   };
 
   if (loading && notifications.length === 0) {
@@ -54,6 +64,7 @@ export const Notifications = () => {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 text-brand-deep"><Bell size={28} strokeWidth={1.75} /></div>
         <h3 className="mt-5 text-title font-extrabold tracking-tight">You're all caught up</h3>
         <p className="mt-2 text-label text-muted">Updates about your rides will appear here as they happen.</p>
+        <PushPrompt className="mt-8 text-left" />
       </div>
     );
   }
@@ -69,6 +80,7 @@ export const Notifications = () => {
     // A plain list, the way Uber and Bolt do it: day headings, hairlines between
     // rows, an unread dot, no boxes around boxes.
     <div className="max-w-2xl">
+      <PushPrompt className="mb-6" />
       {groups.map((group) => (
         <section key={group.label} className="mb-6">
           <h3 className="mb-1 text-sm font-semibold text-muted">{group.label}</h3>
@@ -78,8 +90,8 @@ export const Notifications = () => {
               const unread = !item.readAt;
               return (
                 <li key={item.id}>
-                  <button type="button" onClick={() => open(item)} disabled={!item.rideId} className="flex w-full items-start gap-4 px-2 py-4 text-left transition-colors hover:bg-surface/80 disabled:cursor-default disabled:hover:bg-transparent">
-                    <span className={`relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.kind === 'cancelled' ? 'bg-danger/10 text-danger' : item.kind === 'completed' ? 'bg-success/10 text-success' : 'bg-brand/15 text-brand-deep'}`}>
+                  <button type="button" onClick={() => open(item)} className="flex w-full items-start gap-4 px-2 py-4 text-left transition-colors hover:bg-surface/80 ">
+                    <span className={`relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${['cancelled', 'no_show', 'sos', 'off_route', 'stalled', 'trip_code', 'rating_low'].includes(item.kind) ? 'bg-danger/10 text-danger' : item.kind === 'compliment' ? 'bg-accent/20 text-ink' : item.kind === 'completed' ? 'bg-success/10 text-success' : 'bg-brand/15 text-brand-deep'}`}>
                       <Icon size={22} strokeWidth={1.75} />
                       {unread && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-brand" aria-label="Unread" />}
                     </span>

@@ -355,6 +355,7 @@ export const mapRide = (raw: unknown): Ride => {
     tripCode: typeof ride.tripCode === 'string' ? ride.tripCode : '',
     safeWord: typeof ride.safeWord === 'string' ? ride.safeWord : '',
     rating: ride.rating && typeof ride.rating === 'object' ? ride.rating as Ride['rating'] : null,
+    canRate: ride.canRate === true,
     pickupCoords: ride.pickupCoords && typeof ride.pickupCoords === 'object' ? ride.pickupCoords as Ride['pickupCoords'] : null,
     dispatchState: ride.dispatchState === 'targeted' ? 'targeted' : 'open',
     isScheduled: ride.isScheduled === true,

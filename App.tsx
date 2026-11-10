@@ -19,6 +19,7 @@ import { AuthProvider, getDefaultRouteForUser, useAuth } from './contexts/AuthCo
 import { RideProvider } from './contexts/RideContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { Notifications } from './pages/Notifications';
+import { AlertBanners } from './components/AlertBanners';
 import { HelpPage, PrivacyPage, TermsPage } from './pages/StaticPages';
 import {
   FaqPage,
@@ -235,6 +236,7 @@ const App = () => {
         <NotificationsProvider>
         <Router>
           <SplashLoader />
+          <AlertBanners />
           <AppRoutes />
         </Router>
         </NotificationsProvider>

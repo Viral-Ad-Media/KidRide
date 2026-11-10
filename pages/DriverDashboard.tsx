@@ -5,7 +5,8 @@ import { Button, Card, ConfirmModal, StatusChip } from '../components/UIComponen
 import { StickyNote } from '../components/StickyNote';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useDriverRating } from '../components/Ratings';
+import { FamilyRatingBadge, RateFamilyModal, useDriverRating } from '../components/Ratings';
+import { PushPrompt } from '../components/AlertBanners';
 import { LiveMap } from '../components/LiveMap';
 import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
 import { DriverIdleMap } from '../components/DriverIdleMap';
@@ -121,6 +122,8 @@ export const DriverDashboard = () => {
   const { activeRide, updateRideStatus, markNoShow, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline, refreshActiveRide, verificationRequired } = useRide();
   const { user } = useAuth();
   const rating = useDriverRating(user?.id);
+  const [ratingFamilyRideId, setRatingFamilyRideId] = useState<string | null>(null);
+  const [ratedFamily, setRatedFamily] = useState<Set<string>>(() => new Set());
   const locationError = useDriverLocation();
   const [isDeclining, setIsDeclining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,6 +252,9 @@ export const DriverDashboard = () => {
           KidRide needs you to verify again before you can go online. <Link to="/driver-verification" className="font-semibold text-brand-deep underline">Open verification</Link>
         </p>
       )}
+
+      <PushPrompt />
+
       {(syncError || locationError) && <p className="text-label text-warning">{syncError || locationError}</p>}
       {error && <p className="text-label text-danger">{error}</p>}
 
@@ -290,6 +296,7 @@ export const DriverDashboard = () => {
               <div className="px-5 pt-5">
                 <StatusChip status={activeRide.status} />
                 <h3 className="mt-3 text-title font-extrabold tracking-tight">{tripHeadline}</h3>
+                <FamilyRatingBadge rideId={activeRide.id} className="mt-1" />
                 {several && <p className="mt-1 text-label font-semibold">{childCountLabel(activeRide)}: {childName}. Check every child is in before you start.</p>}
                 <p className="mt-1 text-label text-muted">Pickup {formatPickupTime(activeRide.pickupTime, 'now')} · You earn {formatRidePrice(rideEarnings(activeRide), undefined, activeRide.currency)}</p>
               </div>
@@ -316,6 +323,7 @@ export const DriverDashboard = () => {
                 {activeRide.status === RideStatus.DRIVER_ARRIVED && <NoShowAction key={activeRide.arrivedAt || activeRide.id} rideId={activeRide.id} childName={childName} onConfirm={markNoShow} />}
                 {activeRide.status === RideStatus.IN_PROGRESS && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.COMPLETED)} className="bg-success text-white hover:brightness-95">Dropped off</Button>}
                 {activeRide.status === RideStatus.COMPLETED && <p className="flex items-center justify-center gap-2 text-label font-semibold text-success"><CheckCircle size={18} /> Ride completed</p>}
+                {activeRide.status === RideStatus.COMPLETED && !ratedFamily.has(activeRide.id) && <Button fullWidth variant="secondary" onClick={() => setRatingFamilyRideId(activeRide.id)}>Rate the family</Button>}
                 {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && (
                   <button type="button" onClick={() => setConfirmingCancel(true)} className="w-full text-center text-label font-semibold text-danger">Cancel ride</button>
                 )}
@@ -327,6 +335,8 @@ export const DriverDashboard = () => {
 
           <DriverUpcomingRides refreshKey={`${activeRide?.id || ''}:${activeRide?.status || ''}`} />
       </div>
+
+      <RateFamilyModal rideId={ratingFamilyRideId} onClose={() => setRatingFamilyRideId(null)} onRated={(rideId) => setRatedFamily((set) => new Set(set).add(rideId))} />
 
       <StickyNote
         id="driver-before-pickup"
