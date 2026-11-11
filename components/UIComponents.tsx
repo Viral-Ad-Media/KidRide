@@ -426,12 +426,13 @@ interface ConfirmModalProps {
     confirmLabel: string;
     tone?: 'primary' | 'danger';
     busy?: boolean;
+    busyLabel?: string;
     error?: string | null;
     onConfirm: () => void;
     onClose: () => void;
 }
 
-export const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, title, body, confirmLabel, tone = 'primary', busy = false, error, onConfirm, onClose }) => (
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, title, body, confirmLabel, tone = 'primary', busy = false, busyLabel, error, onConfirm, onClose }) => (
     <Modal open={open} onClose={busy ? undefined : onClose} labelledBy="confirm-modal-title">
         <h2 id="confirm-modal-title" className="text-lg font-bold text-slate-950">{title}</h2>
         {body && <div className="mt-3 text-sm leading-6 text-slate-600">{body}</div>}
@@ -439,7 +440,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, title, body, c
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} disabled={busy} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
             <button type="button" onClick={onConfirm} disabled={busy} className={`rounded-full px-5 py-2.5 text-sm font-semibold text-ink disabled:opacity-60 ${tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-brand hover:brightness-95'}`}>
-                {busy ? 'Working...' : confirmLabel}
+                {busy ? busyLabel || 'Working...' : confirmLabel}
             </button>
         </div>
     </Modal>

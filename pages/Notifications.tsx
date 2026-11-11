@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Car, CheckCircle2, KeyRound, MapPin, ShieldAlert, Star, UserCheck, XCircle } from 'lucide-react';
+import { Bell, Car, CheckCircle2, Clock, KeyRound, MapPin, ShieldAlert, Star, UserCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationLink, PushPrompt } from '../components/AlertBanners';
 import { useNotifications } from '../contexts/NotificationsContext';
@@ -20,6 +20,7 @@ const ICONS: Record<string, typeof Bell> = {
   sos: ShieldAlert,
   off_route: ShieldAlert,
   stalled: ShieldAlert,
+  running_late: Clock,
   trip_code: KeyRound,
   compliment: Star,
   rating_low: Star

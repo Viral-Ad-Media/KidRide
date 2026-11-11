@@ -19,6 +19,8 @@ interface SafetySettings {
   stopSeconds: number;
   maxStopsPerTrip: number;
   maxSpeedKph: number;
+  lateFactor: number;
+  lateMinMinutes: number;
   spotCheckPercent: number;
   spotCheckMinDays: number;
   inactivityDays: number;
@@ -27,7 +29,7 @@ interface SafetySettings {
   documentReminderDays: number;
   faceMatchThreshold: number;
 }
-const KEYS: (keyof SafetySettings)[] = ['tripCodeMaxAttempts', 'offRouteMiles', 'stalledMinutes', 'stalledRadiusMeters', 'dropoffQuietMeters', 'overshootNearMeters', 'overshootMeters', 'stopSeconds', 'maxStopsPerTrip', 'maxSpeedKph', 'spotCheckPercent', 'spotCheckMinDays', 'inactivityDays', 'identityRenewDays', 'farLoginKm', 'documentReminderDays', 'faceMatchThreshold'];
+const KEYS: (keyof SafetySettings)[] = ['tripCodeMaxAttempts', 'offRouteMiles', 'stalledMinutes', 'stalledRadiusMeters', 'dropoffQuietMeters', 'overshootNearMeters', 'overshootMeters', 'stopSeconds', 'maxStopsPerTrip', 'maxSpeedKph', 'lateFactor', 'lateMinMinutes', 'spotCheckPercent', 'spotCheckMinDays', 'inactivityDays', 'identityRenewDays', 'farLoginKm', 'documentReminderDays', 'faceMatchThreshold'];
 const toForm = (s: SafetySettings): Form => Object.fromEntries(KEYS.map((key) => [key, String(s[key])]));
 const fromForm = (f: Form): SafetySettings => Object.fromEntries(KEYS.map((key) => [key, f[key].trim() === '' ? NaN : Number(f[key])])) as unknown as SafetySettings;
 
@@ -88,6 +90,10 @@ export const AdminSafety = () => {
         <Section title="Drove past the drop-off" note="The car reached the drop-off and then drove away with the child still onboard. Alerts the parent and admins and sends the driver to re-verify.">
           <Field label="Counts as reached within" name="overshootNearMeters" suffix="m" {...props} />
           <Field label="Alert when this far away again" name="overshootMeters" suffix="m" {...props} />
+        </Section>
+        <Section title="Running late" note="The trip with the child onboard is taking much longer than the quoted drive time. Tells the parent (and admins) once; not a safety incident.">
+          <Field label="Late after this many times the expected time" name="lateFactor" suffix="x" hint="1.5 means a 10-minute drive is late at 15 minutes" {...props} />
+          <Field label="And at least this much over" name="lateMinMinutes" suffix="min" hint="Stops short trips from counting as late after a couple of minutes" {...props} />
         </Section>
         <Section title="Frequent stops" note="Stops away from the pickup and drop-off while the child is in the car. Admins only.">
           <Field label="A stop lasts at least" name="stopSeconds" suffix="s" hint="Two minutes or more leaves out traffic lights" {...props} />

@@ -81,6 +81,8 @@ interface ConfirmState {
   title: string;
   body: React.ReactNode;
   confirmLabel: string;
+  // Shown on the button while the action runs, e.g. "Approving...".
+  busyLabel?: string;
   tone: 'danger' | 'primary';
   onConfirm: () => Promise<void>;
 }
@@ -114,6 +116,7 @@ const ConfirmDialog: React.FC<{ state: ConfirmState | null; onClose: () => void 
       title={state.title}
       body={state.body}
       confirmLabel={state.confirmLabel}
+      busyLabel={state.busyLabel}
       tone={state.tone}
       busy={busy}
       error={error}
@@ -230,6 +233,7 @@ const ApplicationDetailPanel: React.FC<{
       title: approve ? `Approve ${application.name}?` : `Reject ${application.name}?`,
       tone: approve ? 'primary' : 'danger',
       confirmLabel: approve ? 'Approve driver' : 'Reject application',
+      busyLabel: approve ? 'Checking documents and approving...' : 'Sending back...',
       body: approve ? (
         <>
           <p>Approving activates this driver account so they can see and accept rides with children.</p>
@@ -698,7 +702,15 @@ const ManagedUsersPage: React.FC<{ role: 'driver' | 'parent' }> = ({ role }) => 
     }
   }, [role, search, page]);
 
+  // A new search, page or tab never shows the previous list under the new heading.
+  useEffect(() => { setData(null); }, [role, search, page]);
   useEffect(() => { void load(); }, [load]);
+  // Search as you type, after a short pause.
+  useEffect(() => {
+    if (searchInput.trim() === search) return undefined;
+    const timer = window.setTimeout(() => { setPage(1); setSearch(searchInput.trim()); }, 400);
+    return () => window.clearTimeout(timer);
+  }, [searchInput, search]);
 
   const reasonField = (label: string, placeholder: string) => (
     <label className="block text-sm font-semibold text-ink">
@@ -777,8 +789,8 @@ const ManagedUsersPage: React.FC<{ role: 'driver' | 'parent' }> = ({ role }) => 
           event.preventDefault();
           setFlash(null);
           // Same search and page: reload anyway so Search always shows fresh data.
-          if (searchInput === search && page === 1) void load();
-          else { setPage(1); setSearch(searchInput); }
+          if (searchInput.trim() === search && page === 1) void load();
+          else { setPage(1); setSearch(searchInput.trim()); }
         }}
       >
         <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder={`Search ${noun} by name or email`} className="flex-1 rounded-full border border-line bg-white px-4 py-2.5 text-sm" />
