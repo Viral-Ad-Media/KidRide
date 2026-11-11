@@ -55,9 +55,16 @@ export const turnPushOn = async () => {
   if (!enabled || !publicKey) throw new Error('Alerts are not switched on for KidRide yet.');
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new Error('Alerts are blocked. Allow notifications for this site in your browser settings, then try again.');
-  const reg = await registration();
-  await navigator.serviceWorker.ready;
-  const subscription = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+  // Browser errors ("Registration failed - push service error", "denied", ...) are not shown raw.
+  let subscription: PushSubscription;
+  try {
+    const reg = await registration();
+    await navigator.serviceWorker.ready;
+    subscription = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+  } catch (error) {
+    console.warn('Push subscription failed', error);
+    throw new Error('This browser could not turn on alerts right now. Check that notifications are allowed for KidRide and that you are not in a private window, then try again. Alerts in the app and by email still work.');
+  }
   await apiRequest('/notifications/push/subscribe', { method: 'POST', token: token(), body: { subscription: subscription.toJSON() } });
   return true;
 };

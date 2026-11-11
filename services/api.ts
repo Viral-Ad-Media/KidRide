@@ -191,7 +191,7 @@ export const fetchDriverSummary = async (token: string): Promise<DriverSummary> 
   };
 };
 
-/** Invalidates every token issued to this account; failures are non-fatal for logout. */
+/** Tells the server this device logged out (other devices stay signed in); failures are non-fatal for logout. */
 export const revokeSession = async (token: string): Promise<void> => {
   await apiRequest('/auth/logout', { method: 'POST', token });
 };

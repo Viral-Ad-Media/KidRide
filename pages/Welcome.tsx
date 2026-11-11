@@ -220,6 +220,11 @@ export const Welcome = () => {
               autoComplete={isSignup ? 'new-password' : 'current-password'}
               required
             />
+            {!isSignup && (
+              <div className="-mt-1 text-right">
+                <Link to="/reset-password" className="text-sm font-semibold text-brand-deep hover:underline">Forgot password?</Link>
+              </div>
+            )}
 
             {isSignup && (
               <Input

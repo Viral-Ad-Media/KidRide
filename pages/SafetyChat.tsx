@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, Users, ArrowLeft, Plus, X, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { generateSafetyResponse } from '../services/geminiService';
-import { Button, Card, Input } from '../components/UIComponents';
+import { Button, Card, ConfirmModal, Input } from '../components/UIComponents';
+import { sendRideSos } from '../components/SafetyActions';
+import { useRide } from '../contexts/RideContext';
+import { useAuth } from '../contexts/AuthContext';
+import { RideStatus, UserRole } from '../types';
 import { ApiError, apiRequest, getStoredToken } from '../services/api';
 
 interface Message {
@@ -99,8 +103,26 @@ export const SafetyChat = () => {
     }
   };
 
-  const handleSosClick = () => {
-    setSosNotice('Emergency dispatch and live location sharing are not connected in this build. Call local emergency services directly if you need immediate help.');
+  // With a ride in progress, SOS alerts KidRide support (and the parent, when the driver sends it)
+  // exactly like the SOS on the trip screen. With no ride, it offers to call 911.
+  const { activeRide } = useRide();
+  const { user } = useAuth();
+  const sosRide = activeRide && ![RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status)
+    && (user?.role === UserRole.PARENT || activeRide.driverId === user?.id) ? activeRide : null;
+  const [sosConfirm, setSosConfirm] = useState(false);
+  const [sosBusy, setSosBusy] = useState(false);
+  const [sosError, setSosError] = useState<string | null>(null);
+  const handleSosClick = () => { setSosError(null); setSosConfirm(true); };
+  const confirmSos = async () => {
+    if (!sosRide) { window.location.href = 'tel:911'; setSosConfirm(false); return; }
+    setSosBusy(true); setSosError(null);
+    try {
+      await sendRideSos(sosRide.id);
+      setSosConfirm(false);
+      setSosNotice(`SOS sent at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. KidRide support has been alerted with this ride and your location. If anyone is in danger, call 911.`);
+    } catch (err) {
+      setSosError(err instanceof Error && err.message ? err.message : 'Could not send the SOS. Call 911 if anyone is in danger.');
+    } finally { setSosBusy(false); }
   };
 
   if (view === 'chat') {
@@ -251,9 +273,23 @@ export const SafetyChat = () => {
 
       {sosNotice && (
         <Card className="border-red-100 bg-red-50">
-          <p className="text-sm text-red-700">{sosNotice}</p>
+          <p role="status" className="text-sm text-red-700">{sosNotice}</p>
         </Card>
       )}
+
+      <ConfirmModal
+        open={sosConfirm}
+        title={sosRide ? 'Send an SOS for this ride?' : 'No ride in progress'}
+        body={sosRide
+          ? 'KidRide support gets an alert now with the time, this ride and your location, and will contact you. For immediate danger, call 911 first.'
+          : 'SOS alerts KidRide support during a ride. Right now there is no ride in progress, so call 911 if anyone is in danger.'}
+        confirmLabel={sosRide ? 'Send SOS' : 'Call 911'}
+        tone="danger"
+        busy={sosBusy}
+        error={sosError}
+        onConfirm={() => void confirmSos()}
+        onClose={() => { setSosConfirm(false); setSosError(null); }}
+      />
 
       <div className="mt-8 grid grid-cols-2 gap-4">
         <Card onClick={() => setView('contacts')} className="flex flex-col items-center justify-center gap-3 py-6 transition-colors hover:border-green-200 hover:bg-green-50">

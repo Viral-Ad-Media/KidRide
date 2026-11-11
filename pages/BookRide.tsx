@@ -5,6 +5,7 @@ import { Button, Input } from '../components/UIComponents';
 import { BookingMap } from '../components/BookingMap';
 import { MapScreen } from '../components/MapScreen';
 import { PlacesInput } from '../components/PlacesInput';
+import { geocodeAddress } from '../services/googleMaps';
 import { ChildChip } from './ParentDashboard';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +33,16 @@ const SERVICES: { type: ServiceType; label: string; note: string }[] = [
 const serviceLabel = (type: string) => SERVICES.find((service) => service.type === type)?.label || type;
 const STAY_OPTIONS = [30, 45, 60, 90, 120, 180];
 type Quote = Fare & { quoteToken: string; currency: string };
+
+// Same check as the server: same address text, or points less than 150 m apart.
+const samePlace = (a: string, b: string, from: PlaceCoords | null, to: PlaceCoords | null) => {
+  const norm = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (norm(a) && norm(a) === norm(b)) return true;
+  if (!from || !to) return false;
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const h = Math.sin(rad(to.lat - from.lat) / 2) ** 2 + Math.cos(rad(from.lat)) * Math.cos(rad(to.lat)) * Math.sin(rad(to.lng - from.lng) / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h)) < 150;
+};
 
 export const BookRide = () => {
   const navigate = useNavigate();
@@ -130,6 +141,22 @@ export const BookRide = () => {
 
   const next = async () => {
     setError(null);
+    if (step === 'where') {
+      // Typed addresses without a picked suggestion are looked up, so the trip is priced by
+      // distance and drivers and route monitoring know where it is.
+      let from = pickupCoords;
+      let to = dropoffCoords;
+      if (!from || !to) {
+        setBusy(true);
+        const [a, b] = await Promise.all([from ? null : geocodeAddress(pickup), to ? null : geocodeAddress(dropoff)]);
+        setBusy(false);
+        if (a) { from = a.coords; setPickupCoords(a.coords); setPickup(a.address); }
+        if (b) { to = b.coords; setDropoffCoords(b.coords); setDropoff(b.address); }
+        // null = no such address; undefined = Maps unavailable, so the booking goes ahead at the minimum fare.
+        if ((!from && a === null) || (!to && b === null)) { setError('We could not find that address. Pick it from the suggestions so the trip can be priced and tracked.'); return; }
+      }
+      if (samePlace(pickup, dropoff, from, to)) { setError('Pickup and drop-off are the same place. Choose a different drop-off.'); return; }
+    }
     if (step !== 'confirm') { setStep(ORDER[stepIndex + 1]); return; }
     if (quote === null) return;
     if (when === 'weekly') {

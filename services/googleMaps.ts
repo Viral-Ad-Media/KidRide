@@ -93,3 +93,21 @@ export const computeRoute = async (maps: typeof google.maps, origin: LatLng | st
     distance: route.localizedValues?.distance?.text
   };
 };
+
+/**
+ * Coordinates for an address the parent typed without picking a suggestion (Geocoding API).
+ * Returns null when nothing matches, undefined when Maps or geocoding is unavailable.
+ */
+export const geocodeAddress = async (address: string): Promise<{ address: string; coords: LatLng } | null | undefined> => {
+  const text = address.trim();
+  if (!text || !API_KEY || authFailure) return undefined;
+  try {
+    const maps = await loadGoogleMaps();
+    const { results } = await new maps.Geocoder().geocode({ address: text });
+    const best = results?.[0];
+    if (!best?.geometry?.location) return null;
+    return { address: best.formatted_address || text, coords: { lat: best.geometry.location.lat(), lng: best.geometry.location.lng() } };
+  } catch (error) {
+    return (error as { code?: string })?.code === 'ZERO_RESULTS' ? null : undefined;
+  }
+};

@@ -119,7 +119,7 @@ const NoShowAction: React.FC<{ rideId: string; childName: string; onConfirm: () 
 };
 
 export const DriverDashboard = () => {
-  const { activeRide, updateRideStatus, markNoShow, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline, refreshActiveRide, verificationRequired } = useRide();
+  const { activeRide, updateRideStatus, markNoShow, declineRideRequest, syncError, cancelRide, acceptRide, isOnline, setIsOnline, refreshActiveRide, verificationRequired, onlineConfirmed, presenceNotice } = useRide();
   const { user } = useAuth();
   const rating = useDriverRating(user?.id);
   const [ratingFamilyRideId, setRatingFamilyRideId] = useState<string | null>(null);
@@ -231,8 +231,8 @@ export const DriverDashboard = () => {
     <div className="space-y-6">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-title font-extrabold tracking-tight sm:text-headline">{isOnline ? "You're online" : "You're offline"}</h2>
-          <p className="mt-1 text-sm text-muted">{isOnline ? 'Nearby ride requests will appear here.' : 'Go online to receive ride requests.'}</p>
+          <h2 className="text-title font-extrabold tracking-tight sm:text-headline">{isOnline ? (onlineConfirmed ? "You're online" : 'Going online...') : "You're offline"}</h2>
+          <p className="mt-1 text-sm text-muted">{isOnline ? (onlineConfirmed ? 'Nearby ride requests will appear here.' : 'Checking your account with KidRide.') : 'Go online to receive ride requests.'}</p>
         </div>
         <label className="inline-flex cursor-pointer items-center gap-3 self-start rounded-full border border-line bg-white py-2 pl-4 pr-2 sm:self-auto">
           <span className="text-sm font-semibold">{isOnline ? 'Online' : 'Offline'}</span>
@@ -252,6 +252,8 @@ export const DriverDashboard = () => {
           KidRide needs you to verify again before you can go online. <Link to="/driver-verification" className="font-semibold text-brand-deep underline">Open verification</Link>
         </p>
       )}
+
+      {presenceNotice && !verificationRequired && <p role="alert" className="text-label text-danger">{presenceNotice}</p>}
 
       <PushPrompt />
 

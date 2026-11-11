@@ -31,6 +31,10 @@ interface RideContextType {
   isOnline: boolean;
   /** The server refused Online: the driver has verification checks to finish. */
   verificationRequired: boolean;
+  /** The server has confirmed this driver is online (false while connecting or after a failure). */
+  onlineConfirmed: boolean;
+  /** Why the driver was put back offline, when it was not their choice. */
+  presenceNotice: string | null;
   setIsOnline: (online: boolean) => void;
 }
 const ONLINE_STORAGE_KEY = 'kidride_driver_online';
@@ -57,6 +61,8 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const approved = user?.role === UserRole.DRIVER && user.isVerifiedDriver && user.driverApplicationStatus === 'approved';
   const [isOnline, setIsOnlineState] = useState(readOnline);
   const [verificationRequired, setVerificationRequired] = useState(false);
+  const [onlineConfirmed, setOnlineConfirmed] = useState(false);
+  const [presenceNotice, setPresenceNotice] = useState<string | null>(null);
   const online = useRef(isOnline);
 
   const refreshActiveRide = async () => {
@@ -89,7 +95,13 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSyncError(null);
     if (!user || isHydrating) return;
     void refreshActiveRide();
-    const interval = setInterval(() => void refreshActiveRide(), user?.role === UserRole.DRIVER ? DRIVER_POLL_MS : PARENT_POLL_MS);
+    // Parents' tabs in the background poll less (every 4th tick); drivers keep polling for offers.
+    let tick = 0;
+    const interval = setInterval(() => {
+      tick += 1;
+      if (user?.role !== UserRole.DRIVER && document.hidden && tick % 4 !== 0) return;
+      void refreshActiveRide();
+    }, user?.role === UserRole.DRIVER ? DRIVER_POLL_MS : PARENT_POLL_MS);
     return () => { generation.current += 1; clearInterval(interval); };
   }, [user?.id, user?.role, user?.isVerifiedDriver, user?.driverApplicationStatus, isHydrating]);
 
@@ -121,13 +133,17 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const body = position
         ? { online: true, deviceId, latitude: position.coords.latitude, longitude: position.coords.longitude, heading: typeof heading === 'number' && Number.isFinite(heading) ? heading : null }
         : { online: true, deviceId };
-      void apiRequest('/users/me/presence', { method: 'PUT', token, body }).then(() => setVerificationRequired(false)).catch((error) => {
+      void apiRequest('/users/me/presence', { method: 'PUT', token, body }).then(() => { setVerificationRequired(false); setOnlineConfirmed(true); setPresenceNotice(null); }).catch((error) => {
+        // Fail closed: the app only says "online" after the server confirms it.
+        setOnlineConfirmed(false);
+        if (!(error instanceof ApiError) || error.status === 429) return; // no connection or busy: keep trying
+        const code = (error.data as { code?: string } | null)?.code;
         // An open verification check keeps the driver offline until it is done.
-        if (error instanceof ApiError && (error.data as { code?: string } | null)?.code === 'verification_required') {
-          setVerificationRequired(true);
-          setIsOnlineState(false);
-          online.current = false;
-        }
+        if (code === 'verification_required') setVerificationRequired(true);
+        else setPresenceNotice(error.message || 'We could not put you online. Try again in a minute.');
+        setIsOnlineState(false);
+        online.current = false;
+        try { window.localStorage.setItem(ONLINE_STORAGE_KEY, 'false'); } catch { /* not persisted */ }
       });
     };
     beat();
@@ -137,6 +153,8 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setIsOnline = (next: boolean) => {
     online.current = next;
+    setOnlineConfirmed(false);
+    if (next) setPresenceNotice(null);
     setIsOnlineState(next);
     if (!next && approved) {
       const token = getStoredToken();
@@ -161,7 +179,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await mutate(`/rides/${activeRide.id}/decline`, undefined, true);
     await refreshActiveRide();
   };
-  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, markNoShow, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline, verificationRequired }}>{children}</RideContext.Provider>;
+  return <RideContext.Provider value={{ activeRide, syncError, requestRide, updateRideStatus, markNoShow, cancelRide, declineRideRequest, acceptRide, refreshActiveRide, isOnline, setIsOnline, verificationRequired, onlineConfirmed, presenceNotice }}>{children}</RideContext.Provider>;
 };
 export const useRide = () => {
   const context = useContext(RideContext);

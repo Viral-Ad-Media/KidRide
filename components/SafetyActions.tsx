@@ -23,6 +23,13 @@ const currentPosition = () => new Promise<GeolocationPosition | null>((resolve) 
   navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 });
 });
 
+/** Sends an SOS for a ride with the device position when shared. Throws with a readable message. */
+export const sendRideSos = async (rideId: string) => {
+  const position = await currentPosition();
+  const location = position ? { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy } : undefined;
+  await apiRequest(`/rides/${rideId}/sos`, { method: 'POST', token: getStoredToken(), body: { confirm: true, location } });
+};
+
 export const SosButton: React.FC<{ rideId: string; who: 'parent' | 'driver'; onSent?: () => void; className?: string }> = ({ rideId, who, onSent, className = '' }) => {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,9 +40,7 @@ export const SosButton: React.FC<{ rideId: string; who: 'parent' | 'driver'; onS
     setBusy(true);
     setError(null);
     try {
-      const position = await currentPosition();
-      const location = position ? { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy } : undefined;
-      await apiRequest(`/rides/${rideId}/sos`, { method: 'POST', token: getStoredToken(), body: { confirm: true, location } });
+      await sendRideSos(rideId);
       setSentAt(new Date());
       setConfirming(false);
       onSent?.();

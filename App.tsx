@@ -15,6 +15,7 @@ import { DriverDashboard } from './pages/DriverDashboard';
 import { AddChild } from './pages/AddChild';
 import { DriverMap } from './pages/DriverMap';
 import { Earnings } from './pages/Earnings';
+import { ResetPassword } from './pages/ResetPassword';
 import { AuthProvider, getDefaultRouteForUser, useAuth } from './contexts/AuthContext';
 import { RideProvider } from './contexts/RideContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
@@ -85,6 +86,7 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<SignedOutOnly><LandingPage /></SignedOutOnly>} />
       <Route path="/login" element={<SignedOutOnly><Welcome /></SignedOutOnly>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/about" element={<MarketingAboutPage />} />
       <Route path="/safety-info" element={<SafetyInfoPage />} />
       <Route path="/for-drivers" element={<ForDriversPage />} />

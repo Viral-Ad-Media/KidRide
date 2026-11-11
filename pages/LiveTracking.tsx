@@ -174,7 +174,7 @@ export const LiveTracking = () => {
       <div className="flex items-center justify-between rounded-card bg-accent/15 px-4 py-3">
         <span>
           <span className="block text-caption font-semibold text-muted">Trip code{activeRide.tripCodeVerified ? ' · checked' : ''}</span>
-          <span className="block text-caption text-muted">{activeRide.tripCodeVerified ? `${driverFirst} entered the right code` : `Give it to ${driverFirst} at pickup; they say the safe word`}</span>
+          <span className="block text-caption text-muted">{activeRide.tripCodeVerified ? `${driverFirst} entered the right code` : `Give it to ${driver ? driverFirst : 'your driver'} at pickup; they say the safe word`}</span>
         </span>
         <span className="text-right">
           <span className="block text-title font-extrabold tabular-nums tracking-wider">{activeRide.tripCode || '····'}</span>

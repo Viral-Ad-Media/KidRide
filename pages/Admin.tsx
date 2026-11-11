@@ -26,6 +26,8 @@ import {
   fetchDriverApplicationDetail,
   fetchDriverApplications,
   reviewDriverApplication,
+  reviewDocument,
+  DocumentReview,
   RideIncident,
   fetchRideIncidents,
   resolveRideIncidents
@@ -127,13 +129,28 @@ const applicationTabs: ApplicationStatus[] = ['pending', 'approved', 'rejected']
 
 const isPdf = (url: string) => /\.pdf($|\?)/i.test(url.split('#')[0]) || /application%2Fpdf|content-type=application\/pdf/i.test(url);
 
-const DocumentTile: React.FC<{ docKey: DocumentKey; url?: string | null }> = ({ docKey, url }) => {
+const DocumentTile: React.FC<{ docKey: DocumentKey; url?: string | null; review?: DocumentReview; onDecide?: (status: 'approved' | 'reupload' | 'clear', note?: string) => Promise<void> }> = ({ docKey, url, review, onDecide }) => {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [tileError, setTileError] = useState<string | null>(null);
   const label = DOCUMENT_LABELS[docKey];
+  const decide = async (status: 'approved' | 'reupload' | 'clear', text?: string) => {
+    if (!onDecide) return;
+    setBusy(true); setTileError(null);
+    try { await onDecide(status, text); setAsking(false); setNote(''); }
+    catch (err) { setTileError(errorMessage(err, 'Could not save.')); }
+    finally { setBusy(false); }
+  };
+  const border = review?.status === 'approved' ? 'border-success' : review?.status === 'reupload' ? 'border-warning' : 'border-line';
   return (
-    <div className="rounded-card border border-line bg-surface-2 p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+    <div className={`rounded-card border bg-surface-2 p-3 ${border}`}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+        {review && <span className={`text-xs font-semibold ${review.status === 'approved' ? 'text-success' : 'text-warning'}`}>{review.status === 'approved' ? 'Accepted' : 'Upload again'}</span>}
+      </div>
       {!url ? (
         <p className="py-6 text-center text-sm text-muted">Not provided</p>
       ) : isPdf(url) || failed ? (
@@ -146,6 +163,25 @@ const DocumentTile: React.FC<{ docKey: DocumentKey; url?: string | null }> = ({ 
           <img src={url} alt={label} loading="lazy" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} className="h-44 w-full rounded-xl bg-white object-contain" />
         </a>
       )}
+      {review?.status === 'reupload' && review.note && <p className="mt-2 text-xs text-warning">Note: {review.note}</p>}
+      {url && onDecide && (
+        asking ? (
+          <div className="mt-2 space-y-2">
+            <input value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} placeholder="What to fix, e.g. blurry, expired" aria-label={`Note for ${label}`} className="w-full rounded-xl border border-line px-3 py-2 text-xs" />
+            <div className="flex gap-2">
+              <button type="button" disabled={busy} onClick={() => void decide('reupload', note.trim())} className="flex-1 rounded-full bg-warning/15 px-3 py-1.5 text-xs font-semibold text-ink disabled:opacity-50">Ask again</button>
+              <button type="button" disabled={busy} onClick={() => setAsking(false)} className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2 flex gap-2">
+            {review?.status !== 'approved' && <button type="button" disabled={busy} onClick={() => void decide('approved')} className="flex-1 rounded-full bg-success/10 px-3 py-1.5 text-xs font-semibold text-success disabled:opacity-50">Looks good</button>}
+            {review?.status !== 'reupload' && <button type="button" disabled={busy} onClick={() => setAsking(true)} className="flex-1 rounded-full bg-warning/15 px-3 py-1.5 text-xs font-semibold text-ink disabled:opacity-50">Ask to upload again</button>}
+            {review && <button type="button" disabled={busy} onClick={() => void decide('clear')} className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted">Undo</button>}
+          </div>
+        )
+      )}
+      {tileError && <p className="mt-1 text-xs text-danger">{tileError}</p>}
     </div>
   );
 };
@@ -182,6 +218,7 @@ const ApplicationDetailPanel: React.FC<{
 
   const linksMayBeExpired = loadedAt > 0 && Date.now() - loadedAt > 4.5 * 60 * 1000;
   const isPending = application.driverApplicationStatus === 'pending';
+  const reuploadCount = (Object.values(detail?.reviews || {}) as (DocumentReview | undefined)[]).filter((review) => review?.status === 'reupload').length;
 
   const rejectReason = useRef('');
 
@@ -202,7 +239,9 @@ const ApplicationDetailPanel: React.FC<{
         </>
       ) : (
         <>
-          <p>The applicant will be marked as rejected and will not be able to accept rides. They can fix their details and apply again.</p>
+          <p>{reuploadCount > 0
+            ? `The driver is asked to upload ${reuploadCount} document${reuploadCount > 1 ? 's' : ''} again, with your notes. Documents you accepted carry over, so they only send the rest.`
+            : 'The applicant will be marked as rejected and will not be able to accept rides. They can fix their details and apply again.'}</p>
           <label className="block text-sm font-semibold text-ink">
             Reason (shown to the driver)
             <textarea maxLength={500} rows={3} onChange={(event) => { rejectReason.current = event.target.value; }} placeholder="e.g. The insurance document is unreadable. Please upload a clear photo." className="mt-2 w-full rounded-card border border-line p-3 text-sm font-normal" />
@@ -257,7 +296,16 @@ const ApplicationDetailPanel: React.FC<{
             {linksMayBeExpired && <p className="mb-3 text-xs font-medium text-warning">Links may have expired. Refresh to view documents.</p>}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(Object.keys(DOCUMENT_LABELS) as DocumentKey[]).map((key) => (
-                <DocumentTile key={`${key}-${loadedAt}`} docKey={key} url={detail.documents[key]} />
+                <DocumentTile
+                  key={`${key}-${loadedAt}`}
+                  docKey={key}
+                  url={detail.documents[key]}
+                  review={detail.reviews[key]}
+                  onDecide={isPending ? async (status, note) => {
+                    const reviews = await reviewDocument(application.id, key, status, note);
+                    setDetail((current) => (current ? { ...current, reviews } : current));
+                  } : undefined}
+                />
               ))}
             </div>
           </>
@@ -266,11 +314,11 @@ const ApplicationDetailPanel: React.FC<{
 
       {isPending ? (
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-          <button type="button" disabled={!detail || loading} onClick={() => startReview('approved')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-success px-5 py-3 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-50">
+          <button type="button" disabled={!detail || loading || reuploadCount > 0} title={reuploadCount > 0 ? 'Some documents are marked "upload again"' : undefined} onClick={() => startReview('approved')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-success px-5 py-3 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-50">
             <CheckCircle2 size={18} /> Approve
           </button>
           <button type="button" disabled={!detail || loading} onClick={() => startReview('rejected')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-danger px-5 py-3 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-50">
-            <XCircle size={18} /> Reject
+            <XCircle size={18} /> {reuploadCount > 0 ? `Send back: re-upload ${reuploadCount}` : 'Reject'}
           </button>
         </div>
       ) : (

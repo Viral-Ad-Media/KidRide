@@ -1,14 +1,48 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RepeatingRides } from '../components/RepeatingRides';
+import { UpcomingRideActions } from '../components/UpcomingRides';
 import { useRide } from '../contexts/RideContext';
-import { Button, Card, StatusChip } from '../components/UIComponents';
+import { Button, Card, Modal, StatusChip } from '../components/UIComponents';
 import { fetchUserRides, getStoredToken } from '../services/api';
 import { Ride, RideStatus } from '../types';
 import { RateRideModal, Stars } from '../components/Ratings';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin, Repeat } from 'lucide-react';
 import { formatMoney, formatPickupTime, formatRidePrice } from '../utils/rideData';
 import { FareBreakdown } from '../components/FareBreakdown';
+
+const childNames = (ride: Ride) => (ride.children || []).map((child) => child.name.split(' ')[0]).filter(Boolean).join(', ');
+
+// A printable receipt for a finished or cancelled ride (the browser's Print saves it as a PDF).
+const ReceiptModal: React.FC<{ ride: Ride | null; onClose: () => void }> = ({ ride, onClose }) => (
+  <Modal open={!!ride} onClose={onClose} labelledBy="receipt-title">
+    {ride && (
+      <div className="kr-receipt text-sm text-ink">
+        <h2 id="receipt-title" className="text-lg font-bold">KidRide receipt</h2>
+        <dl className="mt-4 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5">
+          <dt className="text-muted">Ride</dt><dd className="font-mono text-xs">{ride.id.slice(0, 8).toUpperCase()}</dd>
+          <dt className="text-muted">Date</dt><dd>{formatPickupTime(ride.pickupTime)}</dd>
+          {childNames(ride) && (<><dt className="text-muted">Children</dt><dd>{childNames(ride)}</dd></>)}
+          <dt className="text-muted">From</dt><dd>{ride.pickupLocation}</dd>
+          <dt className="text-muted">To</dt><dd>{ride.dropoffLocation}</dd>
+          <dt className="text-muted">Service</dt><dd className="capitalize">{ride.serviceType.replace(/_/g, ' ')}</dd>
+          {ride.driver?.name && (<><dt className="text-muted">Driver</dt><dd>{ride.driver.name}</dd></>)}
+          <dt className="text-muted">Status</dt><dd className="capitalize">{String(ride.status).replace(/_/g, ' ')}</dd>
+        </dl>
+        <div className="mt-4 border-t border-line pt-3">
+          {ride.status === RideStatus.CANCELLED
+            ? <p className="flex justify-between font-bold"><span>Cancellation fee</span><span>{ride.cancellationFee ? formatMoney(ride.cancellationFee, ride.currency) : formatMoney(0, ride.currency)}</span></p>
+            : ride.fare ? <FareBreakdown fare={ride.fare} currency={ride.currency} /> : <p className="flex justify-between font-bold"><span>Total</span><span>{formatRidePrice(ride.price, undefined, ride.currency)}</span></p>}
+        </div>
+        <p className="mt-4 text-xs text-muted">KidRide. Keep this receipt for your records.</p>
+        <div className="mt-6 flex justify-end gap-2 print:hidden">
+          <button type="button" onClick={onClose} className="rounded-full border border-line px-5 py-2.5 text-sm font-semibold">Close</button>
+          <button type="button" onClick={() => window.print()} className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-ink">Print or save PDF</button>
+        </div>
+      </div>
+    )}
+  </Modal>
+);
 
 const FareDetails: React.FC<{ ride: Ride }> = ({ ride }) => (
   <details className="mt-2 text-xs text-gray-600">
@@ -30,6 +64,7 @@ export const RideHistory = () => {
   const [error, setError] = useState<string | null>(null);
   // ?rate=<rideId> (from the "arrived" alert or the tracking screen) opens the rating sheet.
   const [ratingRideId, setRatingRideId] = useState<string | null>(() => params.get('rate'));
+  const [receiptRide, setReceiptRide] = useState<Ride | null>(null);
 
   useEffect(() => {
     if (activeTab === 'active') {
@@ -165,6 +200,7 @@ export const RideHistory = () => {
                     <p className="text-sm flex items-center gap-2">
                       {ride.pickupLocation} <ArrowRight size={12} /> {ride.dropoffLocation}
                     </p>
+                    {childNames(ride) && <p className="text-sm"><span className="text-gray-500">For:</span> <span className="font-medium">{childNames(ride)}</span></p>}
                     <p className="text-sm">
                       <span className="text-gray-500">Service:</span> <span className="font-medium">{ride.serviceType.replace(/_/g, ' ')}</span>
                     </p>
@@ -174,6 +210,9 @@ export const RideHistory = () => {
                     <span className="font-bold text-gray-900">{formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
                   {ride.fare && <FareDetails ride={ride} />}
+                  {[RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER, RideStatus.DRIVER_ASSIGNED].includes(ride.status) && (
+                    <UpcomingRideActions ride={ride} onChanged={() => setReloadKey((key) => key + 1)} />
+                  )}
                 </Card>
               ))
             )}
@@ -210,11 +249,13 @@ export const RideHistory = () => {
                     </div>
                     <StatusChip status={ride.status} />
                   </div>
+                  {childNames(ride) && <p className="text-xs text-gray-600">For {childNames(ride)}</p>}
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-xs text-gray-600">{ride.serviceType.replace(/_/g, ' ')}</span>
                     <span className="font-bold text-gray-900">{ride.status === RideStatus.CANCELLED ? (ride.cancellationFee ? `${formatMoney(ride.cancellationFee, ride.currency)} fee` : 'No charge') : formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
                   {ride.fare && ride.status !== RideStatus.CANCELLED && <FareDetails ride={ride} />}
+                  <button type="button" onClick={() => setReceiptRide(ride)} className="mt-2 text-xs font-semibold text-brand-deep underline">View receipt</button>
                   {ride.status === RideStatus.COMPLETED && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                       {ride.rating ? (
@@ -242,6 +283,7 @@ export const RideHistory = () => {
           </div>
         )}
       </div>
+      <ReceiptModal ride={receiptRide} onClose={() => setReceiptRide(null)} />
       <RateRideModal
         rideId={ratingRideId}
         onClose={() => setRatingRideId(null)}

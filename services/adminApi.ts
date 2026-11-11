@@ -24,7 +24,7 @@ export interface DriverApplicationSummary {
   submittedAt: string | null;
 }
 
-export type DocumentKey = 'license' | 'insurance' | 'registration' | 'photo_front' | 'photo_left' | 'photo_right';
+export type DocumentKey = 'license' | 'insurance' | 'registration' | 'photo_front' | 'photo_left' | 'photo_right' | 'car_front' | 'car_back' | 'car_side' | 'car_plate';
 
 export const DOCUMENT_LABELS: Record<DocumentKey, string> = {
   license: "Driver's license",
@@ -32,12 +32,20 @@ export const DOCUMENT_LABELS: Record<DocumentKey, string> = {
   registration: 'Vehicle registration',
   photo_front: 'Photo (front)',
   photo_left: 'Photo (left)',
-  photo_right: 'Photo (right)'
+  photo_right: 'Photo (right)',
+  car_front: 'Car (front)',
+  car_back: 'Car (back)',
+  car_side: 'Car (side)',
+  car_plate: 'Licence plate'
 };
+
+/** An admin's decision on one document: accepted, or to be uploaded again (with a note for the driver). */
+export interface DocumentReview { status: 'approved' | 'reupload'; note: string | null }
 
 export interface DriverApplicationDetail {
   documents: Partial<Record<DocumentKey, string | null>>;
   submittedAt: string | null;
+  reviews: Partial<Record<DocumentKey, DocumentReview>>;
 }
 
 export interface AdminRide extends Ride {
@@ -96,8 +104,16 @@ export const fetchDriverApplicationDetail = async (id: string): Promise<DriverAp
     : {}) as DriverApplicationDetail['documents'];
   return {
     documents,
-    submittedAt: response?.submittedAt ? str(response.submittedAt) : null
+    submittedAt: response?.submittedAt ? str(response.submittedAt) : null,
+    reviews: (response?.reviews && typeof response.reviews === 'object' ? response.reviews : {}) as DriverApplicationDetail['reviews']
   };
+};
+
+export const reviewDocument = async (id: string, kind: DocumentKey, status: 'approved' | 'reupload' | 'clear', note?: string) => {
+  const response = await apiRequest<{ reviews?: DriverApplicationDetail['reviews'] }>(`/users/driver-applications/${encodeURIComponent(id)}/documents/${kind}`, {
+    method: 'PUT', token: requireToken(), body: { status, note }
+  });
+  return response?.reviews || {};
 };
 
 export const reviewDriverApplication = async (

@@ -6,6 +6,10 @@ const LABELS: Record<string, string> = {
   license: "Driver's license",
   insurance: 'Vehicle insurance',
   registration: 'Vehicle registration',
+  car_front: 'Car photo (front)',
+  car_back: 'Car photo (back)',
+  car_side: 'Car photo (side)',
+  car_plate: 'Licence plate photo',
   photo_front: 'Front photo',
   photo_left: 'Left photo',
   photo_right: 'Right photo'

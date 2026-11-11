@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, FileUpload, CameraCapture, VerificationPhotos } from '../components/UIComponents';
 import { ArrowLeft, Car, ShieldCheck, CheckCircle, AlertCircle, Home } from 'lucide-react';
 import { getDefaultRouteForUser, useAuth } from '../contexts/AuthContext';
-import { ApiError } from '../services/api';
+import { ApiError, apiRequest, getStoredToken } from '../services/api';
 import { uploadVerification } from '../services/verification';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 import { UserRole } from '../types';
@@ -35,8 +35,30 @@ export const DriverSignup = () => {
     licenseDoc: null as File | null,
     insuranceDoc: null as File | null,
     registrationDoc: null as File | null,
+    carFront: null as File | null,
+    carBack: null as File | null,
+    carSide: null as File | null,
+    carPlate: null as File | null,
     verificationPhotos: null as VerificationPhotos | null
   });
+
+  // After a rejection: documents the admin accepted carry over, and the ones to send again come with a note.
+  const [approvedDocs, setApprovedDocs] = useState<string[]>([]);
+  const [reupload, setReupload] = useState<{ kind: string; label: string; note: string | null }[]>([]);
+  useEffect(() => {
+    if (user?.role !== UserRole.DRIVER || user.driverApplicationStatus !== 'rejected') return;
+    let active = true;
+    apiRequest<{ approvedDocuments?: string[]; reupload?: { kind: string; label: string; note: string | null }[] }>('/users/driver-application', { token: getStoredToken() })
+      .then((info) => { if (active) { setApprovedDocs(info.approvedDocuments || []); setReupload(info.reupload || []); } })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [user?.role, user?.driverApplicationStatus]);
+  const accepted = (kind: string) => approvedDocs.includes(kind);
+  const facesAccepted = ['photo_front', 'photo_left', 'photo_right'].every(accepted);
+  const reuploadNote = (kind: string) => {
+    const item = reupload.find((entry) => entry.kind === kind);
+    return item ? `Please upload again${item.note ? `: ${item.note}` : '.'}` : null;
+  };
 
   useEffect(() => {
     if (!user) {
@@ -76,11 +98,13 @@ export const DriverSignup = () => {
     formData.licenseExpiresOn > today &&
     formData.insuranceExpiresOn > today;
 
+  const DOC_FIELDS = [
+    ['license', 'licenseDoc'], ['insurance', 'insuranceDoc'], ['registration', 'registrationDoc'],
+    ['car_front', 'carFront'], ['car_back', 'carBack'], ['car_side', 'carSide'], ['car_plate', 'carPlate']
+  ] as const;
   const isStep3Valid =
-    formData.licenseDoc !== null &&
-    formData.insuranceDoc !== null &&
-    formData.registrationDoc !== null &&
-    formData.verificationPhotos !== null &&
+    DOC_FIELDS.every(([kind, field]) => accepted(kind) || formData[field] !== null) &&
+    (facesAccepted || formData.verificationPhotos !== null) &&
     (!requiresAccountCreation || acceptTerms);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
@@ -138,7 +162,10 @@ export const DriverSignup = () => {
       }
 
       const documents: Record<string, string> = {};
-      const files = { license: formData.licenseDoc!, insurance: formData.insuranceDoc!, registration: formData.registrationDoc!, photo_front: formData.verificationPhotos!.front, photo_left: formData.verificationPhotos!.left, photo_right: formData.verificationPhotos!.right };
+      // Only new uploads are sent; documents already accepted are kept by the server.
+      const files: Record<string, File | string> = {};
+      for (const [kind, field] of DOC_FIELDS) { const file = formData[field]; if (file) files[kind] = file; }
+      if (formData.verificationPhotos) Object.assign(files, { photo_front: formData.verificationPhotos.front, photo_left: formData.verificationPhotos.left, photo_right: formData.verificationPhotos.right });
       for (const [kind, file] of Object.entries(files)) documents[kind] = await uploadVerification(kind, file);
       await submitDriverApplication({
         documents,
@@ -435,29 +462,45 @@ export const DriverSignup = () => {
             </div>
 
             <div className="space-y-4">
-              <FileUpload
-                label="Driver&apos;s License (Front)"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                onFileSelect={(file) => handleFileSelect('licenseDoc', file)}
-              />
-              <FileUpload
-                label="Vehicle Insurance"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                onFileSelect={(file) => handleFileSelect('insuranceDoc', file)}
-              />
-              <FileUpload
-                label="Vehicle Registration"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                onFileSelect={(file) => handleFileSelect('registrationDoc', file)}
-              />
+              {reupload.length > 0 && (
+                <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  KidRide asked you to upload again: {reupload.map((item) => item.label).join(', ')}. Everything else you sent was accepted.
+                </div>
+              )}
+              {([
+                ['license', 'licenseDoc', 'Driver\'s License (Front)', 'image/jpeg,image/png,image/webp,application/pdf'],
+                ['insurance', 'insuranceDoc', 'Vehicle Insurance', 'image/jpeg,image/png,image/webp,application/pdf'],
+                ['registration', 'registrationDoc', 'Vehicle Registration', 'image/jpeg,image/png,image/webp,application/pdf'],
+                ['car_front', 'carFront', 'Car photo: front', 'image/jpeg,image/png,image/webp'],
+                ['car_back', 'carBack', 'Car photo: back', 'image/jpeg,image/png,image/webp'],
+                ['car_side', 'carSide', 'Car photo: side', 'image/jpeg,image/png,image/webp'],
+                ['car_plate', 'carPlate', 'Licence plate (close up, readable)', 'image/jpeg,image/png,image/webp']
+              ] as const).map(([kind, field, label, accept]) => (
+                accepted(kind) ? (
+                  <p key={kind} className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"><CheckCircle size={16} /> {label}: accepted, no need to upload again</p>
+                ) : (
+                  <div key={kind}>
+                    <FileUpload label={label} accept={accept} onFileSelect={(file) => handleFileSelect(field, file)} />
+                    {reuploadNote(kind) && <p className="-mt-2 mb-2 text-xs font-medium text-amber-700">{reuploadNote(kind)}</p>}
+                  </div>
+                )
+              ))}
 
               <div className="border-t border-gray-100 pt-4">
-                <CameraCapture onCapture={handlePhotosCaptured} />
-                {formData.verificationPhotos && (
-                  <p className="text-center text-xs text-green-600 mt-2 flex items-center justify-center gap-1 font-medium">
-                    <CheckCircle size={12} />
-                    3D photos captured
-                  </p>
+                {facesAccepted ? (
+                  <p className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"><CheckCircle size={16} /> Face photos and selfie: accepted</p>
+                ) : (
+                  <>
+                    <p className="mb-2 text-sm font-semibold text-gray-700">Selfie and face photos</p>
+                    {['photo_front', 'photo_left', 'photo_right'].map((kind) => reuploadNote(kind) && <p key={kind} className="mb-2 text-xs font-medium text-amber-700">{reuploadNote(kind)}</p>)}
+                    <CameraCapture onCapture={handlePhotosCaptured} />
+                    {formData.verificationPhotos && (
+                      <p className="text-center text-xs text-green-600 mt-2 flex items-center justify-center gap-1 font-medium">
+                        <CheckCircle size={12} />
+                        3D photos captured
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 

@@ -70,67 +70,46 @@ const RideLine: React.FC<{ ride: Ride }> = ({ ride }) => (
   </p>
 );
 
-export const ParentUpcomingRides: React.FC = () => {
-  const { rides, error, load } = useScheduledRides();
-  const [editing, setEditing] = useState<Ride | null>(null);
+/**
+ * Change time / Cancel for one ride booked for later. The time can change until the ride is
+ * offered to drivers (30 minutes before pickup); a single day of a weekly booking can be cancelled.
+ */
+export const UpcomingRideActions: React.FC<{ ride: Ride; onChanged: () => void | Promise<void> }> = ({ ride, onChanged }) => {
+  const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
-  const [cancelling, setCancelling] = useState<Ride | null>(null);
-  const feeNote = useCancellationFeeNote(cancelling?.id, !!cancelling);
+  const [cancelling, setCancelling] = useState(false);
+  const feeNote = useCancellationFeeNote(cancelling ? ride.id : undefined, cancelling);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const editProblem = editing ? validateScheduleInput(editValue) : null;
+  const canReschedule = ride.isScheduled && !ride.seriesId && ride.scheduleState === 'scheduled';
 
-  const openEdit = (ride: Ride) => { setActionError(null); setEditValue(toLocalInputValue(new Date(ride.pickupTime))); setEditing(ride); };
+  const openEdit = () => { setActionError(null); setEditValue(toLocalInputValue(new Date(ride.pickupTime))); setEditing(true); };
   const saveEdit = async () => {
-    if (!editing || editProblem) return;
+    if (editProblem) return;
     setBusy(true); setActionError(null);
-    try { await rescheduleRide(editing.id, new Date(editValue).toISOString()); setEditing(null); await load(); }
-    catch (err) { setActionError(err instanceof Error ? err.message : 'Could not change the time.'); await load(); }
+    try { await rescheduleRide(ride.id, new Date(editValue).toISOString()); setEditing(false); await onChanged(); }
+    catch (err) { setActionError(err instanceof Error ? err.message : 'Could not change the time.'); }
     finally { setBusy(false); }
   };
   const confirmCancel = async () => {
-    if (!cancelling) return;
     setBusy(true); setActionError(null);
-    try { await cancelScheduledRide(cancelling.id); setCancelling(null); await load(); }
+    try { await cancelScheduledRide(ride.id); setCancelling(false); await onChanged(); }
     catch (err) { setActionError(err instanceof Error ? err.message : 'Could not cancel the ride.'); }
     finally { setBusy(false); }
   };
 
   return (
-    <Card>
+    <>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {canReschedule && (
+          <button type="button" onClick={openEdit} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-deep hover:bg-brand/10">Change time</button>
+        )}
+        <button type="button" onClick={() => { setActionError(null); setCancelling(true); }} className="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100">{ride.seriesId ? 'Cancel this day' : 'Cancel'}</button>
+      </div>
 
-      <h3 className="text-lead font-bold">Upcoming rides</h3>
-      {error && <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">{error}</p>}
-      {rides.length === 0 ? (
-        <p className="mt-4 rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
-          No upcoming rides. Choose "Schedule" when booking to plan a ride up to 30 days ahead.
-        </p>
-      ) : (
-        <ul className="mt-5 space-y-3" aria-label="Upcoming rides">
-          {rides.map((ride) => (
-            <li key={ride.id} className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-base font-bold text-slate-950">{formatScheduledTime(ride.pickupTime)}</p>
-                <ScheduleChip state={ride.scheduleState} />
-              </div>
-              <RideLine ride={ride} />
-              <p className="mt-1 text-xs text-slate-500">
-                {formatRidePrice(ride.price, undefined, ride.currency)}
-                {ride.driver?.name ? ` · Driver: ${ride.driver.name}` : ride.scheduleState === 'scheduled' ? ' · Offered to drivers 30 min before pickup' : ''}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ride.scheduleState === 'scheduled' && (
-                  <button type="button" onClick={() => openEdit(ride)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-deep hover:bg-brand/10">Change time</button>
-                )}
-                <button type="button" onClick={() => { setActionError(null); setCancelling(ride); }} className="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100">Cancel</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <Modal open={!!editing} onClose={busy ? undefined : () => setEditing(null)} labelledBy="reschedule-title">
-        <h2 id="reschedule-title" className="text-lg font-bold text-slate-950">Change pickup time</h2>
+      <Modal open={editing} onClose={busy ? undefined : () => setEditing(false)} labelledBy={`reschedule-title-${ride.id}`}>
+        <h2 id={`reschedule-title-${ride.id}`} className="text-lg font-bold text-slate-950">Change pickup time</h2>
         <p className="mt-2 text-sm text-slate-500">Your local time. Between 30 minutes and 30 days ahead, in 5-minute steps.</p>
         <div className="mt-4">
           <Input type="datetime-local" aria-label="New pickup date and time" value={editValue} min={toLocalInputValue(firstSlot(30))} max={toLocalInputValue(latestSlot())} step={300} onChange={(event) => setEditValue(event.target.value)} />
@@ -138,27 +117,26 @@ export const ParentUpcomingRides: React.FC = () => {
         <p className={`-mt-2 text-sm ${editProblem ? 'text-red-600' : 'text-slate-500'}`}>{editProblem || formatScheduledTime(editValue)}</p>
         {actionError && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{actionError}</p>}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" onClick={() => setEditing(null)} disabled={busy} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Keep time</button>
+          <button type="button" onClick={() => setEditing(false)} disabled={busy} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Keep time</button>
           <button type="button" onClick={() => void saveEdit()} disabled={busy || !!editProblem} className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-ink hover:brightness-95 disabled:opacity-60">{busy ? 'Saving...' : 'Save new time'}</button>
         </div>
       </Modal>
 
       <ConfirmModal
-        open={!!cancelling}
-        title="Cancel this ride?"
-        body={cancelling ? <p>{formatScheduledTime(cancelling.pickupTime)} from {cancelling.pickupLocation}.{cancelling.driver?.name ? ' The driver will be told.' : ''} {feeNote}</p> : null}
-        confirmLabel="Cancel ride"
+        open={cancelling}
+        title={ride.seriesId ? 'Cancel this day?' : 'Cancel this ride?'}
+        body={<p>{formatScheduledTime(ride.pickupTime)} from {ride.pickupLocation}.{ride.driver?.name ? ' The driver will be told.' : ''}{ride.seriesId ? ' Other weeks stay booked.' : ''} {feeNote}</p>}
+        confirmLabel={ride.seriesId ? 'Cancel this day' : 'Cancel ride'}
         tone="danger"
         busy={busy}
         error={actionError}
         onConfirm={() => void confirmCancel()}
-        onClose={() => setCancelling(null)}
+        onClose={() => setCancelling(false)}
       />
-    </Card>
+    </>
   );
 };
 
-/** `refreshKey` reloads the list straight away, e.g. after the driver accepts a ride. */
 export const DriverUpcomingRides: React.FC<{ refreshKey?: string }> = ({ refreshKey }) => {
   const { rides } = useScheduledRides(refreshKey);
   const now = useNow();
