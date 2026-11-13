@@ -16,6 +16,8 @@ import { formatMoney, joinNames } from '../utils/rideData';
 import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalInputValue, validateScheduleInput } from '../services/scheduledRides';
 import { RepeatPlanPicker } from '../components/RepeatingRides';
 import { RideSeries, SCHOOL_DAYS, SeriesPlan, SeriesPreview, addDays, bookSeries, describeDays, formatClock, formatDay, planDays, previewSeries, validatePlan, ymd } from '../services/rideSeries';
+import { CardSetup } from '../components/payments/CardSetup';
+import { fetchPaymentConfig } from '../services/payments';
 
 // Booking as one sheet per question over the map, the way Uber and Bolt do
 // it: who (one or more children), where, when, which service, confirm. One pill button per sheet;
@@ -83,6 +85,9 @@ export const BookRide = () => {
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [scheduledRide, setScheduledRide] = useState<Ride | null>(null);
+  // Card payments: when switched on, a saved card is needed to book.
+  const [payment, setPayment] = useState<{ enabled: boolean; hasCard: boolean }>({ enabled: false, hasCard: false });
+  useEffect(() => { fetchPaymentConfig().then((config) => setPayment({ enabled: config.enabled, hasCard: !!config.card })).catch(() => undefined); }, []);
 
   const planProblem = when === 'weekly' ? validatePlan(plan) : null;
   const firstDay = when === 'weekly' && !planProblem ? planDays(plan, new Date(), 1)[0] : null;
@@ -132,10 +137,10 @@ export const BookRide = () => {
       case 'child': return riders.length > 0;
       case 'where': return !!pickup.trim() && !!dropoff.trim();
       case 'when': return when === 'weekly' ? !planProblem : !scheduleProblem;
-      case 'confirm': return quote !== null && (when !== 'weekly' || (!!preview && preview.rideCount > 0));
+      case 'confirm': return quote !== null && (!payment.enabled || payment.hasCard) && (when !== 'weekly' || (!!preview && preview.rideCount > 0));
       default: return quote !== null;
     }
-  }, [step, riders.length, pickup, dropoff, scheduleProblem, planProblem, when, serviceType, quote, preview]);
+  }, [step, riders.length, pickup, dropoff, scheduleProblem, planProblem, when, serviceType, quote, preview, payment]);
 
   const back = () => (stepIndex > 0 && !(step === 'where' && skipWho) ? setStep(ORDER[stepIndex - 1]) : navigate(-1));
 
@@ -365,6 +370,13 @@ export const BookRide = () => {
             {when === 'weekly'
               ? <p className="mt-3 px-1 text-caption text-muted">Each ride is priced and charged on its own, so a school-run peak day can cost a little more. Rides are booked a week ahead; skip a day or cancel any time from Rides.</p>
               : quote && <FareBreakdown fare={quote} currency={quote.currency} showTotal={false} className="mt-3 px-1" />}
+            {payment.enabled && (
+              <div className="mt-4 rounded-card border border-line bg-white p-4">
+                <p className="mb-2 text-label font-semibold text-ink">Pay with</p>
+                <CardSetup compact onChange={(card) => setPayment({ enabled: true, hasCard: !!card })} />
+                <p className="mt-2 text-caption text-muted">The fare is held on your card when a driver accepts and charged after drop-off.</p>
+              </div>
+            )}
           </>
         )}
         {error && <p className="mt-3 text-label text-danger">{error}</p>}

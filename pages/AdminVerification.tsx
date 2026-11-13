@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { AdminTabs } from './Admin';
+import { ProviderStatus } from '../components/payments/ProviderStatus';
 import { Button, Modal } from '../components/UIComponents';
 import { fetchManagedUsers, ManagedUser } from '../services/adminApi';
 import { CHECK_LABELS, CheckKind, DriverCheck, fetchAdminCheck, fetchAdminChecks, fetchRules, requestChecks, reviewCheck } from '../services/driverChecks';
@@ -181,6 +182,7 @@ export const AdminVerification = () => {
         </ul>
       )}
       <div className="mt-8 space-y-8">
+        <ProviderStatus />
         <RequestCheck onDone={load} />
         {rules.length > 0 && (
           <section>

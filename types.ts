@@ -120,7 +120,21 @@ export interface FareBreakdown {
   distanceSource: 'routes' | 'estimate' | 'none';
 }
 
+/** A ride's card payment, once card payments are switched on. */
+export interface RidePayment {
+  status: 'none' | 'authorized' | 'requires_action' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+  amountHeld: number;
+  amountCharged: number;
+  amountRefunded: number;
+  currency: string;
+  error: string | null;
+  payoutStatus: 'none' | 'pending' | 'paid' | 'failed';
+  payoutAmount: number;
+}
+
 export interface Ride {
+  /** Parents and admins: the card payment, when payments are on. */
+  payment?: RidePayment | null;
   currency?: string;
   /** Null for rides booked before distance pricing. */
   fare?: FareBreakdown | null;

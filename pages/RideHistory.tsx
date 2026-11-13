@@ -9,6 +9,7 @@ import { Ride, RideStatus } from '../types';
 import { RateRideModal, Stars } from '../components/Ratings';
 import { ArrowRight, Calendar, Car, ChevronRight, Clock, MapPin, Repeat } from 'lucide-react';
 import { formatMoney, formatPickupTime, formatRidePrice } from '../utils/rideData';
+import { RidePaymentStatus } from '../components/payments/RidePaymentStatus';
 import { FareBreakdown } from '../components/FareBreakdown';
 
 const childNames = (ride: Ride) => (ride.children || []).map((child) => child.name.split(' ')[0]).filter(Boolean).join(', ');
@@ -34,6 +35,9 @@ const ReceiptModal: React.FC<{ ride: Ride | null; onClose: () => void }> = ({ ri
             ? <p className="flex justify-between font-bold"><span>Cancellation fee</span><span>{ride.cancellationFee ? formatMoney(ride.cancellationFee, ride.currency) : formatMoney(0, ride.currency)}</span></p>
             : ride.fare ? <FareBreakdown fare={ride.fare} currency={ride.currency} /> : <p className="flex justify-between font-bold"><span>Total</span><span>{formatRidePrice(ride.price, undefined, ride.currency)}</span></p>}
         </div>
+        {ride.payment?.status === 'succeeded' && (
+          <p className="mt-2 flex justify-between text-xs text-muted"><span>Paid by card</span><span>{formatMoney(ride.payment.amountCharged, ride.currency)}{ride.payment.amountRefunded > 0 ? `, ${formatMoney(ride.payment.amountRefunded, ride.currency)} refunded` : ''}</span></p>
+        )}
         <p className="mt-4 text-xs text-muted">KidRide. Keep this receipt for your records.</p>
         <div className="mt-6 flex justify-end gap-2 print:hidden">
           <button type="button" onClick={onClose} className="rounded-full border border-line px-5 py-2.5 text-sm font-semibold">Close</button>
@@ -210,6 +214,7 @@ export const RideHistory = () => {
                     <span className="font-bold text-gray-900">{formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
                   {ride.fare && <FareDetails ride={ride} />}
+                  <RidePaymentStatus ride={ride} onChanged={() => setReloadKey((key) => key + 1)} />
                   {[RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER, RideStatus.DRIVER_ASSIGNED].includes(ride.status) && (
                     <UpcomingRideActions ride={ride} onChanged={() => setReloadKey((key) => key + 1)} />
                   )}
@@ -255,6 +260,7 @@ export const RideHistory = () => {
                     <span className="font-bold text-gray-900">{ride.status === RideStatus.CANCELLED ? (ride.cancellationFee ? `${formatMoney(ride.cancellationFee, ride.currency)} fee` : 'No charge') : formatRidePrice(ride.price, undefined, ride.currency)}</span>
                   </div>
                   {ride.fare && ride.status !== RideStatus.CANCELLED && <FareDetails ride={ride} />}
+                  <RidePaymentStatus ride={ride} onChanged={() => setReloadKey((key) => key + 1)} />
                   <button type="button" onClick={() => setReceiptRide(ride)} className="mt-2 text-xs font-semibold text-brand-deep underline">View receipt</button>
                   {ride.status === RideStatus.COMPLETED && (
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
