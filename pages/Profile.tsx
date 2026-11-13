@@ -7,6 +7,7 @@ import { UserRole } from '../types';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 import { DriverReviews } from '../components/Ratings';
 import { AccountPrivacy } from '../components/AccountPrivacy';
+import { SavedPlacesCard } from '../components/SavedPlaces';
 import { fetchPushConfig, isPushOn, pushPermission, pushSupport, sendTestPush, turnPushOff, turnPushOn } from '../services/push';
 
 // Name and phone are editable here; vehicle details are part of the verified
@@ -243,6 +244,8 @@ export const Profile = () => {
         </div>
 
         <AccountDetails />
+
+        {user?.role === UserRole.PARENT && <SavedPlacesCard />}
 
         {user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'approved' && <DriverReviews driverId={user.id} />}
 

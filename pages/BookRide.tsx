@@ -5,6 +5,8 @@ import { Button, Input } from '../components/UIComponents';
 import { BookingMap } from '../components/BookingMap';
 import { MapScreen } from '../components/MapScreen';
 import { PlacesInput } from '../components/PlacesInput';
+import { SavedPlaceChips, SaveThisPlace } from '../components/SavedPlaces';
+import { placeAt, useSavedPlaces } from '../services/savedPlaces';
 import { geocodeAddress } from '../services/googleMaps';
 import { ChildChip } from './ParentDashboard';
 import { useRide } from '../contexts/RideContext';
@@ -65,6 +67,10 @@ export const BookRide = () => {
   const [dropoff, setDropoff] = useState('');
   const [pickupCoords, setPickupCoords] = useState<PlaceCoords | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<PlaceCoords | null>(null);
+  // Saved places (Home, School, Piano lesson) picked with one tap; they carry coordinates, so fares use real distance.
+  const { places: savedPlaces, unavailable: placesUnavailable } = useSavedPlaces();
+  const pickupPlace = placeAt(savedPlaces, pickup, pickupCoords);
+  const dropoffPlace = placeAt(savedPlaces, dropoff, dropoffCoords);
   const [when, setWhen] = useState<'now' | 'later' | 'weekly'>(params.get('when') === 'later' ? 'later' : params.get('when') === 'weekly' ? 'weekly' : 'now');
   // Repeating school-week plan: weekdays, local pickup time, first and last day.
   const [plan, setPlan] = useState<SeriesPlan>(() => {
@@ -267,9 +273,16 @@ export const BookRide = () => {
           <>
             <Heading title={`Where ${several ? 'are' : 'is'} ${childName} going?`} />
             <div className="relative z-20 space-y-1">
-              <PlacesInput label="Pickup" placeholder="Home, school, an address" value={pickup} onChange={(text) => { setPickup(text); setPickupCoords(null); }} onSelect={({ address, coords }) => { setPickup(address); setPickupCoords(coords); }} />
-              <PlacesInput label="Drop-off" placeholder="Where to?" value={dropoff} onChange={(text) => { setDropoff(text); setDropoffCoords(null); }} onSelect={({ address, coords }) => { setDropoff(address); setDropoffCoords(coords); }} />
+              <PlacesInput label="Pickup" placeholder={savedPlaces.length ? 'Search, or pick a saved place' : 'Home, school, an address'} value={pickup} picked={!!pickupCoords} onChange={(text) => { setPickup(text); setPickupCoords(null); }} onSelect={({ address, coords }) => { setPickup(address); setPickupCoords(coords); }} />
+              <SavedPlaceChips label="Pickup" places={savedPlaces} selectedId={pickupPlace?.id} disabledId={dropoffPlace?.id} onPick={(place) => { setPickup(place.address); setPickupCoords(place.coords); }} />
+              {!pickupPlace && <SaveThisPlace address={pickup} coords={pickupCoords} />}
+              <PlacesInput label="Drop-off" placeholder={savedPlaces.length ? 'Search, or pick a saved place' : 'Where to?'} value={dropoff} picked={!!dropoffCoords} onChange={(text) => { setDropoff(text); setDropoffCoords(null); }} onSelect={({ address, coords }) => { setDropoff(address); setDropoffCoords(coords); }} />
+              <SavedPlaceChips label="Drop-off" places={savedPlaces} selectedId={dropoffPlace?.id} disabledId={pickupPlace?.id} onPick={(place) => { setDropoff(place.address); setDropoffCoords(place.coords); }} />
+              {!dropoffPlace && <SaveThisPlace address={dropoff} coords={dropoffCoords} />}
             </div>
+            {!savedPlaces.length && !placesUnavailable && !pickup && !dropoff && (
+              <p className="text-label text-muted">Tip: save Home, School and activities in <button type="button" onClick={() => navigate('/profile')} className="font-semibold text-brand-deep hover:underline">Profile</button> to book them with one tap.</p>
+            )}
             {routeInfo && pickupCoords && dropoffCoords && <p className="text-label text-muted">About {routeInfo.duration}, {routeInfo.distance}.</p>}
           </>
         )}

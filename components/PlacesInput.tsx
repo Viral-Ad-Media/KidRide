@@ -15,6 +15,8 @@ interface PlacesInputProps {
   onChange: (text: string) => void;
   /** Called with the chosen address and its coordinates. */
   onSelect: (place: { address: string; coords: LatLng }) => void;
+  /** True while the value is an exact place (a picked suggestion or saved place), so no suggestions are fetched. */
+  picked?: boolean;
 }
 
 interface Suggestion {
@@ -23,7 +25,7 @@ interface Suggestion {
   prediction: google.maps.places.PlacePrediction;
 }
 
-export const PlacesInput: React.FC<PlacesInputProps> = ({ label, placeholder, value, onChange, onSelect }) => {
+export const PlacesInput: React.FC<PlacesInputProps> = ({ label, placeholder, value, onChange, onSelect, picked = false }) => {
   const mapsState = useGoogleMaps();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -34,6 +36,7 @@ export const PlacesInput: React.FC<PlacesInputProps> = ({ label, placeholder, va
   useEffect(() => {
     if (mapsState.status !== 'ready') return;
     if (skipNext.current) { skipNext.current = false; return; }
+    if (picked) { setSuggestions([]); return; }
     const text = value.trim();
     if (text.length < 3) { setSuggestions([]); return; }
     const places = mapsState.maps.places;
@@ -53,7 +56,7 @@ export const PlacesInput: React.FC<PlacesInputProps> = ({ label, placeholder, va
         .catch(() => { if (request === latest.current) setSuggestions([]); });
     }, 250);
     return () => clearTimeout(timer);
-  }, [value, mapsState.status]);
+  }, [value, mapsState.status, picked]);
 
   const choose = async (suggestion: Suggestion) => {
     setOpen(false);
