@@ -59,7 +59,7 @@ export const AddChild = () => {
 
   if (isEdit && !existing) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 text-center">
+      <div className="space-y-4 text-center">
         <p className="text-slate-600">This child profile could not be found.</p>
         <Button onClick={() => navigate('/dashboard')}>Back to dashboard</Button>
       </div>
@@ -67,8 +67,9 @@ export const AddChild = () => {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
+    <div className="space-y-6 animate-fade-in">
+      {/* Desktop shows the page title in the shell, so this header is for phones. */}
+      <div className="flex items-center gap-4 lg:hidden">
         <button onClick={() => navigate(-1)} className="rounded-full p-2 hover:bg-gray-100">
           <ArrowLeft size={24} />
         </button>

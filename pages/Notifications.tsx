@@ -80,7 +80,7 @@ export const Notifications = () => {
   return (
     // A plain list, the way Uber and Bolt do it: day headings, hairlines between
     // rows, an unread dot, no boxes around boxes.
-    <div className="max-w-2xl">
+    <div>
       <PushPrompt className="mb-6" />
       {groups.map((group) => (
         <section key={group.label} className="mb-6">

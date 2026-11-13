@@ -45,9 +45,10 @@ const formatDate = (value?: string | null) => {
 
 export const AdminTabs = () => {
   const cls = ({ isActive }: { isActive: boolean }) =>
-    `rounded-full px-4 py-2 text-sm font-semibold transition ${isActive ? 'bg-ink text-white' : 'bg-surface-2 text-muted hover:bg-line'}`;
+    `shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${isActive ? 'bg-ink text-white' : 'bg-surface-2 text-muted hover:bg-line'}`;
   return (
-    <div className="mb-6 flex flex-wrap gap-2">
+    // Phones and tablets only: on desktop the sidebar already lists these pages.
+    <div className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
       <NavLink to="/admin" end className={cls}>Driver applications</NavLink>
       <NavLink to="/admin/drivers" className={cls}>Drivers</NavLink>
       <NavLink to="/admin/parents" className={cls}>Parents</NavLink>

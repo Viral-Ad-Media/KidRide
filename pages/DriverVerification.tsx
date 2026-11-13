@@ -71,7 +71,7 @@ export const DriverVerification = () => {
 
   if (active) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="max-w-xl">
         <h2 className="mb-1 text-title font-extrabold tracking-tight">{CHECK_LABELS[active.kind]}</h2>
         <p className="mb-5 text-label text-muted">{active.reasonLabel}</p>
         {active.kind === 'liveness'
@@ -93,7 +93,7 @@ export const DriverVerification = () => {
   const { identity } = data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <p className="text-label text-muted">Parents trust KidRide because every driver is who they say they are. We may ask you to verify again from time to time.</p>
       </div>

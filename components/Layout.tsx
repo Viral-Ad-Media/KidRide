@@ -18,6 +18,7 @@ import {
   X,
   Tag,
   ShieldCheck,
+  Siren,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,12 +50,14 @@ const pageTitles: Record<string, string> = {
   '/profile/payments': 'Payments',
   '/driver-dashboard': 'Jobs',
   '/driver-map': 'Map',
-  '/admin': 'Applications',
+  '/admin': 'Driver applications',
+  '/edit-child': 'Edit child',
   '/admin/drivers': 'Drivers',
   '/admin/parents': 'Parents',
   '/admin/live-map': 'Live map',
   '/admin/rides': 'Rides',
   '/admin/pricing': 'Pricing',
+  '/admin/safety': 'Safety',
   '/earnings': 'Earnings',
   '/driver-verification': 'Verification',
   '/admin/verification': 'Verification'
@@ -87,10 +90,22 @@ const adminNavItems: NavItem[] = [
   { icon: Navigation, label: 'Live map', path: '/admin/live-map' },
   { icon: Tag, label: 'Pricing', path: '/admin/pricing' },
   { icon: ShieldCheck, label: 'Verification', path: '/admin/verification' },
+  { icon: Siren, label: 'Safety', path: '/admin/safety' },
   { icon: User, label: 'Profile', path: '/profile' }
 ];
 
-const resolveRouteKey = (pathname: string) => (pathname.startsWith('/tracking/') ? '/tracking/:id' : pathname.startsWith('/edit-child/') ? '/add-child' : pathname);
+// Phones get at most five bottom tabs; the rest of admin is in the page's tab strip.
+const adminPhoneTabs = new Set(['/admin', '/admin/drivers', '/admin/rides', '/admin/live-map', '/profile']);
+
+// Desktop pages sit in one centred column. Its width follows the kind of page so a
+// short form is not stretched across a wide monitor and admin tables get room.
+const columnWidthFor = (pathname: string): string => {
+  if (pathname.startsWith('/admin')) return 'max-w-[1280px]';
+  if (['/driver-dashboard', '/earnings', '/rides', '/driver-map'].includes(pathname)) return 'max-w-[960px]';
+  return 'max-w-[760px]';
+};
+
+const resolveRouteKey = (pathname: string) => (pathname.startsWith('/tracking/') ? '/tracking/:id' : pathname.startsWith('/edit-child/') ? '/edit-child' : pathname);
 
 const userInitials = (name: string | undefined) =>
   (name || '').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'KR';
@@ -152,9 +167,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-surface text-ink">
       <div className="flex min-h-screen">
-        {/* Icon rail / sidebar */}
+        {/* Icon rail / sidebar. The rail always takes 72px; when it opens with labels it
+            slides over the page instead of pushing it, so nothing on the page jumps. */}
+        <div className="sticky top-0 z-50 hidden h-screen w-[72px] shrink-0 lg:block">
         <aside
-          className={`sticky top-0 hidden h-screen shrink-0 overflow-hidden transition-[width] duration-200 ease-out lg:block ${expanded ? 'w-60' : 'w-[72px]'}`}
+          className={`absolute inset-y-0 left-0 overflow-hidden transition-[width,box-shadow] duration-200 ease-out ${expanded ? 'w-60 shadow-float' : 'w-[72px]'}`}
           onMouseEnter={() => setExpanded(true)}
           onMouseLeave={() => setExpanded(false)}
           onFocus={() => setExpanded(true)}
@@ -205,6 +222,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
          </div>
         </aside>
+        </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Phone top bar */}
@@ -222,9 +240,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <main className="flex-1">{children}</main>
           ) : (
             <main className="flex-1 pb-24 lg:pb-10">
-              <div className="mx-auto w-full max-w-[1180px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8">
-                {/* Home screens open with their own greeting, so no page title there. */}
-                {location.pathname !== homePath && <h1 className="mb-6 hidden text-headline font-extrabold tracking-tight lg:block">{title}</h1>}
+              <div className={`mx-auto w-full px-4 pt-5 sm:px-6 lg:px-8 lg:pt-10 ${columnWidthFor(location.pathname)}`}>
+                {/* Parent and driver home screens open with their own greeting, so no page title there. */}
+                {(location.pathname !== homePath || isAdmin) && <h1 className="mb-6 hidden text-headline font-extrabold tracking-tight lg:block">{title}</h1>}
                 {children}
               </div>
             </main>
@@ -234,7 +252,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Phone bottom tabs */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {navItems.map((item) => {
+        {(isAdmin ? navItems.filter((item) => adminPhoneTabs.has(item.path)) : navItems).map((item) => {
           const active = location.pathname === item.path;
           return (
             <button key={item.path} type="button" onClick={() => navigate(item.path)} aria-current={active ? 'page' : undefined} className={`flex min-w-0 flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-[11px] ${active ? 'font-semibold text-brand-deep' : 'font-medium text-muted'}`}>

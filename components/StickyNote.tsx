@@ -34,7 +34,8 @@ const initialPos = (id: string): Pos => {
     const saved = JSON.parse(read(key(id, '.pos')) || 'null');
     if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') return clamp(saved, 0);
   } catch { /* fall through to default */ }
-  return { x: window.innerWidth - WIDTH - 24, y: DEFAULT_TOP };
+  // Bottom-right by default, clear of page headers and their controls.
+  return { x: window.innerWidth - WIDTH - 24, y: Math.max(DEFAULT_TOP, window.innerHeight - 260) };
 };
 
 export const StickyNote: React.FC<StickyNoteProps> = ({ id, title, lines, className = '' }) => {
