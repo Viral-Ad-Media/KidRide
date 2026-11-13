@@ -353,6 +353,17 @@ export const Profile = () => {
                 <span className="font-medium text-gray-700">{user?.role === UserRole.DRIVER ? 'Payouts' : 'Payment Methods'}</span>
                 <ChevronRight size={20} className="text-gray-400" />
             </div>
+            {user?.role === UserRole.PARENT && (
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate('/plans')}
+                className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-center active:bg-gray-100"
+            >
+                <span className="font-medium text-gray-700">Monthly plan</span>
+                <ChevronRight size={20} className="text-gray-400" />
+            </div>
+            )}
         </div>
 
         <AccountPrivacy />

@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { AdminTabs } from './Admin';
 import { Button } from '../components/UIComponents';
 import { FareBreakdown } from '../components/FareBreakdown';
+import { AdminPlans } from '../components/AdminPlans';
 import { apiRequest, getStoredToken } from '../services/api';
 import { FareBreakdown as Fare } from '../types';
 import { formatMoney } from '../utils/rideData';
@@ -218,6 +219,7 @@ export const AdminPricing = () => {
           <Button fullWidth onClick={() => void save()} disabled={saving || !!previewError}>{saving ? 'Saving...' : 'Save rates'}</Button>
         </aside>
       </div>
+      <AdminPlans currency={currency} />
     </div>
   );
 };

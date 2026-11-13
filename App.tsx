@@ -32,6 +32,7 @@ import {
 } from './pages/Marketing';
 import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pages/Admin';
 import { AdminPricing } from './pages/AdminPricing';
+import { Plans } from './pages/Plans';
 import { AdminSafety } from './pages/AdminSafety';
 import { AdminVerification } from './pages/AdminVerification';
 import { DriverVerification } from './pages/DriverVerification';
@@ -210,6 +211,7 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/plans" element={<ProtectedRoute roles={[UserRole.PARENT]}><Plans /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route
         path="/profile/notifications"

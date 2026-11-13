@@ -55,6 +55,7 @@ const pageTitles: Record<string, string> = {
   '/admin/live-map': 'Live map',
   '/admin/rides': 'Rides',
   '/admin/pricing': 'Pricing',
+  '/plans': 'Monthly plans',
   '/earnings': 'Earnings',
   '/driver-verification': 'Verification',
   '/admin/verification': 'Verification'

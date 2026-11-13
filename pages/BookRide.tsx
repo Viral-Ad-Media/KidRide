@@ -17,6 +17,7 @@ import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalI
 import { RepeatPlanPicker } from '../components/RepeatingRides';
 import { RideSeries, SCHOOL_DAYS, SeriesPlan, SeriesPreview, addDays, bookSeries, describeDays, formatClock, formatDay, planDays, previewSeries, validatePlan, ymd } from '../services/rideSeries';
 import { CardSetup } from '../components/payments/CardSetup';
+import { QuotePlan } from '../services/plans';
 import { fetchPaymentConfig } from '../services/payments';
 
 // Booking as one sheet per question over the map, the way Uber and Bolt do
@@ -79,6 +80,7 @@ export const BookRide = () => {
   const [serviceType, setServiceType] = useState<ServiceType>(ServiceType.PICKUP);
   const [stayMinutes, setStayMinutes] = useState(60);
   const [quotes, setQuotes] = useState<Record<string, Quote> | null>(null);
+  const [quotePlan, setQuotePlan] = useState<QuotePlan | null>(null);
   const [pricing, setPricing] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ duration: string; distance: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,11 +101,11 @@ export const BookRide = () => {
     if (step !== 'service') return;
     let live = true;
     setQuotes(null); setPricing(true); setError(null);
-    apiRequest<{ quotes: Record<string, Quote> }>('/rides/quotes', {
+    apiRequest<{ quotes: Record<string, Quote>; plan?: QuotePlan }>('/rides/quotes', {
       method: 'POST', token: getStoredToken(),
       body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when !== 'now', pickupTime: pickupIso, stayMinutes, childCount: childIds.length }
     })
-      .then((result) => { if (live) setQuotes(result.quotes); })
+      .then((result) => { if (live) { setQuotes(result.quotes); setQuotePlan(result.plan || null); } })
       .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price this trip.'); })
       .finally(() => { if (live) setPricing(false); });
     return () => { live = false; };
@@ -327,6 +329,13 @@ export const BookRide = () => {
                 </select>
               </label>
             )}
+            {quotePlan && (
+              <p className="mt-3 rounded-card bg-surface-2 px-3 py-2 text-caption text-ink">
+                {quotePlan.ridesLeftThisWeek > 0
+                  ? `${quotePlan.name} plan: ${quotePlan.ridesLeftThisWeek} of ${quotePlan.ridesPerWeek} discounted rides left this week. Prices above include your discount.`
+                  : `${quotePlan.name} plan: this week's ${quotePlan.ridesPerWeek} discounted rides are used, so this ride is the normal fare.`}
+              </p>
+            )}
             {quote && quote.distanceSource !== 'none' && <p className="mt-3 text-caption text-muted">Priced for {quote.miles.toFixed(1)} mi, about {quote.minutes} min. The price is fixed when you book.</p>}
           </>
         )}
@@ -368,7 +377,7 @@ export const BookRide = () => {
               )}
             </dl>
             {when === 'weekly'
-              ? <p className="mt-3 px-1 text-caption text-muted">Each ride is priced and charged on its own, so a school-run peak day can cost a little more. Rides are booked a week ahead; skip a day or cancel any time from Rides.</p>
+              ? <p className="mt-3 px-1 text-caption text-muted">Each ride is priced and charged on its own, so a school-run peak day can cost a little more. Rides are booked a week ahead; skip a day or cancel any time from Rides.{quotePlan ? ' Your monthly plan discount is added to each ride, up to your weekly limit.' : ''}</p>
               : quote && <FareBreakdown fare={quote} currency={quote.currency} showTotal={false} className="mt-3 px-1" />}
             {payment.enabled && (
               <div className="mt-4 rounded-card border border-line bg-white p-4">
