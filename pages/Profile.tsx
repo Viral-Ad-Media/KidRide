@@ -10,6 +10,7 @@ import { AccountPrivacy } from '../components/AccountPrivacy';
 import { CardSetup } from '../components/payments/CardSetup';
 import { DriverPayouts } from '../components/payments/DriverPayouts';
 import { fetchPaymentConfig } from '../services/payments';
+import { SavedPlacesCard } from '../components/SavedPlaces';
 import { fetchPushConfig, isPushOn, pushPermission, pushSupport, sendTestPush, turnPushOff, turnPushOn } from '../services/push';
 
 // Name and phone are editable here; vehicle details are part of the verified
@@ -253,6 +254,8 @@ export const Profile = () => {
         </div>
 
         <AccountDetails />
+
+        {user?.role === UserRole.PARENT && <SavedPlacesCard />}
 
         {user?.role === UserRole.DRIVER && user.driverApplicationStatus === 'approved' && <DriverReviews driverId={user.id} />}
 

@@ -11,6 +11,7 @@ import {
   mapUser,
   setStoredToken
 } from '../services/api';
+import { clearSavedPlaces } from '../services/savedPlaces';
 
 const USER_STORAGE_KEY = 'kidride_user';
 
@@ -123,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearSession = () => {
+    clearSavedPlaces();
     setUser(null);
 
     if (typeof window !== 'undefined') {
