@@ -7,6 +7,9 @@ import { UserRole } from '../types';
 import { DriverApplicationStatus } from '../components/DriverApplicationStatus';
 import { DriverReviews } from '../components/Ratings';
 import { AccountPrivacy } from '../components/AccountPrivacy';
+import { CardSetup } from '../components/payments/CardSetup';
+import { DriverPayouts } from '../components/payments/DriverPayouts';
+import { fetchPaymentConfig } from '../services/payments';
 import { fetchPushConfig, isPushOn, pushPermission, pushSupport, sendTestPush, turnPushOff, turnPushOn } from '../services/push';
 
 // Name and phone are editable here; vehicle details are part of the verified
@@ -175,15 +178,21 @@ export const NotificationSettings = () => {
 
 export const PaymentMethods = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  useEffect(() => { fetchPaymentConfig().then((config) => setEnabled(config.enabled)).catch(() => setEnabled(false)); }, []);
   return (
      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-4">
             <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
                 <ArrowLeft size={24} />
             </button>
-            <h2 className="text-xl font-bold text-gray-900">Payment Methods</h2>
+            <h2 className="text-xl font-bold text-gray-900">{user?.role === UserRole.DRIVER ? 'Payouts' : 'Payment Methods'}</h2>
         </div>
 
+        {enabled && user?.role === UserRole.PARENT && <CardSetup />}
+        {enabled && user?.role === UserRole.DRIVER && <DriverPayouts />}
+        {enabled === false && (
         <div className="space-y-4">
              <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-200 text-center shadow-sm">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand-deep">
@@ -196,6 +205,7 @@ export const PaymentMethods = () => {
                 </p>
              </div>
         </div>
+        )}
      </div>
   );
 };
@@ -340,7 +350,7 @@ export const Profile = () => {
                 onClick={() => navigate('/profile/payments')}
                 className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-center active:bg-gray-100"
             >
-                <span className="font-medium text-gray-700">Payment Methods</span>
+                <span className="font-medium text-gray-700">{user?.role === UserRole.DRIVER ? 'Payouts' : 'Payment Methods'}</span>
                 <ChevronRight size={20} className="text-gray-400" />
             </div>
         </div>

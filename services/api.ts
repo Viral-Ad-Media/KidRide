@@ -371,6 +371,7 @@ export const mapRide = (raw: unknown): Ride => {
     safetyAlert: typeof ride.safetyAlert === 'string' && SAFETY_ALERTS.includes(ride.safetyAlert as SafetyAlert) ? ride.safetyAlert as SafetyAlert : null,
     safetyAlertAt: typeof ride.safetyAlertAt === 'string' ? ride.safetyAlertAt : null,
     cancelReason: ride.cancelReason === 'no_show' ? 'no_show' : null,
+    payment: ride.payment && typeof ride.payment === 'object' ? ride.payment as Ride['payment'] : null,
     serviceType: validServiceTypes.has(rawServiceType)
       ? (rawServiceType as ServiceType)
       : ServiceType.PICKUP

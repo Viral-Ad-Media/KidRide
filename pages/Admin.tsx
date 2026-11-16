@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Loader2, RefreshCw, X, XCircle } from 'lucide-react';
 import { ConfirmModal, Modal, StatusChip } from '../components/UIComponents';
 import { ScheduleChip } from '../components/UpcomingRides';
+import { AdminPaymentLine } from '../components/payments/AdminPaymentLine';
 import { ApiError, RideScope } from '../services/api';
 import {
   AdminRide,
@@ -616,6 +617,7 @@ export const AdminRides = () => {
                       {ride.fare ? (ride.fare.distanceSource === 'none' ? ' - distance unknown' : ` - ${ride.fare.miles.toFixed(1)} mi, ${ride.fare.minutes} min${ride.fare.distanceSource === 'estimate' ? ' (estimated)' : ''}`) : ' - flat price'}
                       {ride.cancellationFee ? ` - Cancellation fee ${formatRidePrice(ride.cancellationFee, '', ride.currency)}` : ''}
                     </p>
+                    <AdminPaymentLine ride={ride} onChanged={(message) => { setFlash(message); void load(); }} />
                     <RideIncidents ride={ride} onResolved={() => { setFlash('Incident marked handled.'); void load(); }} />
                     {ride.fare && (
                       <details className="mt-1 max-w-sm text-xs">

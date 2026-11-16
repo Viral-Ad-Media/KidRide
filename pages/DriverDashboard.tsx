@@ -11,6 +11,7 @@ import { LiveMap } from '../components/LiveMap';
 import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
 import { DriverIdleMap } from '../components/DriverIdleMap';
 import { apiRequest, fetchDriverSummary, getStoredToken } from '../services/api';
+import { PayoutSetupNudge } from '../components/payments/DriverPayouts';
 import { SosButton } from '../components/SafetyActions';
 import { RideStatus } from '../types';
 import { childCountLabel, formatPickupTime, formatRidePrice, rideChildNames, rideEarnings } from '../utils/rideData';
@@ -246,6 +247,8 @@ export const DriverDashboard = () => {
         <div className="px-4 py-4"><p className="text-xs text-muted">Trips</p><p className="mt-1 text-title font-extrabold tabular-nums">{isMetricsLoading ? '--' : completedCount}</p></div>
         <div className="px-4 py-4"><p className="text-xs text-muted">Rating</p><p className="mt-1 text-title font-extrabold tabular-nums">{rating?.count && rating.average !== null ? `\u2605 ${rating.average.toFixed(1)}` : '\u2013'}</p></div>
       </div>
+
+      <PayoutSetupNudge />
 
       {verificationRequired && (
         <p role="alert" className="text-label text-ink">
