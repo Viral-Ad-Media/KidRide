@@ -10,8 +10,9 @@ import { PushPrompt } from '../components/AlertBanners';
 import { LiveMap } from '../components/LiveMap';
 import { DriverUpcomingRides, ScheduleChip } from '../components/UpcomingRides';
 import { DriverIdleMap } from '../components/DriverIdleMap';
-import { apiRequest, fetchDriverSummary, getStoredToken } from '../services/api';
+import { apiRequest, fetchDriverSummary, getStoredToken, updateRideStop } from '../services/api';
 import { PayoutSetupNudge } from '../components/payments/DriverPayouts';
+import { RideStops, currentStop, stopRiders } from '../components/RideStops';
 import { SosButton } from '../components/SafetyActions';
 import { RideStatus } from '../types';
 import { childCountLabel, formatPickupTime, formatRidePrice, rideChildNames, rideEarnings } from '../utils/rideData';
@@ -131,6 +132,7 @@ export const DriverDashboard = () => {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
+  const [stopBusy, setStopBusy] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [isMetricsLoading, setIsMetricsLoading] = useState(true);
   // Reload the totals when the current trip finishes so they include it.
@@ -210,23 +212,24 @@ export const DriverDashboard = () => {
   // Every child on the ride by first name, so the driver greets the right children at the pickup.
   const childName = (activeRide && rideChildNames(activeRide)) || 'the child';
   const several = (activeRide?.childIds?.length || activeRide?.childCount || 1) > 1;
+  const nextStop = activeRide ? currentStop(activeRide) : undefined;
   const offerOpen = !!activeRide && [RideStatus.REQUESTED, RideStatus.SEARCHING_DRIVER].includes(activeRide.status);
   const tripHeadline = !activeRide ? ''
     : activeRide.status === RideStatus.DRIVER_ASSIGNED ? 'Head to the pickup'
     : activeRide.status === RideStatus.DRIVER_ARRIVED ? `Waiting for ${childName}`
+    : activeRide.status === RideStatus.IN_PROGRESS && nextStop ? (nextStop.status === 'arrived' ? `At stop ${nextStop.index + 1}` : `Driving to stop ${nextStop.index + 1}`)
     : activeRide.status === RideStatus.IN_PROGRESS ? `Driving ${childName} to the drop-off`
     : activeRide.status === RideStatus.COMPLETED ? 'Trip complete' : '';
 
-  // Pickup and drop-off as a two-stop line: Marigold ring for the pickup, navy dot for the drop-off.
-  const stops = (pickupDone = false) => (
-    <div className="grid grid-cols-[14px_1fr] gap-x-3 gap-y-1">
-      <span className="mt-1.5 h-3 w-3 rounded-full border-[3px] border-accent bg-white" />
-      <p className={`text-body font-semibold ${pickupDone ? 'text-muted line-through' : ''}`}>{activeRide?.pickupLocation}</p>
-      <span className="ml-[5px] h-5 w-0.5 bg-line" /><span />
-      <span className="mt-1.5 h-3 w-3 rounded-full bg-ink" />
-      <p className="text-body font-semibold">{activeRide?.dropoffLocation}</p>
-    </div>
-  );
+  // Extra stops are done in order while the children are in the car: arrive, then finish.
+  const handleStop = async (action: 'arrive' | 'complete') => {
+    if (!activeRide || !nextStop) return;
+    setStopBusy(true);
+    try { setError(null); await updateRideStop(activeRide.id, nextStop.index, action); await refreshActiveRide(); }
+    catch (stopError) { setError(stopError instanceof Error && stopError.message ? `Could not update the stop: ${stopError.message}` : 'Could not update the stop. Check your connection and try again.'); }
+    finally { setStopBusy(false); }
+  };
+  const nextStopRiders = activeRide && nextStop ? stopRiders(activeRide, nextStop) : '';
 
   return (
     <div className="space-y-6">
@@ -286,11 +289,11 @@ export const DriverDashboard = () => {
                   <p className="text-label font-semibold text-brand-deep">New request{activeRide.isScheduled ? ' (booked ahead)' : ''}</p>
                   <p className="mt-1 text-display font-extrabold tabular-nums tracking-tight">{formatRidePrice(rideEarnings(activeRide), undefined, activeRide.currency)}</p>
                   <p className="text-caption text-muted">You earn{activeRide.fare ? ` · ${activeRide.fare.miles.toFixed(1)} mi, about ${activeRide.fare.minutes} min` : ''}</p>
-                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} · {childCountLabel(activeRide)} · Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
+                  <p className="text-label text-muted">{humanizeStatus(activeRide.serviceType)} · {childCountLabel(activeRide)}{activeRide.stops?.length ? ` · ${activeRide.stops.length} extra stop${activeRide.stops.length > 1 ? 's' : ''}` : ''} · Pickup {formatPickupTime(activeRide.pickupTime, 'now')}</p>
                 </div>
                 {activeRide.offerExpiresAt && <OfferCountdown expiresAt={activeRide.offerExpiresAt} />}
               </div>
-              <div className="mx-5 mt-4 border-t border-line pt-4">{stops()}</div>
+              <RideStops ride={activeRide} pickupDone={false} className="mx-5 mt-4 border-t border-line pt-4" />
               <div className="mt-5 grid grid-cols-[1fr_2fr] gap-3 px-5 pb-5">
                 <Button variant="secondary" onClick={() => void handleDecline()} disabled={isDeclining}>{isDeclining ? '...' : 'Decline'}</Button>
                 <Button onClick={() => handleStatusUpdate(RideStatus.DRIVER_ASSIGNED)} disabled={isDeclining}>Accept</Button>
@@ -312,12 +315,13 @@ export const DriverDashboard = () => {
                 </span>
                 <span className="text-right text-lead font-extrabold">{activeRide.safeWord || 'Pending'}</span>
               </div>
-              <div className="mx-5 mt-4">{stops(activeRide.status === RideStatus.IN_PROGRESS)}</div>
+              <RideStops ride={activeRide} pickupDone={activeRide.status === RideStatus.IN_PROGRESS} className="mx-5 mt-4" />
               <LiveMap
                 pickup={activeRide.pickupLocation}
                 dropoff={activeRide.dropoffLocation}
                 pickupCoords={activeRide.pickupCoords}
                 dropoffCoords={activeRide.dropoffCoords}
+                stops={activeRide.stops}
                 driverLocation={activeRide.driverLocation}
                 nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
                 className="mt-4 h-64 rounded-none"
@@ -326,7 +330,13 @@ export const DriverDashboard = () => {
                 {activeRide.status === RideStatus.DRIVER_ASSIGNED && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.DRIVER_ARRIVED)}>I've arrived at the pickup</Button>}
                 {activeRide.status === RideStatus.DRIVER_ARRIVED && <TripCodeEntry childName={childName} onSubmit={(code) => updateRideStatus(RideStatus.IN_PROGRESS, code)} />}
                 {activeRide.status === RideStatus.DRIVER_ARRIVED && <NoShowAction key={activeRide.arrivedAt || activeRide.id} rideId={activeRide.id} childName={childName} onConfirm={markNoShow} />}
-                {activeRide.status === RideStatus.IN_PROGRESS && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.COMPLETED)} className="bg-success text-white hover:brightness-95">Dropped off</Button>}
+                {activeRide.status === RideStatus.IN_PROGRESS && nextStop && nextStop.status !== 'arrived' && <Button fullWidth disabled={stopBusy} onClick={() => void handleStop('arrive')}>I've arrived at stop {nextStop.index + 1}</Button>}
+                {activeRide.status === RideStatus.IN_PROGRESS && nextStop?.status === 'arrived' && (
+                  <Button fullWidth disabled={stopBusy} onClick={() => void handleStop('complete')} className="bg-success text-white hover:brightness-95">
+                    {nextStopRiders ? `Dropped off ${nextStopRiders}` : `Done at stop ${nextStop.index + 1}`}
+                  </Button>
+                )}
+                {activeRide.status === RideStatus.IN_PROGRESS && !nextStop && <Button fullWidth onClick={() => handleStatusUpdate(RideStatus.COMPLETED)} className="bg-success text-white hover:brightness-95">Dropped off</Button>}
                 {activeRide.status === RideStatus.COMPLETED && <p className="flex items-center justify-center gap-2 text-label font-semibold text-success"><CheckCircle size={18} /> Ride completed</p>}
                 {activeRide.status === RideStatus.COMPLETED && !ratedFamily.has(activeRide.id) && <Button fullWidth variant="secondary" onClick={() => setRatingFamilyRideId(activeRide.id)}>Rate the family</Button>}
                 {![RideStatus.IN_PROGRESS, RideStatus.COMPLETED, RideStatus.CANCELLED].includes(activeRide.status) && (

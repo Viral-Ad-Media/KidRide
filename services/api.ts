@@ -1,4 +1,4 @@
-import { AssignedDriver, Child, Ride, RideStatus, SafetyAlert, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
+import { AssignedDriver, Child, Ride, RideStatus, RideStop, SafetyAlert, SCHEDULE_STATES, ScheduleState, ServiceType, User, UserRole, VehicleDetails } from '../types';
 
 const LOCAL_API_BASE_URL = 'http://localhost:5000/api';
 const DEPLOYED_API_BASE_URL = 'https://kidride-backend.vercel.app/api';
@@ -112,6 +112,9 @@ const isRawBody = (body: RequestBody): body is BodyInit => (
   body instanceof ArrayBuffer ||
   ArrayBuffer.isView(body)
 );
+
+/** Driver: arrive at, or finish, the next extra stop of their trip. */
+export const updateRideStop = (rideId: string, index: number, action: 'arrive' | 'complete') => apiRequest<unknown>(`/rides/${encodeURIComponent(rideId)}/stops/${index}`, { method: 'PUT', token: getStoredToken(), body: { action } });
 
 export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {}): Promise<T> => {
   const { token, body, headers, timeoutMs = 20000, ...rest } = options;
@@ -365,6 +368,16 @@ export const mapRide = (raw: unknown): Ride => {
     offerExpiresAt: typeof ride.offerExpiresAt === 'string' ? ride.offerExpiresAt : null,
     nearbyDrivers: ride.dispatch && typeof (ride.dispatch as { nearbyDrivers?: unknown }).nearbyDrivers === 'number' ? (ride.dispatch as { nearbyDrivers: number }).nearbyDrivers : null,
     dropoffCoords: ride.dropoffCoords && typeof ride.dropoffCoords === 'object' ? ride.dropoffCoords as Ride['dropoffCoords'] : null,
+    stops: Array.isArray(ride.stops) ? (ride.stops as Record<string, unknown>[]).filter((stop) => stop && typeof stop.address === 'string').map((stop, index) => ({
+      index: typeof stop.index === 'number' ? stop.index : index,
+      address: String(stop.address),
+      coords: stop.coords && typeof stop.coords === 'object' ? stop.coords as RideStop['coords'] : null,
+      note: typeof stop.note === 'string' ? stop.note : null,
+      childIds: Array.isArray(stop.childIds) ? (stop.childIds as unknown[]).filter((id): id is string => typeof id === 'string') : [],
+      status: stop.status === 'arrived' || stop.status === 'done' ? stop.status : 'pending',
+      arrivedAt: typeof stop.arrivedAt === 'string' ? stop.arrivedAt : null,
+      completedAt: typeof stop.completedAt === 'string' ? stop.completedAt : null
+    })) : [],
     arrivedAt: typeof ride.arrivedAt === 'string' ? ride.arrivedAt : null,
     tripCodeVerified: ride.tripCodeVerified === true,
     tripCodeAttempts: typeof ride.tripCodeAttempts === 'number' ? ride.tripCodeAttempts : 0,

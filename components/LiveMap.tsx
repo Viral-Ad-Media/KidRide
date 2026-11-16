@@ -4,7 +4,7 @@ import { MapPinOff } from 'lucide-react';
 import { LatLng, computeRoute, useGoogleMaps } from '../services/googleMaps';
 import { BRAND, createDashedLine, createKidRideMap, createRouteLine } from '../services/mapStyle';
 import { DriverLocation } from '../types';
-import { HtmlMarker, carHtml, createHtmlMarker, stopPinHtml } from './mapMarkers';
+import { HtmlMarker, carHtml, createHtmlMarker, numberPinHtml, stopPinHtml } from './mapMarkers';
 import { CarMotion } from '../services/carMotion';
 import { MapControls } from './MapControls';
 
@@ -34,6 +34,8 @@ interface LiveMapProps {
   driverLocation?: DriverLocation | null;
   /** Where the driver is heading next; used for the driver ETA. */
   nextStop?: 'pickup' | 'dropoff';
+  /** Extra stops between pickup and drop-off, in order (numbered pins; the route passes through them). */
+  stops?: { coords: LatLng | null }[];
   /** Chip text on the pins, e.g. "Pickup · Mia". */
   pickupLabel?: string;
   dropoffLabel?: string;
@@ -45,7 +47,7 @@ interface LiveMapProps {
   onRoute?: (info: RouteInfo) => void;
 }
 
-export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, driverLocation, nextStop = 'pickup', pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', className = 'h-full', controlsClassName = 'bottom-24 right-3', noticeClassName = 'bottom-3 left-3 right-16', onRoute }) => {
+export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords, dropoffCoords, stops = [], driverLocation, nextStop = 'pickup', pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', className = 'h-full', controlsClassName = 'bottom-24 right-3', noticeClassName = 'bottom-3 left-3 right-16', onRoute }) => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -92,7 +94,9 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
     const toLatLng = (point: google.maps.LatLng): LatLng => ({ lat: point.lat(), lng: point.lng() });
     pathsRef.current = { trip: [], approach: [] };
 
-    computeRoute(maps, pickupCoords || pickup, dropoffCoords || dropoff).then((route) => {
+    const via = stops.map((stop) => stop.coords).filter((point): point is LatLng => !!point);
+    via.forEach((point, index) => markers.push(createHtmlMarker(maps, { map, position: point, html: numberPinHtml(index + 1), title: `Stop ${index + 1}`, zIndex: 2 })));
+    computeRoute(maps, pickupCoords || pickup, dropoffCoords || dropoff, via).then((route) => {
       routeLine.setPath(route.path);
       pathsRef.current.trip = route.path.map(toLatLng);
       syncRoutes();
@@ -127,7 +131,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({ pickup, dropoff, pickupCoords,
       mapRef.current = null;
     };
     // Rebuild only when the trip itself changes.
-  }, [mapsState.status, pickup, dropoff, pickupCoords?.lat, pickupCoords?.lng, dropoffCoords?.lat, dropoffCoords?.lng, pickupLabel, dropoffLabel]);
+  }, [mapsState.status, pickup, dropoff, pickupCoords?.lat, pickupCoords?.lng, dropoffCoords?.lat, dropoffCoords?.lng, stops.map((stop) => (stop.coords ? `${stop.coords.lat},${stop.coords.lng}` : '')).join('|'), pickupLabel, dropoffLabel]);
 
   // Driver's car: glide to each new GPS fix and face the direction of travel.
   useEffect(() => {

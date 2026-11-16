@@ -81,7 +81,8 @@ export const bookScheduledRide = async (ride: Ride): Promise<Ride> => mapRide(aw
     quoteToken: ride.quoteToken,
     stayMinutes: ride.stayMinutes,
     pickupCoords: ride.pickupCoords,
-    dropoffCoords: ride.dropoffCoords
+    dropoffCoords: ride.dropoffCoords,
+    stops: ride.stopDrafts || []
   }
 }));
 

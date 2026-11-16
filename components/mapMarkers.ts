@@ -102,6 +102,10 @@ export const stopPinHtml = (label: string, color: string, glyph: 'pickup' | 'dro
     </svg>
   </div>`;
 
+/** A numbered extra stop on the route; done stops are greyed. */
+export const numberPinHtml = (n: number, done = false) => `
+  <div style="width:26px;height:26px;border-radius:9999px;background:${done ? '#CBD2DE' : '#fff'};border:3px solid ${done ? '#CBD2DE' : BRAND.ink};color:${BRAND.ink};font:800 12px/20px ${BRAND.font};text-align:center;box-shadow:0 3px 8px rgba(20,33,61,.25)">${n}</div>`;
+
 /** Marigold dot with a pulse, for rides waiting for a driver. */
 export const waitingPinHtml = (selected = false) => `
   <div style="position:relative;width:26px;height:26px">

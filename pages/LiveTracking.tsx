@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
 import { RideStatus } from '../types';
 import { rideChildNames } from '../utils/rideData';
+import { RideStops, currentStop, stopRiders } from '../components/RideStops';
 
 // Tracking, the way DoorDash and Uber do it: a status stepper, one headline
 // that says what is happening and how long it will take, the driver card
@@ -83,6 +84,13 @@ export const LiveTracking = () => {
   const onBoard = status === RideStatus.IN_PROGRESS;
   const arrived = status === RideStatus.DRIVER_ARRIVED;
   const finished = [RideStatus.COMPLETED, RideStatus.CANCELLED].includes(status);
+  const stops = activeRide.stops || [];
+  const nextStop = currentStop(activeRide);
+  // Children already dropped at a finished stop are no longer in the car.
+  const droppedIds = new Set(stops.filter((stop) => stop.status === 'done').flatMap((stop) => stop.childIds));
+  const onboardIds = (activeRide.childIds?.length ? activeRide.childIds : [activeRide.childId]).filter((id) => !droppedIds.has(id));
+  const onboardName = droppedIds.size ? rideChildNames({ ...activeRide, childIds: onboardIds }, user?.children) || childName : childName;
+  const onboardSeveral = droppedIds.size ? onboardIds.length > 1 : several;
   const stepIndex = Math.max(0, STEPS.findIndex((step) => step.status.includes(status)));
   const eta = activeRide.driverLocation ? route.driverEta : undefined;
   const vehicle = driver?.vehicle;
@@ -92,10 +100,11 @@ export const LiveTracking = () => {
     : status === RideStatus.COMPLETED ? `${childName} ${several ? 'have' : 'has'} arrived`
     : searching ? 'Finding a verified driver nearby'
     : arrived ? `${driverFirst} is at the pickup`
-    : onBoard ? (eta ? `${childName} arrives in ${eta}` : `${childName} ${several ? 'are' : 'is'} in the car`)
+    : onBoard ? (eta ? `${onboardName} arrives in ${eta}` : `${onboardName} ${onboardSeveral ? 'are' : 'is'} in the car`)
     : eta ? `${driverFirst} arriving in ${eta}` : `${driverFirst} is on the way`;
   const subline = searching
     ? (activeRide.nearbyDrivers === 0 ? 'No drivers right next to the pickup yet; open to all drivers.' : typeof activeRide.nearbyDrivers === 'number' ? `${activeRide.nearbyDrivers} driver${activeRide.nearbyDrivers === 1 ? '' : 's'} near the pickup` : 'Your request is with nearby drivers.')
+    : onBoard && nextStop ? `${nextStop.status === 'arrived' ? 'At' : 'Heading to'} stop ${nextStop.index + 1} of ${stops.length}: ${nextStop.address}${stopRiders(activeRide, nextStop, user?.children) ? ` (${stopRiders(activeRide, nextStop, user?.children)})` : ''}`
     : onBoard ? `Heading to ${activeRide.dropoffLocation}`
     : finished ? '' : `Pickup at ${activeRide.pickupLocation}${route.tripDuration ? ` · ${route.tripDuration} trip` : ''}`;
 
@@ -138,6 +147,7 @@ export const LiveTracking = () => {
         {(syncError || actionError) && <p className="mt-2 text-label text-warning">{actionError || syncError}</p>}
       </div>
       {!finished && <SafetyAlertNote alert={activeRide.safetyAlert} driverName={driverFirst} />}
+      {stops.length > 0 && status !== RideStatus.CANCELLED && <RideStops ride={activeRide} pickupDone={onBoard || status === RideStatus.COMPLETED} accountChildren={user?.children} className="rounded-card border border-line bg-white p-4" />}
       {!finished && <PushPrompt />}
 
       {driver ? (
@@ -242,6 +252,7 @@ export const LiveTracking = () => {
             dropoff={activeRide.dropoffLocation}
             pickupCoords={activeRide.pickupCoords}
             dropoffCoords={activeRide.dropoffCoords}
+            stops={activeRide.stops}
             driverLocation={activeRide.driverLocation}
             nextStop={onBoard ? 'dropoff' : 'pickup'}
             pickupLabel={`Pickup · ${childName}`}

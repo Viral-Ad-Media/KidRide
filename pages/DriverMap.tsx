@@ -24,6 +24,7 @@ export const DriverMap = () => {
             dropoff={activeRide.dropoffLocation}
             pickupCoords={activeRide.pickupCoords}
             dropoffCoords={activeRide.dropoffCoords}
+            stops={activeRide.stops}
             driverLocation={activeRide.driverLocation}
             nextStop={activeRide.status === RideStatus.IN_PROGRESS ? 'dropoff' : 'pickup'}
             className="h-full rounded-none"
@@ -32,7 +33,7 @@ export const DriverMap = () => {
           />
           <button type="button" onClick={() => navigate('/driver-dashboard')} className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-card bg-white px-4 py-3 text-left shadow-float sm:left-auto sm:w-[360px]">
             <StatusChip status={activeRide.status} />
-            <span className="min-w-0 flex-1 truncate text-label font-semibold">{activeRide.status === RideStatus.IN_PROGRESS ? activeRide.dropoffLocation : activeRide.pickupLocation}</span>
+            <span className="min-w-0 flex-1 truncate text-label font-semibold">{activeRide.status === RideStatus.IN_PROGRESS ? (activeRide.stops?.find((stop) => stop.status !== 'done')?.address || activeRide.dropoffLocation) : activeRide.pickupLocation}</span>
             <ArrowRight size={18} className="text-muted" />
           </button>
         </>

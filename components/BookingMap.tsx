@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapPinOff } from 'lucide-react';
 import { LatLng, computeRoute, useGoogleMaps } from '../services/googleMaps';
 import { BRAND, createKidRideMap, createRouteLine } from '../services/mapStyle';
-import { HtmlMarker, createHtmlMarker, stopPinHtml, waitingPinHtml } from './mapMarkers';
+import { HtmlMarker, createHtmlMarker, numberPinHtml, stopPinHtml, waitingPinHtml } from './mapMarkers';
 
 // The map behind the parent's home and booking sheets. It centres on the
 // parent (browser location) until there is a pickup, then shows the pickup
@@ -16,6 +16,8 @@ const LOCATION_ZOOM = 14;
 interface BookingMapProps {
   pickup?: LatLng | null;
   dropoff?: LatLng | null;
+  /** Extra stops between pickup and drop-off, in order. */
+  stops?: LatLng[];
   pickupLabel?: string;
   dropoffLabel?: string;
   /** Pulse the pickup pin (finding a driver). */
@@ -28,12 +30,13 @@ interface BookingMapProps {
 
 let cachedLocation: LatLng | null = null;
 
-export const BookingMap: React.FC<BookingMapProps> = ({ pickup, dropoff, pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', matching = false, padding = { top: 80, right: 40, bottom: 80, left: 40 }, className = 'h-full', onRoute }) => {
+export const BookingMap: React.FC<BookingMapProps> = ({ pickup, dropoff, stops = [], pickupLabel = 'Pickup', dropoffLabel = 'Drop-off', matching = false, padding = { top: 80, right: 40, bottom: 80, left: 40 }, className = 'h-full', onRoute }) => {
   const mapsState = useGoogleMaps();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const routeRef = useRef<ReturnType<typeof createRouteLine> | null>(null);
   const pinsRef = useRef<{ pickup?: HtmlMarker; dropoff?: HtmlMarker; pulse?: HtmlMarker }>({});
+  const stopPinsRef = useRef<HtmlMarker[]>([]);
   const [ready, setReady] = useState(false);
 
   // Map once.
@@ -54,6 +57,8 @@ export const BookingMap: React.FC<BookingMapProps> = ({ pickup, dropoff, pickupL
       routeRef.current?.remove();
       (Object.values(pinsRef.current) as (HtmlMarker | undefined)[]).forEach((pin) => pin?.remove());
       pinsRef.current = {};
+      stopPinsRef.current.forEach((pin) => pin.remove());
+      stopPinsRef.current = [];
       mapRef.current = null;
     };
   }, [mapsState.status]);
@@ -73,13 +78,15 @@ export const BookingMap: React.FC<BookingMapProps> = ({ pickup, dropoff, pickupL
     };
     place('pickup', pickup, pickupLabel);
     place('dropoff', dropoff, dropoffLabel);
+    stopPinsRef.current.forEach((pin) => pin.remove());
+    stopPinsRef.current = stops.map((point, index) => createHtmlMarker(maps, { map, position: point, html: numberPinHtml(index + 1), title: `Stop ${index + 1}`, zIndex: 2 }));
 
     pins.pulse?.remove();
     pins.pulse = undefined;
     if (matching && pickup) pins.pulse = createHtmlMarker(maps, { map, position: pickup, html: waitingPinHtml(), zIndex: 1 });
 
     if (pickup && dropoff) {
-      computeRoute(maps, pickup, dropoff).then((route) => {
+      computeRoute(maps, pickup, dropoff, stops).then((route) => {
         if (!mapRef.current) return;
         routeRef.current?.setPath(route.path);
         const bounds = new maps.LatLngBounds();
@@ -89,7 +96,7 @@ export const BookingMap: React.FC<BookingMapProps> = ({ pickup, dropoff, pickupL
       }).catch(() => {
         routeRef.current?.setPath([]);
         const bounds = new maps.LatLngBounds();
-        bounds.extend(pickup); bounds.extend(dropoff);
+        bounds.extend(pickup); bounds.extend(dropoff); stops.forEach((point) => bounds.extend(point));
         map.fitBounds(bounds, padding);
       });
     } else {
@@ -97,7 +104,7 @@ export const BookingMap: React.FC<BookingMapProps> = ({ pickup, dropoff, pickupL
       const only = pickup || dropoff;
       if (only) { map.panTo(only); if ((map.getZoom() || 0) < LOCATION_ZOOM) map.setZoom(LOCATION_ZOOM); }
     }
-  }, [ready, mapsState.status, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng, pickupLabel, dropoffLabel, matching]);
+  }, [ready, mapsState.status, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng, stops.map((point) => `${point.lat},${point.lng}`).join('|'), pickupLabel, dropoffLabel, matching]);
 
   if (mapsState.status === 'unavailable') {
     return (

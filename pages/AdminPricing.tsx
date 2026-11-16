@@ -22,6 +22,7 @@ interface PricingSettings {
   peakSurcharge: number;
   peakWindows: string[];
   extraChildFee: number;
+  stopFee: number;
   serviceMultipliers: Record<string, number>;
   stayPerMinute: number;
   stayMinimumMinutes: number;
@@ -40,7 +41,7 @@ export type Form = Record<string, string>;
 const toForm = (s: PricingSettings): Form => ({
   currency: s.currency, timezone: s.timezone,
   baseFare: String(s.baseFare), perMile: String(s.perMile), perMinute: String(s.perMinute), minimumFare: String(s.minimumFare), bookingFee: String(s.bookingFee),
-  peakSurcharge: String(s.peakSurcharge), peakWindows: s.peakWindows.join(', '), extraChildFee: String(s.extraChildFee),
+  peakSurcharge: String(s.peakSurcharge), peakWindows: s.peakWindows.join(', '), extraChildFee: String(s.extraChildFee), stopFee: String(s.stopFee ?? 2),
   stayPerMinute: String(s.stayPerMinute), stayMinimumMinutes: String(s.stayMinimumMinutes), driverSharePercent: String(Math.round(s.driverShare * 1000) / 10),
   ...Object.fromEntries(SERVICES.map(([type]) => [`m_${type}`, String(s.serviceMultipliers[type])])),
   ...Object.fromEntries(Object.entries(s.cancellation).map(([key, value]) => [`c_${key}`, String(value)]))
@@ -50,7 +51,7 @@ const fromForm = (f: Form): PricingSettings => {
   return {
     currency: f.currency.trim().toUpperCase(), timezone: f.timezone.trim(),
     baseFare: n('baseFare'), perMile: n('perMile'), perMinute: n('perMinute'), minimumFare: n('minimumFare'), bookingFee: n('bookingFee'),
-    peakSurcharge: n('peakSurcharge'), peakWindows: f.peakWindows.split(',').map((w) => w.replace(/\s/g, '')).filter(Boolean), extraChildFee: n('extraChildFee'),
+    peakSurcharge: n('peakSurcharge'), peakWindows: f.peakWindows.split(',').map((w) => w.replace(/\s/g, '')).filter(Boolean), extraChildFee: n('extraChildFee'), stopFee: n('stopFee'),
     stayPerMinute: n('stayPerMinute'), stayMinimumMinutes: n('stayMinimumMinutes'), driverShare: n('driverSharePercent') / 100,
     serviceMultipliers: Object.fromEntries(SERVICES.map(([type]) => [type, n(`m_${type}`)])),
     cancellation: {
@@ -164,6 +165,7 @@ export const AdminPricing = () => {
           <Section title="Extras">
             <Field label="School-run peak fee" name="peakSurcharge" suffix={currency} {...props} />
             <Field label="Extra child fee" name="extraChildFee" suffix={currency} hint="Each extra child on the same ride" {...props} />
+            <Field label="Extra stop fee" name="stopFee" suffix={currency} hint="Each stop between pickup and drop-off; the detour distance is priced too" {...props} />
             <Field label="Peak windows" name="peakWindows" wide hint="24-hour local times, comma separated, e.g. 07:00-09:00, 14:30-16:30" {...props} />
           </Section>
 

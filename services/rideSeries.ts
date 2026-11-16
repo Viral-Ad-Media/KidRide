@@ -1,4 +1,4 @@
-import { PlaceCoords, Ride, ServiceType } from '../types';
+import { PlaceCoords, Ride, ServiceType, StopDraft } from '../types';
 import { apiRequest, getStoredToken, mapRide } from './api';
 
 // Repeating school-week bookings. The parent picks weekdays, a local pickup
@@ -22,11 +22,11 @@ const MIN_LEAD_MS = 30 * 60000;
 export interface SeriesPlan { weekdays: number[]; pickupLocalTime: string; startDate: string; endDate: string }
 export interface SeriesTrip {
   childIds: string[]; pickup: string; dropoff: string; pickupCoords: PlaceCoords | null; dropoffCoords: PlaceCoords | null;
-  serviceType: ServiceType; stayMinutes: number;
+  serviceType: ServiceType; stayMinutes: number; stops: StopDraft[];
 }
 export interface SeriesPreview { currency: string; rideCount: number; rides: { date: string; pickupTime: string; total: number }[] }
 export interface RideSeries extends SeriesPlan {
-  id: string; childIds: string[]; pickupLocation: string; dropoffLocation: string; serviceType: string; stayMinutes: number;
+  id: string; childIds: string[]; pickupLocation: string; dropoffLocation: string; stops?: { address: string }[]; serviceType: string; stayMinutes: number;
   timeZone: string; skippedDates: string[]; status: string; nextDays: string[]; rides: Ride[];
 }
 

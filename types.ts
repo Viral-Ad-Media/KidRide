@@ -116,6 +116,8 @@ export interface FareBreakdown {
   miles: number;
   minutes: number;
   stayMinutes?: number;
+  /** Extra stops priced into the route. */
+  stopCount?: number;
   /** 'routes' from Google driving directions; 'estimate' from straight-line distance. */
   distanceSource: 'routes' | 'estimate' | 'none';
 }
@@ -132,10 +134,31 @@ export interface RidePayment {
   payoutAmount: number;
 }
 
+/** Most extra stops one ride can have between pickup and drop-off. */
+export const MAX_STOPS = 3;
+/** An extra stop between pickup and drop-off; childIds get out there. */
+export interface RideStop {
+  index: number;
+  address: string;
+  coords: PlaceCoords | null;
+  note?: string | null;
+  childIds: string[];
+  /** pending: still to come; arrived: driver waiting there; done: finished. */
+  status: 'pending' | 'arrived' | 'done';
+  arrivedAt?: string | null;
+  completedAt?: string | null;
+}
+/** A stop as the parent enters it while booking. */
+export interface StopDraft { address: string; coords: PlaceCoords | null; childIds: string[] }
+
 export interface Ride {
   /** Parents and admins: the card payment, when payments are on. */
   payment?: RidePayment | null;
   currency?: string;
+  /** Extra stops in driving order (empty for a direct ride). */
+  stops?: RideStop[];
+  /** Booking only: the stops to send with the request. */
+  stopDrafts?: StopDraft[];
   /** Null for rides booked before distance pricing. */
   fare?: FareBreakdown | null;
   /** The driver's share of the fare. */

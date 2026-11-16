@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CalendarClock, Check, CheckCircle2, MapPin, Repeat, Zap } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Check, CheckCircle2, MapPin, Plus, Repeat, X, Zap } from 'lucide-react';
 import { Button, Input } from '../components/UIComponents';
 import { BookingMap } from '../components/BookingMap';
 import { MapScreen } from '../components/MapScreen';
@@ -12,7 +12,7 @@ import { ChildChip } from './ParentDashboard';
 import { useRide } from '../contexts/RideContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, getStoredToken } from '../services/api';
-import { FareBreakdown as Fare, MAX_CHILDREN_PER_RIDE, PlaceCoords, Ride, RideStatus, ServiceType } from '../types';
+import { FareBreakdown as Fare, MAX_CHILDREN_PER_RIDE, MAX_STOPS, PlaceCoords, Ride, RideStatus, ServiceType, StopDraft } from '../types';
 import { FareBreakdown } from '../components/FareBreakdown';
 import { formatMoney, joinNames } from '../utils/rideData';
 import { bookScheduledRide, firstSlot, formatScheduledTime, latestSlot, toLocalInputValue, validateScheduleInput } from '../services/scheduledRides';
@@ -74,6 +74,9 @@ export const BookRide = () => {
   const { places: savedPlaces, unavailable: placesUnavailable } = useSavedPlaces();
   const pickupPlace = placeAt(savedPlaces, pickup, pickupCoords);
   const dropoffPlace = placeAt(savedPlaces, dropoff, dropoffCoords);
+  // Extra stops between pickup and drop-off, in driving order (e.g. school, then a club).
+  const [stops, setStops] = useState<StopDraft[]>([]);
+  const updateStop = (index: number, change: Partial<StopDraft>) => setStops((current) => current.map((stop, i) => (i === index ? { ...stop, ...change } : stop)));
   const [when, setWhen] = useState<'now' | 'later' | 'weekly'>(params.get('when') === 'later' ? 'later' : params.get('when') === 'weekly' ? 'weekly' : 'now');
   // Repeating school-week plan: weekdays, local pickup time, first and last day.
   const [plan, setPlan] = useState<SeriesPlan>(() => {
@@ -97,6 +100,9 @@ export const BookRide = () => {
   const [payment, setPayment] = useState<{ enabled: boolean; hasCard: boolean }>({ enabled: false, hasCard: false });
   useEffect(() => { fetchPaymentConfig().then((config) => setPayment({ enabled: config.enabled, hasCard: !!config.card })).catch(() => undefined); }, []);
 
+  // Who gets out at a stop is kept to children still on the ride.
+  const stopDrafts = stops.map((stop) => ({ ...stop, address: stop.address.trim(), childIds: stop.childIds.filter((id) => childIds.includes(id)) }));
+  const stopsKey = JSON.stringify(stopDrafts);
   const planProblem = when === 'weekly' ? validatePlan(plan) : null;
   const firstDay = when === 'weekly' && !planProblem ? planDays(plan, new Date(), 1)[0] : null;
   // A repeating booking is quoted at its first ride; the confirm step shows each ride's own fare.
@@ -109,15 +115,15 @@ export const BookRide = () => {
     setQuotes(null); setPricing(true); setError(null);
     apiRequest<{ quotes: Record<string, Quote>; plan?: QuotePlan }>('/rides/quotes', {
       method: 'POST', token: getStoredToken(),
-      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when !== 'now', pickupTime: pickupIso, stayMinutes, childCount: childIds.length }
+      body: { pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, scheduled: when !== 'now', pickupTime: pickupIso, stayMinutes, childCount: childIds.length, stops: stopDrafts }
     })
       .then((result) => { if (live) { setQuotes(result.quotes); setQuotePlan(result.plan || null); } })
       .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price this trip.'); })
       .finally(() => { if (live) setPricing(false); });
     return () => { live = false; };
-  }, [step, pickup, dropoff, pickupCoords, dropoffCoords, when, pickupIso, stayMinutes, childIds.length]);
+  }, [step, pickup, dropoff, pickupCoords, dropoffCoords, stopsKey, when, pickupIso, stayMinutes, childIds.length]);
   const quote = quotes?.[serviceType] || null;
-  const seriesTrip = () => ({ childIds, pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, serviceType, stayMinutes });
+  const seriesTrip = () => ({ childIds, pickup: pickup.trim(), dropoff: dropoff.trim(), pickupCoords, dropoffCoords, serviceType, stayMinutes, stops: stopDrafts });
   // Every ride day and its own fare, before a repeating booking is made.
   useEffect(() => {
     if (step !== 'confirm' || when !== 'weekly' || planProblem) { setPreview(null); return; }
@@ -127,7 +133,7 @@ export const BookRide = () => {
       .then((result) => { if (live) setPreview(result); })
       .catch((err) => { if (live) setError(err instanceof Error ? err.message : 'Could not price these rides.'); });
     return () => { live = false; };
-  }, [step, when, plan, serviceType, stayMinutes, pickup, dropoff, pickupCoords, dropoffCoords, childIds]);
+  }, [step, when, plan, serviceType, stayMinutes, pickup, dropoff, pickupCoords, dropoffCoords, stopsKey, childIds]);
 
   // Follow the ride once a driver takes it.
   useEffect(() => {
@@ -143,12 +149,12 @@ export const BookRide = () => {
   const canContinue = useMemo(() => {
     switch (step) {
       case 'child': return riders.length > 0;
-      case 'where': return !!pickup.trim() && !!dropoff.trim();
+      case 'where': return !!pickup.trim() && !!dropoff.trim() && stops.every((stop) => !!stop.address.trim());
       case 'when': return when === 'weekly' ? !planProblem : !scheduleProblem;
       case 'confirm': return quote !== null && (!payment.enabled || payment.hasCard) && (when !== 'weekly' || (!!preview && preview.rideCount > 0));
       default: return quote !== null;
     }
-  }, [step, riders.length, pickup, dropoff, scheduleProblem, planProblem, when, serviceType, quote, preview, payment]);
+  }, [step, riders.length, pickup, dropoff, stopsKey, scheduleProblem, planProblem, when, serviceType, quote, preview, payment]);
 
   const back = () => (stepIndex > 0 && !(step === 'where' && skipWho) ? setStep(ORDER[stepIndex - 1]) : navigate(-1));
 
@@ -169,6 +175,19 @@ export const BookRide = () => {
         if ((!from && a === null) || (!to && b === null)) { setError('We could not find that address. Pick it from the suggestions so the trip can be priced and tracked.'); return; }
       }
       if (samePlace(pickup, dropoff, from, to)) { setError('Pickup and drop-off are the same place. Choose a different drop-off.'); return; }
+      // Every stop needs a place on the map so the whole route can be priced.
+      const placed = [...stops];
+      for (const [index, stop] of placed.entries()) {
+        if (stop.coords) continue;
+        setBusy(true);
+        const found = await geocodeAddress(stop.address);
+        setBusy(false);
+        if (!found) { setError(`We could not find stop ${index + 1}. Pick it from the suggestions.`); return; }
+        placed[index] = { ...stop, address: found.address, coords: found.coords };
+      }
+      if (placed.some((stop, i) => !stop.coords || stop !== stops[i])) setStops(placed);
+      const route = [{ address: pickup, coords: from }, ...placed, { address: dropoff, coords: to }];
+      if (route.slice(1).some((point, i) => samePlace(route[i].address, point.address, route[i].coords, point.coords))) { setError('Two places next to each other on this route are the same. Remove the duplicate stop.'); return; }
     }
     if (step !== 'confirm') { setStep(ORDER[stepIndex + 1]); return; }
     if (quote === null) return;
@@ -182,7 +201,7 @@ export const BookRide = () => {
     const ride: Ride = {
       id: '', childId: riders[0].id, childIds: riders.map((item) => item.id), pickupLocation: pickup.trim(), dropoffLocation: dropoff.trim(), pickupCoords, dropoffCoords,
       pickupTime: pickupIso || new Date().toISOString(),
-      status: RideStatus.SEARCHING_DRIVER, price: quote.total, quoteToken: quote.quoteToken, stayMinutes, tripCode: '', safeWord: '', serviceType
+      status: RideStatus.SEARCHING_DRIVER, price: quote.total, quoteToken: quote.quoteToken, stayMinutes, tripCode: '', safeWord: '', serviceType, stopDrafts
     };
     setBusy(true);
     try {
@@ -283,6 +302,35 @@ export const BookRide = () => {
               <PlacesInput label="Pickup" placeholder={savedPlaces.length ? 'Search, or pick a saved place' : 'Home, school, an address'} value={pickup} picked={!!pickupCoords} onChange={(text) => { setPickup(text); setPickupCoords(null); }} onSelect={({ address, coords }) => { setPickup(address); setPickupCoords(coords); }} />
               <SavedPlaceChips label="Pickup" places={savedPlaces} selectedId={pickupPlace?.id} disabledId={dropoffPlace?.id} onPick={(place) => { setPickup(place.address); setPickupCoords(place.coords); }} />
               {!pickupPlace && <SaveThisPlace address={pickup} coords={pickupCoords} />}
+              {stops.map((stop, index) => (
+                <div key={index}>
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <PlacesInput label={`Stop ${index + 1}`} placeholder="School, club, a friend's house" value={stop.address} onChange={(text) => updateStop(index, { address: text, coords: null })} onSelect={({ address, coords }) => updateStop(index, { address, coords })} />
+                    </div>
+                    <button type="button" onClick={() => setStops((current) => current.filter((_, i) => i !== index))} className="mt-7 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-ink" aria-label={`Remove stop ${index + 1}`}><X size={18} /></button>
+                  </div>
+                  {several && (
+                    <div className="-mt-1 mb-2 flex flex-wrap items-center gap-1.5" role="group" aria-label={`Who gets out at stop ${index + 1}`}>
+                      <span className="mr-1 text-caption text-muted">Getting out here:</span>
+                      {riders.map((child) => {
+                        const on = stop.childIds.includes(child.id);
+                        return (
+                          <button key={child.id} type="button" aria-pressed={on} onClick={() => updateStop(index, { childIds: on ? stop.childIds.filter((id) => id !== child.id) : [...stop.childIds, child.id] })}
+                            className={`rounded-full border px-3 py-1 text-caption font-semibold transition-colors ${on ? 'border-brand-deep bg-brand-deep text-white' : 'border-line bg-white text-ink hover:border-ink/30'}`}>
+                            {child.name.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {stops.length < MAX_STOPS && (
+                <button type="button" onClick={() => setStops((current) => [...current, { address: '', coords: null, childIds: [] }])} className="mb-2 inline-flex items-center gap-1.5 rounded-full px-1 py-1 text-label font-semibold text-brand-deep hover:underline">
+                  <Plus size={16} /> Add a stop
+                </button>
+              )}
               <PlacesInput label="Drop-off" placeholder={savedPlaces.length ? 'Search, or pick a saved place' : 'Where to?'} value={dropoff} picked={!!dropoffCoords} onChange={(text) => { setDropoff(text); setDropoffCoords(null); }} onSelect={({ address, coords }) => { setDropoff(address); setDropoffCoords(coords); }} />
               <SavedPlaceChips label="Drop-off" places={savedPlaces} selectedId={dropoffPlace?.id} disabledId={pickupPlace?.id} onPick={(place) => { setDropoff(place.address); setDropoffCoords(place.coords); }} />
               {!dropoffPlace && <SaveThisPlace address={dropoff} coords={dropoffCoords} />}
@@ -290,7 +338,8 @@ export const BookRide = () => {
             {!savedPlaces.length && !placesUnavailable && !pickup && !dropoff && (
               <p className="text-label text-muted">Tip: save Home, School and activities in <button type="button" onClick={() => navigate('/profile')} className="font-semibold text-brand-deep hover:underline">Profile</button> to book them with one tap.</p>
             )}
-            {routeInfo && pickupCoords && dropoffCoords && <p className="text-label text-muted">About {routeInfo.duration}, {routeInfo.distance}.</p>}
+            {routeInfo && pickupCoords && dropoffCoords && <p className="text-label text-muted">About {routeInfo.duration}, {routeInfo.distance}{stops.length ? `, through ${stops.length} stop${stops.length > 1 ? 's' : ''}` : ''}.</p>}
+            {stops.length > 0 && <p className="mt-1 text-caption text-muted">Each stop adds a small fee plus the extra distance, shown before you book.</p>}
           </>
         )}
         {step === 'when' && (
@@ -349,7 +398,7 @@ export const BookRide = () => {
                   : `${quotePlan.name} plan: this week's ${quotePlan.ridesPerWeek} discounted rides are used, so this ride is the normal fare.`}
               </p>
             )}
-            {quote && quote.distanceSource !== 'none' && <p className="mt-3 text-caption text-muted">Priced for {quote.miles.toFixed(1)} mi, about {quote.minutes} min. The price is fixed when you book.</p>}
+            {quote && quote.distanceSource !== 'none' && <p className="mt-3 text-caption text-muted">Priced for {quote.miles.toFixed(1)} mi, about {quote.minutes} min{stops.length ? ` through ${stops.length} stop${stops.length > 1 ? 's' : ''}` : ''}. The price is fixed when you book.</p>}
           </>
         )}
         {step === 'confirm' && (
@@ -359,6 +408,9 @@ export const BookRide = () => {
               {([
                 [several ? 'Riders' : 'Rider', joinNames(riders.map((item) => item.name))],
                 ['Pickup', pickup.trim()],
+                ...stopDrafts.map((stop, index) => [`Stop ${index + 1}`, stop.childIds.length
+                  ? `${stop.address} (${joinNames(stop.childIds.map((id) => riders.find((item) => item.id === id)?.name.split(' ')[0] || '').filter(Boolean))} get${stop.childIds.length > 1 ? '' : 's'} out)`
+                  : stop.address] as const),
                 ['Drop-off', dropoff.trim()],
                 ['When', when === 'weekly' ? `${describeDays(plan.weekdays)} at ${formatClock(plan.pickupLocalTime)}, ${formatDay(plan.startDate)} to ${formatDay(plan.endDate)}` : when === 'later' ? formatScheduledTime(scheduleValue) : 'Now'],
                 ['Service', serviceLabel(serviceType)]
@@ -411,7 +463,7 @@ export const BookRide = () => {
 
   return (
     <MapScreen
-      map={<BookingMap pickup={pickupCoords} dropoff={dropoffCoords} pickupLabel={`Pickup · ${childName}`} matching={matching} padding={{ top: 80, right: 40, bottom: 120, left: 40 }} onRoute={setRouteInfo} />}
+      map={<BookingMap pickup={pickupCoords} dropoff={dropoffCoords} stops={stops.map((stop) => stop.coords).filter((point): point is PlaceCoords => !!point)} pickupLabel={`Pickup · ${childName}`} matching={matching} padding={{ top: 80, right: 40, bottom: 120, left: 40 }} onRoute={setRouteInfo} />}
       sheetClassName="max-h-[72%]"
     >
       {sheet}
