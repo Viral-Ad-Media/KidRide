@@ -51,6 +51,8 @@ export interface User {
   children?: Child[];
   /** Email on ride updates (on by default). */
   notifyEmail?: boolean;
+  /** 'guardian' when this parent is a second guardian in someone else's family. */
+  familyRole?: 'owner' | 'guardian';
 }
 
 export interface AppNotification {

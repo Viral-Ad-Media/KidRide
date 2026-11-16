@@ -276,6 +276,7 @@ export const mapUser = (raw: unknown): User => {
     vehicle: user.vehicle && typeof user.vehicle === 'object' ? user.vehicle as VehicleDetails : undefined,
     isVerifiedDriver: Boolean(user.isVerifiedDriver),
     notifyEmail: user.notifyEmail !== false,
+    familyRole: user.familyRole === 'guardian' ? 'guardian' : 'owner',
     driverApplicationStatus:
       user.driverApplicationStatus === 'pending' ||
       user.driverApplicationStatus === 'approved' ||

@@ -18,6 +18,7 @@ export const notificationLink = (item: Pick<AppNotification, 'kind' | 'rideId'>,
   if (role === UserRole.ADMIN) return SAFETY_KINDS.has(item.kind) ? '/admin/safety' : item.kind === 'rating_low' ? '/admin/drivers' : '/admin/rides';
   if (role === UserRole.DRIVER && ['completed', 'cancelled', 'no_show', 'compliment'].includes(item.kind)) return '/driver-dashboard';
   if (role === UserRole.PARENT && item.kind === 'completed' && item.rideId) return `/rides?tab=past&rate=${item.rideId}`;
+  if (item.kind.startsWith('guardian_')) return '/profile';
   return item.rideId ? `/tracking/${item.rideId}` : '/notifications';
 };
 
