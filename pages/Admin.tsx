@@ -36,6 +36,7 @@ import {
 import { SAFETY_ALERT_LABELS } from '../components/SafetyActions';
 import { RideStatus } from '../types';
 import { FareBreakdown } from '../components/FareBreakdown';
+import { ChatRecordButton } from '../components/ChatRecordButton';
 import { formatRidePrice, rideChildNames, rideEarnings } from '../utils/rideData';
 
 const formatDate = (value?: string | null) => {
@@ -55,6 +56,7 @@ export const AdminTabs = () => {
       <NavLink to="/admin/rides" className={cls}>Rides</NavLink>
       <NavLink to="/admin/live-map" className={cls}>Live map</NavLink>
       <NavLink to="/admin/pricing" className={cls}>Pricing</NavLink>
+      <NavLink to="/admin/promotions" className={cls}>Promotions</NavLink>
       <NavLink to="/admin/safety" className={cls}>Safety</NavLink>
       <NavLink to="/admin/verification" className={cls}>Verification</NavLink>
     </div>
@@ -626,6 +628,8 @@ export const AdminRides = () => {
                       </details>
                     )}
                   </div>
+                  {/* What the parent and the driver wrote to each other, for looking into an incident or a complaint. */}
+                  {ride.driver ? <ChatRecordButton rideId={ride.id} /> : null}
                   {!terminal && (
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                       <select

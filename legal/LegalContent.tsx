@@ -73,26 +73,45 @@ export const TermsContent = () => (
       SOS alerts and live links depend on mobile signal and device settings and may be delayed or unavailable.
     </P>
 
-    <H>6. Payments</H>
+    <H>6. Messages between parents and drivers</H>
+    <P>
+      The parent who booked a ride and the driver who accepted it can message each other in the app. Messaging opens when the driver accepts
+      and closes when the trip ends (or is cancelled). After that the conversation is no longer shown to either of you.
+    </P>
+    <UL items={[
+      'KidRide keeps a compressed copy of each conversation after the trip. We keep it for safety and security only: to look into an incident, a complaint or a suspected breach of these terms, to protect a child, or where the law requires it.',
+      'We do not use your messages for advertising or marketing, do not sell them, and do not use them for any purpose other than safety and security.',
+      'Only authorised KidRide safety staff can open a stored conversation, and only for one of the reasons above.',
+      'Use messages only for the ride: where to meet, timing, and the child\'s needs on that trip. Do not use them to arrange rides or payments outside KidRide, or to contact a child.',
+      'Messages are not monitored live. In an emergency call your local emergency number, then use SOS in the app.'
+    ]} />
+    <P>[CONFIRM WITH LAWYER: how long stored conversations are kept, and whether separate consent is needed in your launch market.]</P>
+
+    <H>7. Payments</H>
     <P>
       Prices, fees and the driver's share are shown in the app. Card payments are handled by our payment provider and KidRide does not store
       full card numbers. [ADD REFUND POLICY AND PAYMENT PROVIDER TERMS WHEN PAYMENTS LAUNCH.]
     </P>
+    <P>
+      From time to time KidRide may offer promo codes or seasonal discounts. Each offer applies only to the accounts, dates and number of rides
+      stated with it, cannot be exchanged for cash, cannot be combined with another offer unless we say so, and may be withdrawn at any time
+      for rides not yet booked. The driver's earnings for a ride are not reduced by a discount.
+    </P>
 
-    <H>7. Acceptable use</H>
+    <H>8. Acceptable use</H>
     <UL items={[
       'Do not use the Service for anything unlawful, to harass or endanger anyone, or to contact a child outside a booked ride.',
       'Do not access data you are not authorised to see, interfere with the Service, or give false information.',
       'We may suspend or close accounts that create safety, legal or operational risk.'
     ]} />
 
-    <H>8. Ending your account</H>
+    <H>9. Ending your account</H>
     <P>
       You can delete your account at any time from Profile, Privacy and account. Rides in progress must finish first. Some records are kept
       after deletion as explained in the Privacy Policy. We may close accounts that breach these terms.
     </P>
 
-    <H>9. Liability</H>
+    <H>10. Liability</H>
     <P>
       To the extent the law allows, KidRide is not liable for indirect or consequential losses, and our total liability for any claim is limited to
       the fares you paid in the 12 months before the claim. Nothing in these terms limits liability for death or personal injury caused by
@@ -100,7 +119,7 @@ export const TermsContent = () => (
       [LAWYER TO REVIEW: insurance, indemnities and liability caps.]
     </P>
 
-    <H>10. Changes, law and contact</H>
+    <H>11. Changes, law and contact</H>
     <P>
       We may update these terms. If changes are significant we will tell you in the app or by email before they take effect. These terms are governed by
       the laws of {LEGAL.governingLaw}. Questions: {LEGAL.supportEmail}.
@@ -139,6 +158,7 @@ export const PrivacyContent = () => (
       <><strong>Location:</strong> a driver's live location while online and during rides; the ride's GPS trail; your location if you allow it when booking.</>,
       <><strong>Safety:</strong> SOS alerts, incident reports, route and stop alerts, trusted contacts (their name, phone and relationship, given by you).</>,
       <><strong>Drivers:</strong> licence, insurance, vehicle registration and photos, vehicle details, verification and background check results.</>,
+      <><strong>Messages between a parent and a driver</strong> during a ride (see "Ride messages" below).</>,
       <><strong>Messages and notifications</strong> we send you, and Safety Assistant chats.</>,
       <><strong>Technical:</strong> session tokens, device and browser data needed to keep you signed in and protect the Service.</>
     ]} />
@@ -152,6 +172,12 @@ export const PrivacyContent = () => (
       'Child health notes and any background check data: explicit consent or as permitted by law.'
     ]} />
     <P>We do not sell personal data and do not use it for targeted advertising.</P>
+    <P>
+      <strong>Ride messages.</strong> Messages between the parent and the driver of a ride are shown to the two of you only while the trip is under way.
+      When the trip ends the conversation is removed from the app, compressed and stored where only authorised KidRide safety staff can open it.
+      We use stored conversations for safety and security only (investigating an incident or complaint, protecting a child, or meeting a legal duty),
+      on the basis of our legitimate interests and legal obligations, and never for advertising, marketing or profiling.
+    </P>
 
     <H>5. Location data</H>
     <P>
@@ -181,6 +207,7 @@ export const PrivacyContent = () => (
       'Account and child details: while your account is open. Deleted when you delete your account.',
       `Ride, fare and safety records: ${LEGAL.rideRecordYears} years after the ride, for safety investigations, disputes, tax and legal claims. After account deletion these are kept without your name or contact details.`,
       `Detailed GPS trail of a ride: ${LEGAL.locationTrailDays} days, unless needed for an open safety investigation.`,
+      `Ride messages: removed from the app when the trip ends. The compressed safety copy is kept with the ride's safety records (${LEGAL.rideRecordYears} years) [CONFIRM WITH LAWYER], including after you delete your account.`,
       'Driver documents and photos: while the driver is active; deleted when the driver deletes their account. Background check results are kept as long as the law requires.',
       'Notifications: deleted with the account.'
     ]} />
@@ -196,7 +223,7 @@ export const PrivacyContent = () => (
     <H>10. Deleting your account</H>
     <P>
       When you delete your account we close your login, remove your name, email, phone, photo, children's names and notes, trusted contacts, notifications,
-      and driver documents. Ride, fare and safety records other people rely on are kept without your personal details for the period above.
+      and driver documents. Ride, fare and safety records other people rely on, including the stored copy of ride messages, are kept for the period above without your name or contact details.
       Rides in progress must finish first; unstarted scheduled rides are cancelled.
     </P>
 

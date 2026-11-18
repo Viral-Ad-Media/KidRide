@@ -34,6 +34,7 @@ import { AdminApplications, AdminDrivers, AdminParents, AdminRides } from './pag
 import { AdminPricing } from './pages/AdminPricing';
 import { Plans } from './pages/Plans';
 import { AdminSafety } from './pages/AdminSafety';
+import { AdminPromotions } from './pages/AdminPromotions';
 import { AdminVerification } from './pages/AdminVerification';
 import { DriverVerification } from './pages/DriverVerification';
 import { AdminLiveMap } from './pages/AdminLiveMap';
@@ -119,6 +120,7 @@ const AppRoutes = () => (
       <Route path="/admin/live-map" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminLiveMap /></ProtectedRoute>} />
       <Route path="/admin/pricing" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminPricing /></ProtectedRoute>} />
       <Route path="/admin/safety" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminSafety /></ProtectedRoute>} />
+      <Route path="/admin/promotions" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminPromotions /></ProtectedRoute>} />
       <Route path="/admin/verification" element={<ProtectedRoute roles={[UserRole.ADMIN]}><AdminVerification /></ProtectedRoute>} />
       <Route path="/driver-verification" element={<ProtectedRoute roles={[UserRole.DRIVER]}><DriverVerification /></ProtectedRoute>} />
       <Route path="/admin/*" element={<Navigate to="/admin" replace />} />

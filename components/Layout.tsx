@@ -18,6 +18,7 @@ import {
   X,
   Tag,
   ShieldCheck,
+  BadgePercent,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -55,6 +56,7 @@ const pageTitles: Record<string, string> = {
   '/admin/live-map': 'Live map',
   '/admin/rides': 'Rides',
   '/admin/pricing': 'Pricing',
+  '/admin/promotions': 'Promotions',
   '/plans': 'Monthly plans',
   '/earnings': 'Earnings',
   '/driver-verification': 'Verification',
@@ -87,6 +89,7 @@ const adminNavItems: NavItem[] = [
   { icon: Map, label: 'Rides', path: '/admin/rides' },
   { icon: Navigation, label: 'Live map', path: '/admin/live-map' },
   { icon: Tag, label: 'Pricing', path: '/admin/pricing' },
+  { icon: BadgePercent, label: 'Promotions', path: '/admin/promotions' },
   { icon: ShieldCheck, label: 'Verification', path: '/admin/verification' },
   { icon: User, label: 'Profile', path: '/profile' }
 ];

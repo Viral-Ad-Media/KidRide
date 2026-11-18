@@ -4,7 +4,7 @@
 // country and state/region KidRide launches in before going live.
 export const LEGAL = {
   isDraft: true,
-  version: '2026-11-06-draft', // keep in step with TERMS_VERSION in kidride-backend/lib/account.js
+  version: '2026-11-18-draft', // keep in step with TERMS_VERSION in kidride-backend/lib/account.js
   effectiveDate: '[EFFECTIVE DATE]',
   companyName: '[COMPANY LEGAL NAME]',
   companyAddress: '[REGISTERED ADDRESS]',
